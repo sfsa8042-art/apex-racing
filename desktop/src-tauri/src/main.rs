@@ -3,6 +3,7 @@
 
 mod commands;
 mod settings;
+mod state;
 mod uploader;
 mod watcher;
 
@@ -13,17 +14,10 @@ use tracing::info;
 
 use crate::uploader::UploadQueue;
 use crate::settings::AppSettings;
+use crate::state::AppState;
 use crate::watcher::WatchHandle;
 
-/// Global application state shared across all Tauri commands
-pub struct AppState {
-    pub settings:     Arc<Mutex<AppSettings>>,
-    pub watcher:      Arc<Mutex<Option<WatchHandle>>>,
-    pub upload_queue: Arc<UploadQueue>,
-}
-
 fn main() {
-    // Structured logging — readable in Windows Event Viewer and VS Code terminal
     tracing_subscriber::fmt()
         .with_env_filter(
             std::env::var("RUST_LOG")
@@ -44,7 +38,6 @@ fn main() {
             let upload_queue = Arc::new(UploadQueue::new());
             let watcher      = Arc::new(Mutex::new(None::<WatchHandle>));
 
-            // Auto-restart watcher on launch if a folder is already configured
             {
                 let settings_clone = settings.clone();
                 let watcher_clone  = watcher.clone();
@@ -56,11 +49,9 @@ fn main() {
                         let s = settings_clone.lock().await;
                         s.watch_folder.clone()
                     };
-
                     if let Some(folder) = folder {
                         let path = std::path::PathBuf::from(&folder);
                         if path.exists() {
-                            info!("Auto-starting watcher on {:?}", path);
                             match watcher::start_watching(path, queue_clone, handle).await {
                                 Ok(h)  => *watcher_clone.lock().await = Some(h),
                                 Err(e) => tracing::warn!("Auto-start watcher failed: {e}"),
