@@ -1,0 +1,73 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "APEX Desktop",
+  "version": "0.1.0",
+  "identifier": "com.apex-racing.desktop",
+
+  "build": {
+    "beforeDevCommand":   "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl":             "http://localhost:1420",
+    "frontendDist":       "../dist"
+  },
+
+  "app": {
+    "windows": [
+      {
+        "title":       "APEX Desktop",
+        "width":       440,
+        "height":      700,
+        "minWidth":    380,
+        "minHeight":   580,
+        "resizable":   true,
+        "fullscreen":  false,
+        "decorations": true,
+        "transparent": false,
+        "center":      true,
+        "shadow":      true
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "tooltip":  "APEX — Sim Racing Telemetry"
+    },
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* https://*.netlify.app https://apex-racing.app"
+    }
+  },
+
+  "bundle": {
+    "active":  true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "shortDescription": "Automatic telemetry upload for sim racing",
+    "longDescription":  "APEX Desktop monitors your simulator telemetry folders and automatically uploads new sessions to the APEX coaching platform.",
+    "category":         "Utility",
+    "copyright":        "© 2025 APEX Racing Technologies",
+    "windows": {
+      "nsis": {
+        "installerIcon":  "icons/icon.ico",
+        "headerImage":    "icons/128x128.png",
+        "installMode":    "currentUser",
+        "languages":      ["English"]
+      },
+      "msi": {
+        "upgradeCode": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      },
+      "wix": null
+    },
+    "resources": []
+  },
+
+  "plugins": {
+    "store": {
+      "path": "apex-settings.bin"
+    }
+  }
+}

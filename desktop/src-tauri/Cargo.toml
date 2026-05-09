@@ -1,0 +1,62 @@
+[package]
+name        = "apex-desktop"
+version     = "0.1.0"
+description = "APEX Sim Racing — Desktop Telemetry Collector"
+authors     = ["APEX Racing Technologies"]
+license     = "MIT"
+edition     = "2021"
+rust-version = "1.77.2"
+
+# Tauri needs this as the binary entry point
+[[bin]]
+name = "apex-desktop"
+path = "src/main.rs"
+
+# lib is only needed for mobile (iOS staticlib / Android cdylib).
+# For desktop-only builds we omit it to avoid MSVC linker conflicts.
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri                     = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-shell        = "2"
+tauri-plugin-dialog       = "2"
+tauri-plugin-fs           = "2"
+tauri-plugin-store        = "2"
+tauri-plugin-notification = "2"
+
+# File-system watcher
+notify = { version = "6", features = ["serde"] }
+
+# HTTP client for telemetry uploads
+reqwest = { version = "0.12", features = ["multipart", "json", "stream"] }
+
+# Async runtime
+tokio      = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+
+# Serialisation
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Utilities
+uuid               = { version = "1", features = ["v4"] }
+chrono             = { version = "0.4", features = ["serde"] }
+anyhow             = "1"
+thiserror          = "1"
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dirs               = "5"
+
+[features]
+# Tauri requires custom-protocol in release builds
+custom-protocol = ["tauri/custom-protocol"]
+default         = ["custom-protocol"]
+
+[profile.release]
+panic         = "abort"
+codegen-units = 1
+lto           = true
+opt-level     = "s"
+strip         = true

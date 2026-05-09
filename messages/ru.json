@@ -1,0 +1,518 @@
+{
+  "nav": {
+    "dashboard": "Главная",
+    "telemetry": "Телеметрия",
+    "academy": "Академия",
+    "tracks": "Трассы",
+    "cars": "Автомобили",
+    "sessions": "Сессии",
+    "community": "Сообщество",
+    "profile": "Профиль",
+    "soon": ""
+  },
+  "common": {
+    "yourLap": "Ваш круг",
+    "reference": "Референс",
+    "gap": "Разрыв",
+    "sector": "Сектор",
+    "upload": "Загрузить",
+    "analyze": "Анализировать",
+    "continue": "Продолжить",
+    "start": "Начать",
+    "review": "Повторить",
+    "learnFix": "Как исправить →",
+    "back": "Назад",
+    "close": "Закрыть",
+    "loading": "Загрузка…",
+    "processing": "Обработка…",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "share": "Поделиться",
+    "export": "Экспорт",
+    "allTime": "За всё время",
+    "thisWeek": "На этой неделе",
+    "thisMonth": "В этом месяце",
+    "completed": "Завершено",
+    "inProgress": "В процессе",
+    "locked": "Заблокировано",
+    "available": "Доступно",
+    "noData": "Нет данных",
+    "error": "Ошибка",
+    "success": "Готово",
+    "simple": "Упрощённый",
+    "detailed": "Подробный",
+    "language": "Язык",
+    "settings": "Настройки",
+    "viewAll": "Смотреть все",
+    "new": "Новый",
+    "latest": "Последний",
+    "best": "Лучший"
+  },
+  "dashboard": {
+    "title": "Главная",
+    "welcomeBack": "Добро пожаловать.",
+    "noLapYet": "Загрузите первый круг, чтобы начать отслеживать прогресс.",
+    "sessionsTotal": "{n} сессий всего · Сохраняйте темп.",
+    "uploadLap": "Загрузить круг",
+    "nextAction": "Следующий шаг",
+    "recentSessions": "Последние сессии",
+    "viewAll": "Смотреть все",
+    "weeklyChallenge": "Еженедельный вызов",
+    "topIssues": "Последний круг — главные проблемы",
+    "quickActions": "Быстрые действия",
+    "openTelemetry": "Открыть телеметрию",
+    "continueAcademy": "Продолжить Академию",
+    "noSessions": "Нет сессий",
+    "uploadFirst": "Загрузить первый круг",
+    "gainedSinceLastSession": "+{s}с выигрыш с прошлой сессии",
+    "slowerThisSession": "−{s}с медленнее этой сессии — посмотрите анализ",
+    "xpEarned": "+{xp} XP получено",
+    "viewFullProfile": "Полный профиль",
+    "nextStep": "Следующий шаг",
+    "stats": {
+      "bestLap": "Лучший круг",
+      "totalLaps": "Сессии",
+      "latestScore": "Оценка",
+      "progress": "Прогресс",
+      "outOf": "из 100",
+      "uploadForScore": "Загрузите круг"
+    },
+    "challenge": {
+      "target": "Цель по разрыву",
+      "yourGap": "Ваш разрыв",
+      "rank": "Место",
+      "of": "из",
+      "endsOn": "до"
+    },
+    "pattern": {
+      "title": "Повторяющаяся проблема",
+      "improving": "↑ Улучшается:"
+    }
+  },
+  "telemetry": {
+    "title": "Анализ телеметрии",
+    "uploadLap": "Загрузить круг",
+    "dropZoneTitle": "Перетащите файл круга сюда",
+    "dropZoneSubtitle": "CSV или JSON · любой симулятор",
+    "browseFiles": "Выбрать файл",
+    "loadSample": "Загрузить пример",
+    "parsing": "Чтение данных…",
+    "analyzing": "Анализ круга…",
+    "uploadAnother": "Загрузить другой круг",
+    "noLap": "Загрузите файл круга для анализа",
+    "noLapSub": "Поддерживаются CSV и JSON с колонками: time, speed, throttle, brake, gear",
+    "csvFormat": "Пример формата CSV",
+    "yourLap": "Ваш круг",
+    "reference": "Референс",
+    "gap": "Разрыв",
+    "score": "Оценка",
+    "potential": "Потенциал",
+    "simpleMode": "Упрощённый режим",
+    "detailedMode": "Подробный режим",
+    "allChannels": "Все каналы",
+    "trackMap": "Карта трассы",
+    "ghostComparison": "Призрак",
+    "segments": "Участки",
+    "insights": "Инсайты",
+    "coach": "Тренер",
+    "deltaTime": "Дельта-время",
+    "keyChart": "Главный",
+    "gaining": "Выигрыш",
+    "losing": "Потеря",
+    "yourLapLabel": "Ваш круг",
+    "referenceLabel": "Референс (пунктир)",
+    "optimalLap": "Оптимальный круг",
+    "channels": {
+      "speed": "Скорость",
+      "throttle": "Газ",
+      "brake": "Тормоз",
+      "delta": "Дельта"
+    },
+    "stats": {
+      "maxSpeed": "Макс. скорость",
+      "avgThrottle": "Ср. газ",
+      "maxBrake": "Макс. тормоз",
+      "brakeZones": "Торм. зон"
+    },
+    "error": {
+      "title": "Ошибка парсинга",
+      "retry": "Попробовать снова"
+    },
+    "processing": {
+      "reading": "Чтение данных…",
+      "analysing": "Анализ круга…",
+      "loading": "Загрузка…"
+    }
+  },
+  "feedback": {
+    "title": "Анализ круга",
+    "totalLoss": "Итого потеряно",
+    "critical": "критичных",
+    "warnings": "предупреждений",
+    "noInsights": "Загрузите круг для получения анализа",
+    "timeCost": "Стоимость",
+    "relatedLesson": "Связанный урок",
+    "mainIssue": "Главная проблема",
+    "categories": {
+      "brake": "Торможение",
+      "throttle": "Газ",
+      "speed": "Скорость",
+      "consistency": "Стабильность",
+      "general": "Общее"
+    },
+    "severity": {
+      "critical": "Критично",
+      "warning": "Внимание",
+      "info": "Инфо",
+      "good": "Хорошо"
+    },
+    "issues": {
+      "earlyBraking": "Раннее торможение",
+      "lateBraking": "Позднее торможение",
+      "lowApexSpeed": "Низкая скорость в апексе",
+      "lateThrottle": "Поздний газ",
+      "speedDeficit": "Дефицит скорости"
+    }
+  },
+  "segments": {
+    "title": "Анализ участков",
+    "corners": "поворотов",
+    "straights": "прямых",
+    "timeLost": "потеряно",
+    "filters": {
+      "all": "Все",
+      "corners": "Повороты",
+      "straights": "Прямые"
+    },
+    "apex": "апекс",
+    "max": "макс",
+    "issues": "проблем",
+    "gaining": "выигрыш",
+    "losing": "потеря"
+  },
+  "coach": {
+    "nextStep": "Далее →",
+    "workingWell": "Что работает хорошо",
+    "patternDetected": "Повторяющаяся проблема",
+    "improving": "↓ улучшается",
+    "sessionsAnalysed": "Проанализировано {n} сессий",
+    "patternsFound": "Найдено {n} паттерн",
+    "patternsFoundPlural": "Найдено {n} паттернов"
+  },
+  "nextAction": {
+    "openLesson": "Открыть урок",
+    "practiceNow": "К практике",
+    "uploadLap": "Загрузить круг",
+    "setGoal": "Поставить цель",
+    "min": "мин",
+    "gainIfFixed": "+{s}с"
+  },
+  "academy": {
+    "title": "Академия",
+    "subtitle": "Учебный центр",
+    "progressLabel": "{done} из {total} модулей завершено",
+    "selectModule": "Выберите модуль для просмотра",
+    "continueLearning": "Продолжить обучение",
+    "telemetryLink": "Ваша телеметрия выявила проблему с этим навыком",
+    "fromTelemetry": "→ из телеметрии",
+    "liveData": "Живые данные",
+    "noLapLinked": "Нет загруженного круга",
+    "noLapLinkedSub": "Загрузите круг на странице Телеметрии, чтобы увидеть персонализированные визуализации.",
+    "uploadLapLink": "Загрузить круг →",
+    "markComplete": "Отметить как выполненный",
+    "backToModule": "← К модулю",
+    "tiers": {
+      "all": "Все модули",
+      "beginner": "Начальный",
+      "intermediate": "Средний",
+      "advanced": "Продвинутый"
+    },
+    "module": {
+      "lessons": "уроков",
+      "duration": "{n} мин",
+      "completedOf": "{done}/{total}",
+      "graduationMetric": "Метрика выпуска",
+      "practicalTask": "Практическое задание",
+      "keyPoints": "Ключевые моменты",
+      "prerequisite": "Завершите предыдущие модули для разблокировки.",
+      "lessonTypes": {
+        "theory": "теория",
+        "exercise": "упражнение",
+        "task": "задание"
+      }
+    },
+    "lesson": {
+      "theory": "Теория",
+      "exercise": "Упражнение",
+      "task": "Задание",
+      "keyPoints": "Ключевые моменты",
+      "practicalTask": "Практика",
+      "liveDataTitle": "Ваши данные",
+      "animationTitle": "Анимация трассы",
+      "channelDataTitle": "Данные каналов",
+      "maxBrake": "Макс. давление тормоза",
+      "avgThrottle": "Средний газ",
+      "brakeZones": "Зон торможения",
+      "lapScore": "Оценка круга",
+      "issueDetected": "Проблема обнаружена в этой зоне",
+      "perLap": "за круг"
+    },
+    "animation": {
+      "play": "Играть",
+      "pause": "Пауза",
+      "reset": "Сброс",
+      "speed": "Скорость",
+      "userLap": "Ваш круг",
+      "reference": "Референс",
+      "braking": "Торможение",
+      "throttle": "Газ",
+      "coasting": "Накат"
+    }
+  },
+  "tracks": {
+    "title": "Трассы",
+    "subtitle": "База данных трасс",
+    "available": "{n} трасс · Референсные круги для всех комбинаций",
+    "noLap": "Нет кругов",
+    "yourBest": "Ваш рекорд",
+    "lapRecord": "Рекорд трассы",
+    "corners": "Поворотов",
+    "length": "Длина",
+    "gapToRef": "{s} от референса",
+    "analyzeHere": "Анализировать на {name}",
+    "difficulty": {
+      "easy": "Лёгкая",
+      "medium": "Средняя",
+      "hard": "Сложная",
+      "expert": "Экспертная"
+    }
+  },
+  "cars": {
+    "title": "Автомобили",
+    "subtitle": "База данных автомобилей",
+    "available": "{n} GT3 автомобиля · Гайды по настройке",
+    "strengths": "Преимущества",
+    "weaknesses": "Недостатки",
+    "overview": "Плюсы и минусы",
+    "setup": "Настройка",
+    "trackSetup": "Настройка для трассы",
+    "selectTrack": "Трасса",
+    "stats": {
+      "power": "Мощность",
+      "weight": "Масса",
+      "topSpeed": "Макс. скорость",
+      "accel": "0–100 км/ч"
+    },
+    "impact": {
+      "high": "Высокое влияние",
+      "medium": "Среднее влияние",
+      "low": "Низкое влияние"
+    },
+    "categories": {
+      "suspension": "Подвеска",
+      "aero": "Аэродинамика",
+      "differential": "Дифференциал",
+      "brake": "Тормоза",
+      "tyres": "Шины"
+    },
+    "conditions": {
+      "dry": "Сухо",
+      "wet": "Мокро",
+      "intermediate": "Переходные"
+    },
+    "analyzeLaps": "Анализировать круги на {name}"
+  },
+  "sessions": {
+    "title": "Сессии",
+    "subtitle": "Загруженные круги",
+    "noSessions": "Нет загруженных сессий",
+    "noSessionsSub": "Установите APEX Desktop для автоматической загрузки телеметрии или загрузите файл вручную.",
+    "desktopHint": "Нет сессий с десктопа",
+    "desktopHintSub": "Установите APEX Desktop для автоматической загрузки после каждой поездки.",
+    "download": "Скачать",
+    "filters": {
+      "all": "Все",
+      "desktop": "Десктоп",
+      "browser": "Браузер",
+      "ready": "Готово"
+    },
+    "status": {
+      "pending": "в очереди",
+      "processing": "анализ…",
+      "ready": "готово",
+      "error": "ошибка"
+    },
+    "stats": {
+      "total": "Всего сессий",
+      "ready": "Готово к анализу",
+      "fromDesktop": "С десктопа",
+      "avgScore": "Ср. оценка"
+    },
+    "source": {
+      "desktop": "Десктоп",
+      "browser": "Браузер"
+    },
+    "autoRefresh": "Обновление",
+    "openAnalysis": "Анализ →",
+    "trackUnknown": "Трасса не определена"
+  },
+  "profile": {
+    "title": "Профиль гонщика",
+    "level": "Уровень гонщика",
+    "totalXP": "Всего XP",
+    "skills": "Навыки",
+    "recentXP": "Последние XP",
+    "toNextLevel": "до {level}",
+    "maxLevel": "Elite — максимальный уровень",
+    "inLevel": "XP на уровне",
+    "communityRank": "Рейтинг сообщества",
+    "fasterThan": "Быстрее {pct}% гонщиков",
+    "estimatedRank": "Расч. место #{rank} из {total}",
+    "estimated": "*Расчётный · улучшается с каждой сессией",
+    "byTrack": "По трассам",
+    "consistency": "Стабильность",
+    "dayStreak": "дней подряд",
+    "last14d": "за 14 дней",
+    "totalSessions": "сессий",
+    "driveToday": "Проедьте сегодня, чтобы сохранить серию из {n} дней! 🔥",
+    "startStreak": "Загрузите круг сегодня, чтобы начать серию.",
+    "scoreOverTime": "Оценка со временем",
+    "needMoreLaps": "Нужно 2+ сессии для отображения тренда",
+    "sessionTimeline": "Хронология сессий",
+    "noSessions": "Нет сессий — загрузите первый круг",
+    "driverMemory": "Память гонщика",
+    "improvingAreas": "показывает стабильное улучшение",
+    "shareResult": "Поделиться результатом",
+    "skillLevels": {
+      "strong": "Сила",
+      "ok": "Хорошо",
+      "weak": "Слабость"
+    }
+  },
+  "goals": {
+    "title": "Цели",
+    "setFirst": "Поставьте первую цель",
+    "newGoal": "Новая цель",
+    "active": "Активные",
+    "achieved": "Достигнуто",
+    "abandoned": "Отменено",
+    "done": "✓ Выполнено",
+    "cancel": "Отмена",
+    "set": "Поставить цель",
+    "select": "Выберите шаблон цели"
+  },
+  "daily": {
+    "title": "Фокус дня",
+    "goal": "Цель дня",
+    "challenge": "Вызов",
+    "markDone": "Отметить выполненным",
+    "startNow": "Начать →",
+    "difficulty": {
+      "easy": "Лёгкий",
+      "medium": "Средний",
+      "hard": "Сложный"
+    }
+  },
+  "streak": {
+    "active": "серия {n} дн.",
+    "monitoring": "мониторинг вкл",
+    "monitoringOff": "мониторинг выкл",
+    "notTested": "не проверено",
+    "connected": "подключено",
+    "noConnection": "нет связи",
+    "checkConnection": "Проверить соединение"
+  },
+  "ranking": {
+    "top5": "Топ 5%",
+    "top20": "Топ 20%",
+    "top40": "Топ 40%",
+    "top60": "Топ 60%",
+    "buildingPace": "Набираем темп",
+    "percentile": "перцентиль",
+    "tiers": {
+      "Bronze": "Бронза",
+      "Silver": "Серебро",
+      "Gold": "Золото",
+      "Platinum": "Платина",
+      "Diamond": "Алмаз"
+    }
+  },
+  "share": {
+    "title": "Поделиться результатом",
+    "copy": "Копировать текст",
+    "copied": "Скопировано!",
+    "share": "Поделиться",
+    "preview": "Предпросмотр"
+  },
+  "onboarding": {
+    "skip": "Пропустить",
+    "next": "Далее",
+    "start": "Начать анализ",
+    "step1": {
+      "title": "Данные не лгут",
+      "body": "Телеметрия — запись вашего круга: скорость, газ, тормоз в каждой точке. Никаких догадок. Только факты."
+    },
+    "step2": {
+      "title": "Дельта — ваш главный показатель",
+      "body": "График дельты показывает, опережаете или отстаёте от референса в каждой точке. Красный = теряете время. Зелёный = выигрываете."
+    },
+    "step3": {
+      "title": "Академия замыкает круг",
+      "body": "Когда анализ находит проблему — например, раннее торможение в повороте 3 — он ведёт прямо к уроку с решением."
+    },
+    "step4": {
+      "title": "С каждым кругом умнее",
+      "body": "Каждый загруженный круг строит ваш профиль. Со временем тренер замечает паттерны: «Вы всегда рано тормозите в повороте 3»."
+    }
+  },
+  "settings": {
+    "title": "Настройки",
+    "language": "Язык",
+    "languageDesc": "Выберите язык интерфейса",
+    "english": "English",
+    "russian": "Русский",
+    "saved": "Настройки сохранены"
+  },
+  "errors": {
+    "parseError": "Не удалось прочитать файл",
+    "noTimeColumn": "Колонка 'time' не найдена в CSV",
+    "noSpeedColumn": "Колонка 'speed' не найдена в CSV",
+    "tooFewRows": "Недостаточно данных — нужно минимум 10 строк",
+    "invalidJSON": "Невалидный JSON файл",
+    "unsupportedFormat": "Неподдерживаемый формат. Используйте CSV или JSON.",
+    "fileTooLarge": "Файл слишком большой (максимум 50 МБ)",
+    "generic": "Произошла неожиданная ошибка"
+  },
+  "desktop": {
+    "appName": "APEX Desktop",
+    "noFolder": "Не выбрана",
+    "folderLabel": "Папка телеметрии",
+    "changeFolder": "изменить",
+    "iRacingPath": "iRacing: Документы\\iRacing\\telemetry",
+    "accPath": "ACC: Документы\\Assetto Corsa Competizione\\MoTeC",
+    "apiUrl": "URL сервера APEX",
+    "apiToken": "API-токен",
+    "apiTokenHint": "Получите токен в настройках профиля на сайте",
+    "saveSettings": "Сохранить",
+    "saving": "Сохранение…",
+    "testConnection": "Проверить",
+    "uploadQueue": "Очередь загрузки",
+    "retryFailed": "повторить",
+    "noFiles": "Нет файлов в очереди",
+    "autoUpload": "Новые файлы появятся автоматически",
+    "status": {
+      "pending": "ожидание",
+      "uploading": "загрузка…",
+      "done": "готово",
+      "failed": "ошибка"
+    },
+    "log": "Лог",
+    "noEvents": "Нет событий",
+    "openDashboard": "Открыть в браузере",
+    "version": "APEX Desktop v0.1.0",
+    "monitoring": {
+      "on": "мониторинг вкл",
+      "off": "мониторинг выкл"
+    }
+  }
+}

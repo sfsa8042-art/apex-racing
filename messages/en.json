@@ -1,0 +1,518 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "telemetry": "Telemetry",
+    "academy": "Academy",
+    "tracks": "Tracks",
+    "cars": "Cars",
+    "sessions": "Sessions",
+    "community": "Community",
+    "profile": "Profile",
+    "soon": ""
+  },
+  "common": {
+    "yourLap": "Your Lap",
+    "reference": "Reference",
+    "gap": "Gap",
+    "sector": "Sector",
+    "upload": "Upload",
+    "analyze": "Analyse",
+    "continue": "Continue",
+    "start": "Start",
+    "review": "Review",
+    "learnFix": "Learn the fix →",
+    "back": "Back",
+    "close": "Close",
+    "loading": "Loading…",
+    "processing": "Processing…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "share": "Share",
+    "export": "Export",
+    "allTime": "All time",
+    "thisWeek": "This week",
+    "thisMonth": "This month",
+    "completed": "Completed",
+    "inProgress": "In progress",
+    "locked": "Locked",
+    "available": "Available",
+    "noData": "No data",
+    "error": "Error",
+    "success": "Done",
+    "simple": "Simple",
+    "detailed": "Detailed",
+    "language": "Language",
+    "settings": "Settings",
+    "viewAll": "View all",
+    "new": "New",
+    "latest": "Latest",
+    "best": "Best"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcomeBack": "Welcome back.",
+    "noLapYet": "Upload your first lap to start tracking progress.",
+    "sessionsTotal": "{n} sessions total · Keep the momentum going.",
+    "uploadLap": "Upload Lap",
+    "nextAction": "Next Step",
+    "recentSessions": "Recent Sessions",
+    "viewAll": "View all",
+    "weeklyChallenge": "Weekly Challenge",
+    "topIssues": "Latest Lap — Top Issues",
+    "quickActions": "Quick Actions",
+    "openTelemetry": "Open Telemetry",
+    "continueAcademy": "Continue Academy",
+    "noSessions": "No sessions yet",
+    "uploadFirst": "Upload your first lap",
+    "gainedSinceLastSession": "{s}s gained since last session",
+    "slowerThisSession": "{s}s slower this session — check the analysis",
+    "xpEarned": "+{xp} XP earned",
+    "viewFullProfile": "View full profile",
+    "nextStep": "Next step",
+    "stats": {
+      "bestLap": "Best Lap",
+      "totalLaps": "Sessions",
+      "latestScore": "Latest Score",
+      "progress": "Progress",
+      "outOf": "out of 100",
+      "uploadForScore": "Upload a lap"
+    },
+    "challenge": {
+      "target": "Target gap",
+      "yourGap": "Your gap",
+      "rank": "Rank",
+      "of": "of",
+      "endsOn": "Ends"
+    },
+    "pattern": {
+      "title": "Recurring pattern",
+      "improving": "↑ Improving:"
+    }
+  },
+  "telemetry": {
+    "title": "Telemetry Analysis",
+    "uploadLap": "Upload Lap",
+    "dropZoneTitle": "Drop your lap file here",
+    "dropZoneSubtitle": "CSV or JSON · any simulator",
+    "browseFiles": "Browse Files",
+    "loadSample": "Load sample data",
+    "parsing": "Reading data…",
+    "analyzing": "Analysing lap…",
+    "uploadAnother": "Upload another lap",
+    "noLap": "Upload a lap file to begin analysis",
+    "noLapSub": "Supported: CSV / JSON with columns: time, speed, throttle, brake, gear",
+    "csvFormat": "CSV format",
+    "yourLap": "Your Lap",
+    "reference": "Reference",
+    "gap": "Gap",
+    "score": "Score",
+    "potential": "Potential",
+    "simpleMode": "Simple mode",
+    "detailedMode": "Detailed mode",
+    "allChannels": "All Channels",
+    "trackMap": "Track Map",
+    "ghostComparison": "Ghost",
+    "segments": "Segments",
+    "insights": "Insights",
+    "coach": "Coach",
+    "deltaTime": "Delta Time",
+    "keyChart": "Key",
+    "gaining": "Gaining",
+    "losing": "Losing",
+    "yourLapLabel": "Your lap",
+    "referenceLabel": "Reference (dashed)",
+    "optimalLap": "Optimal Lap",
+    "channels": {
+      "speed": "Speed",
+      "throttle": "Throttle",
+      "brake": "Brake",
+      "delta": "Delta"
+    },
+    "stats": {
+      "maxSpeed": "Max speed",
+      "avgThrottle": "Avg throttle",
+      "maxBrake": "Max brake",
+      "brakeZones": "Brake zones"
+    },
+    "error": {
+      "title": "Parse error",
+      "retry": "Try again"
+    },
+    "processing": {
+      "reading": "Reading data…",
+      "analysing": "Analysing lap…",
+      "loading": "Loading…"
+    }
+  },
+  "feedback": {
+    "title": "Lap Analysis",
+    "totalLoss": "Total loss",
+    "critical": "critical",
+    "warnings": "warnings",
+    "noInsights": "Upload a lap to get analysis",
+    "timeCost": "Cost",
+    "relatedLesson": "Related lesson",
+    "mainIssue": "Main issue",
+    "categories": {
+      "brake": "Braking",
+      "throttle": "Throttle",
+      "speed": "Speed",
+      "consistency": "Consistency",
+      "general": "General"
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info",
+      "good": "Good"
+    },
+    "issues": {
+      "earlyBraking": "Early braking",
+      "lateBraking": "Late braking",
+      "lowApexSpeed": "Low apex speed",
+      "lateThrottle": "Late throttle",
+      "speedDeficit": "Speed deficit"
+    }
+  },
+  "segments": {
+    "title": "Segment Analysis",
+    "corners": "corners",
+    "straights": "straights",
+    "timeLost": "time lost",
+    "filters": {
+      "all": "All",
+      "corners": "Corners",
+      "straights": "Straights"
+    },
+    "apex": "apex",
+    "max": "max",
+    "issues": "issues",
+    "gaining": "gaining",
+    "losing": "losing"
+  },
+  "coach": {
+    "nextStep": "Next →",
+    "workingWell": "What's working",
+    "patternDetected": "Recurring pattern",
+    "improving": "↓ improving",
+    "sessionsAnalysed": "{n} sessions analysed",
+    "patternsFound": "{n} pattern found",
+    "patternsFoundPlural": "{n} patterns found"
+  },
+  "nextAction": {
+    "openLesson": "Open lesson",
+    "practiceNow": "Practice now",
+    "uploadLap": "Upload lap",
+    "setGoal": "Set goal",
+    "min": "min",
+    "gainIfFixed": "+{s}s"
+  },
+  "academy": {
+    "title": "Academy",
+    "subtitle": "Learning Centre",
+    "progressLabel": "{done} of {total} modules completed",
+    "selectModule": "Select a module to view its contents",
+    "continueLearning": "Continue learning",
+    "telemetryLink": "Your telemetry identified an issue with this skill",
+    "fromTelemetry": "→ from telemetry",
+    "liveData": "Live data",
+    "noLapLinked": "No lap data loaded",
+    "noLapLinkedSub": "Upload a lap on the Telemetry page to see personalised visuals.",
+    "uploadLapLink": "Upload a lap →",
+    "markComplete": "Mark as completed",
+    "backToModule": "← Back to module",
+    "tiers": {
+      "all": "All modules",
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "module": {
+      "lessons": "lessons",
+      "duration": "{n} min",
+      "completedOf": "{done}/{total}",
+      "graduationMetric": "Graduation metric",
+      "practicalTask": "Practical task",
+      "keyPoints": "Key points",
+      "prerequisite": "Complete prerequisite modules to unlock.",
+      "lessonTypes": {
+        "theory": "theory",
+        "exercise": "exercise",
+        "task": "task"
+      }
+    },
+    "lesson": {
+      "theory": "Theory",
+      "exercise": "Exercise",
+      "task": "Task",
+      "keyPoints": "Key points",
+      "practicalTask": "Practice",
+      "liveDataTitle": "Your data",
+      "animationTitle": "Track animation",
+      "channelDataTitle": "Channel data",
+      "maxBrake": "Max brake pressure",
+      "avgThrottle": "Avg throttle",
+      "brakeZones": "Braking zones",
+      "lapScore": "Lap score",
+      "issueDetected": "Issue detected in this area",
+      "perLap": "per lap"
+    },
+    "animation": {
+      "play": "Play",
+      "pause": "Pause",
+      "reset": "Reset",
+      "speed": "Speed",
+      "userLap": "Your lap",
+      "reference": "Reference",
+      "braking": "Braking",
+      "throttle": "Throttle",
+      "coasting": "Coasting"
+    }
+  },
+  "tracks": {
+    "title": "Tracks",
+    "subtitle": "Track Database",
+    "available": "{n} tracks · Reference laps for all combinations",
+    "noLap": "No laps yet",
+    "yourBest": "Your best",
+    "lapRecord": "Lap record",
+    "corners": "Corners",
+    "length": "Length",
+    "gapToRef": "{s} off reference",
+    "analyzeHere": "Analyse at {name}",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "expert": "Expert"
+    }
+  },
+  "cars": {
+    "title": "Cars",
+    "subtitle": "Car Database",
+    "available": "{n} GT3 cars · Setup guides",
+    "strengths": "Strengths",
+    "weaknesses": "Weaknesses",
+    "overview": "Overview",
+    "setup": "Setup",
+    "trackSetup": "Track Setup",
+    "selectTrack": "Track",
+    "stats": {
+      "power": "Power",
+      "weight": "Weight",
+      "topSpeed": "Top Speed",
+      "accel": "0–100 km/h"
+    },
+    "impact": {
+      "high": "High impact",
+      "medium": "Medium impact",
+      "low": "Low impact"
+    },
+    "categories": {
+      "suspension": "Suspension",
+      "aero": "Aerodynamics",
+      "differential": "Differential",
+      "brake": "Brakes",
+      "tyres": "Tyres"
+    },
+    "conditions": {
+      "dry": "Dry",
+      "wet": "Wet",
+      "intermediate": "Mixed"
+    },
+    "analyzeLaps": "Analyse laps in {name}"
+  },
+  "sessions": {
+    "title": "Sessions",
+    "subtitle": "Uploaded laps",
+    "noSessions": "No sessions yet",
+    "noSessionsSub": "Install APEX Desktop for automatic telemetry upload, or upload a file manually.",
+    "desktopHint": "No sessions from desktop",
+    "desktopHintSub": "Install APEX Desktop for automatic upload after every session.",
+    "download": "Download",
+    "filters": {
+      "all": "All",
+      "desktop": "Desktop",
+      "browser": "Browser",
+      "ready": "Ready"
+    },
+    "status": {
+      "pending": "queued",
+      "processing": "analysing…",
+      "ready": "ready",
+      "error": "error"
+    },
+    "stats": {
+      "total": "Total sessions",
+      "ready": "Ready to analyse",
+      "fromDesktop": "From desktop",
+      "avgScore": "Avg score"
+    },
+    "source": {
+      "desktop": "Desktop",
+      "browser": "Browser"
+    },
+    "autoRefresh": "Auto-refreshing",
+    "openAnalysis": "Analysis →",
+    "trackUnknown": "Track not identified"
+  },
+  "profile": {
+    "title": "Driver Profile",
+    "level": "Driver Level",
+    "totalXP": "Total XP",
+    "skills": "Skills",
+    "recentXP": "Recent XP",
+    "toNextLevel": "to {level}",
+    "maxLevel": "Elite — maximum level",
+    "inLevel": "XP in level",
+    "communityRank": "Community Ranking",
+    "fasterThan": "Faster than {pct}% of drivers",
+    "estimatedRank": "Est. rank #{rank} of {total}",
+    "estimated": "*Estimated · improves with more sessions",
+    "byTrack": "By track",
+    "consistency": "Consistency",
+    "dayStreak": "day streak",
+    "last14d": "last 14d",
+    "totalSessions": "sessions",
+    "driveToday": "Drive today to keep your {n}-day streak alive! 🔥",
+    "startStreak": "Upload a lap today to start your streak.",
+    "scoreOverTime": "Score over time",
+    "needMoreLaps": "Upload 2+ laps to see your trend",
+    "sessionTimeline": "Session Timeline",
+    "noSessions": "No sessions yet — upload your first lap",
+    "driverMemory": "Driver Memory",
+    "improvingAreas": "showing consistent improvement",
+    "shareResult": "Share result",
+    "skillLevels": {
+      "strong": "Strong",
+      "ok": "Good",
+      "weak": "Weak"
+    }
+  },
+  "goals": {
+    "title": "Goals",
+    "setFirst": "Set your first goal",
+    "newGoal": "New goal",
+    "active": "Active",
+    "achieved": "Achieved",
+    "abandoned": "Abandoned",
+    "done": "✓ Done",
+    "cancel": "Cancel",
+    "set": "Set goal",
+    "select": "Select a goal template"
+  },
+  "daily": {
+    "title": "Today's Focus",
+    "goal": "Daily Goal",
+    "challenge": "Challenge",
+    "markDone": "Mark as done",
+    "startNow": "Start now →",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    }
+  },
+  "streak": {
+    "active": "{n}d streak",
+    "monitoring": "monitoring on",
+    "monitoringOff": "monitoring off",
+    "notTested": "not tested",
+    "connected": "connected",
+    "noConnection": "no connection",
+    "checkConnection": "Check connection"
+  },
+  "ranking": {
+    "top5": "Top 5%",
+    "top20": "Top 20%",
+    "top40": "Top 40%",
+    "top60": "Top 60%",
+    "buildingPace": "Building pace",
+    "percentile": "percentile",
+    "tiers": {
+      "Bronze": "Bronze",
+      "Silver": "Silver",
+      "Gold": "Gold",
+      "Platinum": "Platinum",
+      "Diamond": "Diamond"
+    }
+  },
+  "share": {
+    "title": "Share your result",
+    "copy": "Copy text",
+    "copied": "Copied!",
+    "share": "Share",
+    "preview": "Preview"
+  },
+  "onboarding": {
+    "skip": "Skip intro",
+    "next": "Next",
+    "start": "Start analysing",
+    "step1": {
+      "title": "Your data tells the truth",
+      "body": "Telemetry is a recording of your lap — speed, throttle, brake, and steering at every point. No guesswork. Just what actually happened."
+    },
+    "step2": {
+      "title": "Delta time: your most important number",
+      "body": "The delta chart shows whether you're ahead or behind a reference lap at every point on track. Red = losing time. Green = gaining. The goal: push everything green."
+    },
+    "step3": {
+      "title": "The Academy closes the loop",
+      "body": "When the analysis finds a problem — say, braking too early in Turn 3 — it links directly to the lesson that explains how to fix it."
+    },
+    "step4": {
+      "title": "It gets smarter every lap",
+      "body": "Each lap you upload builds your personal profile. Over time the coach spots patterns: 'You always brake early at Turn 3.' That's when real improvement accelerates."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "languageDesc": "Select interface language",
+    "english": "English",
+    "russian": "Русский",
+    "saved": "Settings saved"
+  },
+  "errors": {
+    "parseError": "Could not read file",
+    "noTimeColumn": "Column 'time' not found in CSV",
+    "noSpeedColumn": "Column 'speed' not found in CSV",
+    "tooFewRows": "Not enough data — at least 10 rows required",
+    "invalidJSON": "Invalid JSON file",
+    "unsupportedFormat": "Unsupported format. Use CSV or JSON.",
+    "fileTooLarge": "File too large (max 50 MB)",
+    "generic": "An unexpected error occurred"
+  },
+  "desktop": {
+    "appName": "APEX Desktop",
+    "noFolder": "Not selected",
+    "folderLabel": "Telemetry folder",
+    "changeFolder": "change",
+    "iRacingPath": "iRacing: Documents\\iRacing\\telemetry",
+    "accPath": "ACC: Documents\\Assetto Corsa Competizione\\MoTeC",
+    "apiUrl": "APEX server URL",
+    "apiToken": "API Token",
+    "apiTokenHint": "Get your token in the profile settings on the website",
+    "saveSettings": "Save",
+    "saving": "Saving…",
+    "testConnection": "Test",
+    "uploadQueue": "Upload Queue",
+    "retryFailed": "retry failed",
+    "noFiles": "No files in queue",
+    "autoUpload": "New files appear automatically",
+    "status": {
+      "pending": "queued",
+      "uploading": "uploading…",
+      "done": "done",
+      "failed": "error"
+    },
+    "log": "Log",
+    "noEvents": "No events",
+    "openDashboard": "Open in browser",
+    "version": "APEX Desktop v0.1.0",
+    "monitoring": {
+      "on": "monitoring on",
+      "off": "monitoring off"
+    }
+  }
+}
