@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use tauri::Emitter;
 use std::sync::Arc;
 
 use anyhow::Result;
