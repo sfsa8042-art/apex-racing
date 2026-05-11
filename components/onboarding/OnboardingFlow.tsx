@@ -35,7 +35,7 @@ export function OnboardingFlow() {
   const finish = () => {
     localStorage.setItem(ONBOARDING_KEY, "1");
     setVisible(false);
-    setTimeout(() => setDismissed(true), 300);
+    setDismissed(true);
   };
 
   const handleCreateProfile = () => {
@@ -50,7 +50,7 @@ export function OnboardingFlow() {
     };
     saveProfile(profile);
     setStep(2);
-    setTimeout(finish, 1200);
+    setTimeout(finish, 900);
   };
 
   if (dismissed || !visible) return null;
