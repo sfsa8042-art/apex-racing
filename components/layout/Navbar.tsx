@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
 import { DownloadButtonNavbar } from "@/components/ui/DownloadButton";
-import { Bell, Settings, ChevronDown, Globe, Check } from "lucide-react";
-import { useState } from "react";
+import { Bell, ChevronDown, Globe, Check, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { loadProfile, getInitials, avatarColor } from "@/lib/profile/store";
 import { useTelemetry } from "@/context/TelemetryContext";
 import { useLang, type Lang } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,8 @@ export function Navbar() {
   const { uploadState }    = useTelemetry();
   const { lang, setLang, t } = useLang();
   const [showLang, setShowLang] = useState(false);
+  const [profile, setProfile] = useState<{ name: string } | null>(null);
+  useEffect(() => { setProfile(loadProfile()); }, []);
   const hasLap = uploadState.status === "done";
 
   return (
@@ -66,9 +69,16 @@ export function Navbar() {
 
         <Link href="/profile">
           <button className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 transition-colors ml-1">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center">
-              <span className="text-zinc-950 text-[10px] font-bold">MB</span>
-            </div>
+            {profile ? (
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                style={{ background: `${avatarColor(profile.name)}25`, color: avatarColor(profile.name) }}>
+                {getInitials(profile.name)}
+              </div>
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                <User size={11} className="text-zinc-500"/>
+              </div>
+            )}
             <ChevronDown size={12} className="text-zinc-500" />
           </button>
         </Link>

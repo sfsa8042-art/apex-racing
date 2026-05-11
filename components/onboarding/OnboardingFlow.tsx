@@ -23,13 +23,12 @@ export function OnboardingFlow() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const done    = localStorage.getItem(ONBOARDING_KEY);
     const profile = loadProfile();
-    // Show if never onboarded OR no profile yet
-    if (!done || !profile) {
+    // Only show if no profile yet — once created, never show again
+    if (!profile) {
       setDismissed(false);
       setVisible(true);
-      setStep(!done ? 0 : 1); // if done but no profile → skip to profile step
+      setStep(0);
     }
   }, []);
 
