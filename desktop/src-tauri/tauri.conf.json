@@ -21,10 +21,7 @@
         "fullscreen": false,
         "center": true
       }
-    ],
-    "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* https://*.netlify.app"
-    }
+    ]
   },
   "bundle": {
     "active": true,
