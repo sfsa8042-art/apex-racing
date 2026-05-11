@@ -84,24 +84,29 @@ export async function updateSession(
 }
 
 export async function listSessions(userId?: string): Promise<TelemetrySession[]> {
-  await ensureDirs();
-  const files = await readdir(sessionDir());
-  const sessions: TelemetrySession[] = [];
+  try {
+    await ensureDirs();
+    const files = await readdir(sessionDir());
+    const sessions: TelemetrySession[] = [];
 
-  for (const file of files) {
-    if (!file.endsWith(".json")) continue;
-    try {
-      const raw = await readFile(path.join(sessionDir(), file), "utf8");
-      const s   = JSON.parse(raw) as TelemetrySession;
-      if (!userId || s.userId === userId) sessions.push(s);
-    } catch {
-      // Corrupt file — skip
+    for (const file of files) {
+      if (!file.endsWith(".json")) continue;
+      try {
+        const raw = await readFile(path.join(sessionDir(), file), "utf8");
+        const s   = JSON.parse(raw) as TelemetrySession;
+        if (!userId || s.userId === userId) sessions.push(s);
+      } catch {
+        // Corrupt file — skip
+      }
     }
-  }
 
-  return sessions.sort((a, b) =>
-    new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
-  );
+    return sessions.sort((a, b) =>
+      new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+    );
+  } catch {
+    // Directory doesn't exist yet or filesystem unavailable — return empty
+    return [];
+  }
 }
 
 export async function storeFile(buffer: Buffer, filename: string): Promise<string> {
