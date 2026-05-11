@@ -41,29 +41,35 @@ export function smoothPoints(ctrl:Vec2[],resolution=16,closed=true):Vec2[] {
 }
 
 /**
- * Normalise preserving aspect ratio relative to viewport (900×540, MARGIN=44).
- * Each track fills as much of the viewport as possible while keeping its
- * real-world proportions — Monza stays a flat oval, Nürburgring stays square.
- * VP drawable area: 812×452 px → aspect 1.797:1
+ * Normalise with two modes:
+ *  fill=false (default): preserve aspect ratio relative to viewport — used for full-size view
+ *  fill=true: independent X/Y scaling — fills the full preview box, used for compact cards
  */
-export function normalisePoints(pts:Vec2[],margin=0.07):Vec2[] {
-  const VP_ASPECT=(900-88)/(540-88)  // 812/452 ≈ 1.797
+export function normalisePoints(pts:Vec2[],margin=0.07,fill=false):Vec2[] {
   const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y)
   const minX=Math.min(...xs),maxX=Math.max(...xs)
   const minY=Math.min(...ys),maxY=Math.max(...ys)
   const rX=maxX-minX||1, rY=maxY-minY||1
-  const trackAspect=rX/rY
   const avail=1-margin*2
-  const ratio=trackAspect/VP_ASPECT
+  if (fill) {
+    // Independent X/Y — fills the box, shows shape not proportion
+    return pts.map(p=>({
+      x:margin+(p.x-minX)/rX*avail,
+      y:margin+(p.y-minY)/rY*avail,
+    }))
+  }
+  // Aspect-preserving relative to SVG viewport (900×540)
+  const VP_ASPECT=(900-88)/(540-88)
+  const ratio=(rX/rY)/VP_ASPECT
   const sX=ratio>1?avail:avail*ratio
   const sY=ratio>1?avail/ratio:avail
   const cx=(minX+maxX)/2,cy=(minY+maxY)/2
   return pts.map(p=>({x:0.5+(p.x-cx)/rX*sX,y:0.5+(p.y-cy)/rY*sY}))
 }
 
-export function getSmoothedLine(id:string,resolution=16):Vec2[]|null {
+export function getSmoothedLine(id:string,resolution=16,fill=false):Vec2[]|null {
   const c=CIRCUITS[id]; if(!c) return null
-  return normalisePoints(smoothPoints(c.controlPoints,resolution,true))
+  return normalisePoints(smoothPoints(c.controlPoints,resolution,true),0.07,fill)
 }
 export function getCircuit(id:string):CircuitGeometry|null { return CIRCUITS[id]??null }
 export function getPointAtFrac(pts:Vec2[],frac:number):Vec2 {

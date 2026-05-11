@@ -98,7 +98,7 @@ export function TrackRenderer({
   const [animPulse, setAnimPulse] = useState(0);
 
   const circuit = useMemo(() => getCircuit(trackId), [trackId]);
-  const pts     = useMemo(() => getSmoothedLine(trackId, 20) ?? [], [trackId]);
+  const pts     = useMemo(() => getSmoothedLine(trackId, 20, compact) ?? [], [trackId]);
 
   // Pulse animation for worst-heat dot
   useEffect(() => {
