@@ -54,7 +54,7 @@ function UploadZone({ onFile, onSample }: { onFile: (f: File) => void; onSample:
           <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}>
             Choose file
           </Button>
-          <input ref={inputRef} type="file" accept=".csv,.json,.txt" className="hidden"
+          <input ref={inputRef} type="file" accept=".csv,.json,.txt,.ld" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
         </div>
         <button onClick={onSample}
@@ -268,7 +268,7 @@ export default function TelemetryPage() {
         )}
         {(status === "idle" || status === "error") && (
           <Button variant="primary" size="sm" onClick={() => {
-            const inp = document.createElement("input"); inp.type="file"; inp.accept=".csv,.json,.txt";
+            const inp = document.createElement("input"); inp.type="file"; inp.accept=".csv,.json,.txt,.ld";
             inp.onchange = (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) handleFile(f); };
             inp.click();
           }}><Upload size={13} />Upload Lap</Button>

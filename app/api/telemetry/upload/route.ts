@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ext = file.name.toLowerCase().split(".").pop();
-    if (!["csv", "json", "txt"].includes(ext ?? "")) {
+    if (!["csv", "json", "txt", "ld"].includes(ext ?? "")) {
       return NextResponse.json(
         { error: "Неподдерживаемый формат. Используйте CSV или JSON." },
         { status: 415 }
@@ -41,10 +41,11 @@ export async function POST(req: NextRequest) {
     const text    = await file.text();
     const preview = text.slice(0, 512).toLowerCase();
 
-    const isCSV  = preview.includes("time") && (preview.includes("speed") || preview.includes("spd"));
-    const isJSON = preview.trimStart().startsWith("[") || preview.trimStart().startsWith("{");
+    const isLD   = ext === "ld";
+    const isCSV  = !isLD && preview.includes("time") && (preview.includes("speed") || preview.includes("spd"));
+    const isJSON = !isLD && (preview.trimStart().startsWith("[") || preview.trimStart().startsWith("{"));
 
-    if (!isCSV && !isJSON) {
+    if (!isLD && !isCSV && !isJSON) {
       return NextResponse.json(
         { error: "Файл не содержит данные телеметрии. Нужны колонки: time, speed, throttle, brake." },
         { status: 422 }
