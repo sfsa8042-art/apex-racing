@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   User, Edit3, Save, X, Zap, Trophy, Activity,
   TrendingUp, TrendingDown, Minus, Calendar, CheckCircle,
-  AlertCircle,
+  AlertCircle, Eye, EyeOff, Key,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { loadProfile, saveProfile, clearProfile, getInitials, avatarColor } from "@/lib/profile/store";
@@ -39,6 +39,8 @@ function ProfileForm({ existing, onSave, onCancel }: {
   const [email,     setEmail]     = useState(existing?.email     ?? "");
   const [simulator, setSimulator] = useState(existing?.simulator ?? "iRacing");
   const [bio,       setBio]       = useState(existing?.bio       ?? "");
+  const [apiToken,  setApiToken]  = useState(existing?.apiToken  ?? "");
+  const [showToken, setShowToken] = useState(false);
   const [error,     setError]     = useState("");
   const [saved,     setSaved]     = useState(false);
 
@@ -49,6 +51,7 @@ function ProfileForm({ existing, onSave, onCancel }: {
       email: email.trim(),
       simulator,
       bio: bio.trim(),
+      apiToken: apiToken.trim(),
       createdAt: existing?.createdAt ?? new Date().toISOString(),
     };
     saveProfile(profile);
@@ -131,10 +134,36 @@ function ProfileForm({ existing, onSave, onCancel }: {
             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-500 transition-colors resize-none"/>
         </div>
 
+        {/* API Token */}
+        <div>
+          <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 block mb-1.5">
+            <span className="flex items-center gap-1.5"><Key size={11}/>API-токен для Desktop приложения</span>
+          </label>
+          <div className="flex gap-2">
+            <div className="flex-1 flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 focus-within:border-zinc-500 transition-colors">
+              <input
+                type={showToken ? "text" : "password"}
+                value={apiToken}
+                onChange={e => setApiToken(e.target.value)}
+                placeholder="Оставь пустым или придумай свой токен"
+                className="flex-1 py-2.5 bg-transparent text-sm text-zinc-200 placeholder-zinc-600 outline-none font-mono"
+              />
+              <button type="button" onClick={() => setShowToken(v => !v)}
+                className="text-zinc-600 hover:text-zinc-400 transition-colors shrink-0">
+                {showToken ? <EyeOff size={13}/> : <Eye size={13}/>}
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-zinc-600 mt-1.5 leading-relaxed">
+            Введи любой текст — этот же токен укажи в настройках десктопного приложения.
+            Например: <span className="font-mono text-zinc-500">my-secret-123</span>
+          </p>
+        </div>
+
         {/* Preview */}
         {name.trim() && (
           <div className="rounded-xl border border-zinc-800 bg-zinc-800/50 p-3 flex items-center gap-3">
-            <Avatar profile={{ name, email, simulator, bio, createdAt: "" }} size="md"/>
+            <Avatar profile={{ name, email, simulator, bio, apiToken: "", createdAt: "" }} size="md"/>
             <div>
               <p className="text-sm font-semibold text-zinc-200">{name}</p>
               <p className="text-xs text-zinc-500">{simulator}</p>

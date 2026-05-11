@@ -3,6 +3,7 @@ export interface UserProfile {
   email:     string;
   simulator: string;
   bio:       string;
+  apiToken:  string;
   createdAt: string;
 }
 

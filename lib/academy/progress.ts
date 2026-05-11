@@ -15,9 +15,9 @@ const STORAGE_KEY = "apex_academy_progress";
 
 function defaultProgress(): AcademyProgress {
   return {
-    completedLessons: { m1: ["m1l1", "m1l2", "m1l3", "m1l4"], m2: ["m2l1", "m2l2", "m2l3", "m2l4", "m2l5"] },
-    startedModules: ["m1", "m2", "m3"],
-    lastAccessedModuleId: "m3",
+    completedLessons: {},
+    startedModules: [],
+    lastAccessedModuleId: null,
     lastUpdated: new Date().toISOString(),
   };
 }
