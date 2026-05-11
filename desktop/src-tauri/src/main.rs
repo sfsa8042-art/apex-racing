@@ -21,7 +21,9 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             app.manage(AppState {
-                settings:     Arc::new(Mutex::new(AppSettings::default())),
+                settings:     Arc::new(Mutex::new(
+    AppSettings::load(app.handle()).unwrap_or_default()
+)),
                 watcher:      Arc::new(Mutex::new(None::<WatchHandle>)),
                 upload_queue: Arc::new(UploadQueue::new()),
             });
