@@ -1,5 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
 use tauri::AppHandle;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,12 +31,31 @@ impl Default for AppSettings {
     }
 }
 
+fn settings_path(app: &AppHandle) -> PathBuf {
+    let dir = app.path().app_data_dir()
+        .unwrap_or_else(|_| PathBuf::from("."));
+    dir.join("settings.json")
+}
+
 impl AppSettings {
-    pub fn load(_app: &AppHandle) -> Result<Self> {
-        Ok(Self::default())
+    pub fn load(app: &AppHandle) -> Result<Self> {
+        let path = settings_path(app);
+        if !path.exists() {
+            return Ok(Self::default());
+        }
+        let text = fs::read_to_string(&path)?;
+        let s = serde_json::from_str(&text)
+            .unwrap_or_else(|_| Self::default());
+        Ok(s)
     }
 
-    pub fn save(&self, _app: &AppHandle) -> Result<()> {
+    pub fn save(&self, app: &AppHandle) -> Result<()> {
+        let path = settings_path(app);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        let text = serde_json::to_string_pretty(self)?;
+        fs::write(&path, text)?;
         Ok(())
     }
 }
