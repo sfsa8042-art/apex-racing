@@ -20,10 +20,11 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
+            let settings = AppSettings::load(app.handle())
+                .unwrap_or_default();
+
             app.manage(AppState {
-                settings:     Arc::new(Mutex::new(
-    AppSettings::load(app.handle()).unwrap_or_default()
-)),
+                settings:     Arc::new(Mutex::new(settings)),
                 watcher:      Arc::new(Mutex::new(None::<WatchHandle>)),
                 upload_queue: Arc::new(UploadQueue::new()),
             });
