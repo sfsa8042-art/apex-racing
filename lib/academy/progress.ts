@@ -11,7 +11,7 @@ export interface AcademyProgress {
   lastUpdated: string;
 }
 
-const STORAGE_KEY = "apex_academy_progress";
+const STORAGE_KEY = "apex_academy_progress_v2"; // v2 = fresh start, no pre-filled lessons
 
 function defaultProgress(): AcademyProgress {
   return {

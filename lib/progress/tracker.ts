@@ -8,7 +8,7 @@
 import type { LapAnalysisResult } from "@/types/telemetry";
 import type { LapHistoryEntry, ProgressSummary, DrivingStyle } from "@/types/extended";
 
-const STORAGE_KEY = "apex_lap_history";
+const STORAGE_KEY = "apex_lap_history_v2"; // v2 = no pre-loaded mock data
 const MAX_ENTRIES = 50;
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
