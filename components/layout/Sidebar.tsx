@@ -1,8 +1,10 @@
 "use client";
 import { useLang } from "@/context/LanguageContext";
+import { loadProfile, getInitials, avatarColor } from "@/lib/profile/store";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, GraduationCap, Activity, MapPin, Car, Users, Trophy, ChevronRight, Layers, User, Radio, Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LayoutDashboard, GraduationCap, Activity, MapPin, Car, Users, ChevronRight, Layers, User, Radio, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ru } from "@/lib/i18n/ru";
 
@@ -11,6 +13,8 @@ import { ru } from "@/lib/i18n/ru";
 export function Sidebar() {
   const pathname = usePathname();
   const { t } = useLang();
+  const [profile, setProfile] = useState<{ name: string } | null>(null);
+  useEffect(() => { setProfile(loadProfile()); }, []);
   const NAV_ITEMS = [
     { href: "/dashboard",  label: t.nav.dashboard,  icon: LayoutDashboard },
     { href: "/telemetry",  label: t.nav.telemetry,  icon: Activity },
@@ -40,15 +44,29 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="px-3 mt-4">
-        <div className="rounded-lg border border-lime-400/20 bg-lime-400/5 p-3">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Trophy size={12} className="text-lime-400" />
-            <span className="text-[10px] font-mono uppercase tracking-widest text-lime-400">Upgrade</span>
+
+      {/* Profile mini card */}
+      <div className="px-3 pb-3 pt-2 border-t border-zinc-800">
+        <Link href="/profile" className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-zinc-800/60 transition-colors group">
+          {profile ? (
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
+              style={{ background: `${avatarColor(profile.name)}20`, color: avatarColor(profile.name) }}>
+              {getInitials(profile.name)}
+            </div>
+          ) : (
+            <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
+              <span className="text-zinc-600 text-xs">?</span>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-zinc-300 truncate group-hover:text-zinc-100 transition-colors">
+              {profile?.name ?? "Создать профиль"}
+            </p>
+            <p className="text-[10px] text-zinc-600 font-mono">
+              {profile ? "профиль" : "нажми чтобы создать"}
+            </p>
           </div>
-          <p className="text-xs text-zinc-400 leading-relaxed mb-2">Unlimited uploads, all academy modules, full analysis.</p>
-          <button className="w-full text-xs bg-lime-400 hover:bg-lime-300 text-zinc-950 font-semibold py-1.5 rounded-md transition-colors">Upgrade to Pro</button>
-        </div>
+        </Link>
       </div>
     </aside>
   );
