@@ -42,10 +42,5 @@
         "languages": ["English"]
       }
     }
-  },
-  "plugins": {
-    "store": {
-      "path": "apex-settings.bin"
-    }
   }
 }
