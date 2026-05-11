@@ -126,6 +126,73 @@ function InsightCard({ insight, selected, onSelect }: {
 type RightTab = "insights" | "segments" | "coach" | "engineer";
 type LeftTab  = "channels" | "heatmap" | "ghost";
 
+// ─── Banner: load latest desktop upload ───────────────────────────────────────
+function DesktopUploadBanner({ onFile }: { onFile: (f: File) => void }) {
+  const [session,  setSession]  = React.useState<{ id: string; filename: string; uploadedAt: string } | null>(null);
+  const [loading,  setLoading]  = React.useState(false);
+  const [fetching, setFetching] = React.useState(false);
+  const [dismissed, setDismissed] = React.useState(false);
+
+  // Check for recent desktop uploads every 10s
+  React.useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch("/api/sessions?all=1");
+        if (!res.ok) return;
+        const { sessions } = await res.json();
+        // Find the most recent desktop upload from the last 5 minutes
+        const recent = sessions
+          ?.filter((s: { source: string; uploadedAt: string }) => s.source === "desktop")
+          ?.sort((a: { uploadedAt: string }, b: { uploadedAt: string }) =>
+            new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+          )?.[0];
+        if (recent) {
+          const age = Date.now() - new Date(recent.uploadedAt).getTime();
+          if (age < 5 * 60 * 1000) setSession(recent); // within 5 min
+        }
+      } catch {}
+    };
+    check();
+    const t = setInterval(check, 10_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const handleLoad = async () => {
+    if (!session) return;
+    setFetching(true);
+    try {
+      const res = await fetch(`/api/sessions/${session.id}/file`);
+      if (!res.ok) throw new Error("Файл недоступен на сервере");
+      const blob = await res.blob();
+      const file = new File([blob], session.filename, { type: "text/plain" });
+      onFile(file);
+      setDismissed(true);
+    } catch (e) {
+      alert("Файл недоступен. Перетащи его вручную на страницу.");
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  if (!session || dismissed) return null;
+
+  return (
+    <div className="mx-4 mt-3 rounded-xl border border-lime-400/30 bg-lime-400/8 px-4 py-3 flex items-center gap-3 animate-slide-up">
+      <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse shrink-0"/>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-lime-400">Новый файл от десктопа</p>
+        <p className="text-[11px] text-zinc-400 font-mono truncate">{session.filename}</p>
+      </div>
+      <button onClick={handleLoad} disabled={fetching}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-400 hover:bg-lime-300 text-zinc-950 text-xs font-semibold transition-all shrink-0 disabled:opacity-60">
+        {fetching ? "Загрузка…" : "Анализировать"}
+      </button>
+      <button onClick={() => setDismissed(true)} className="text-zinc-600 hover:text-zinc-400 shrink-0 text-lg leading-none">×</button>
+    </div>
+  );
+}
+
+
 export default function TelemetryPage() {
   const { t } = useLang();
   const {
@@ -218,6 +285,7 @@ export default function TelemetryPage() {
               <Button variant="ghost" size="sm" className="ml-auto" onClick={reset}>Retry</Button>
             </div>
           )}
+<DesktopUploadBanner onFile={handleFile} />
           <UploadZone onFile={handleFile} onSample={loadSampleData} />
         </div>
       )}
