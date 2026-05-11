@@ -50,7 +50,7 @@ export function OnboardingFlow() {
     };
     saveProfile(profile);
     setStep(2);
-    setTimeout(finish, 900);
+    setTimeout(() => { finish(); window.location.reload(); }, 900);
   };
 
   if (dismissed || !visible) return null;
