@@ -18,13 +18,9 @@ use crate::watcher::WatchHandle;
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
-            let settings = AppSettings::load(app.handle())
-                .unwrap_or_default();
-
             app.manage(AppState {
-                settings:     Arc::new(Mutex::new(settings)),
+                settings:     Arc::new(Mutex::new(AppSettings::default())),
                 watcher:      Arc::new(Mutex::new(None::<WatchHandle>)),
                 upload_queue: Arc::new(UploadQueue::new()),
             });
