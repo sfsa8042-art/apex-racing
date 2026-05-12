@@ -9,6 +9,7 @@
  */
 
 import type { TelemetryRow, ParsedLap, ChannelStats, BrakingEvent, ThrottleEvent, CornerMinimum } from "@/types/telemetry";
+import { parseMoTeCLD } from "./parsers/motec";
 
 // ─── Column name aliases ──────────────────────────────────────────────────────
 
@@ -26,7 +27,10 @@ const ALIASES: Record<string, keyof TelemetryRow> = {
   // gear
   gear: "gear", g: "gear",
   // optional
-  steer_angle: "steerAngle", steer: "steerAngle", steering: "steerAngle",
+  steer_angle: "steerAngle", steer: "steerAngle", steering: "steerAngle", steerangle: "steerAngle",
+  rpm: "rpm", revs: "rpm", engine_rpm: "rpm", rpms: "rpm",
+  lateral_g: "lateralG", lateralg: "lateralG", lat_g: "lateralG",
+  longitudinal_g: "lonG", longitudinalg: "lonG", lon_g: "lonG",
   lap_dist: "lapDist", lap_distance: "lapDist", dist: "lapDist", distance: "lapDist",
   pos_x: "posX", x: "posX", posx: "posX",
   pos_y: "posY", y: "posY", posy: "posY",
@@ -328,18 +332,24 @@ function detectSampleRate(rows: TelemetryRow[]): number {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function parseFile(file: File): Promise<ParsedLap> {
-  const text = await file.text();
   const ext = file.name.toLowerCase().split(".").pop();
 
   let rows: TelemetryRow[];
-  if (ext === "json") {
-    rows = parseJSON(text);
-  } else if (ext === "csv" || ext === "txt") {
-    rows = parseCSV(text);
+
+  if (ext === "ld") {
+    // MoTeC binary format (ACC, rFactor 2)
+    const buffer = await file.arrayBuffer();
+    rows = parseMoTeCLD(buffer);
   } else {
-    // Try CSV first, then JSON
-    try { rows = parseCSV(text); }
-    catch { rows = parseJSON(text); }
+    const text = await file.text();
+    if (ext === "json") {
+      rows = parseJSON(text);
+    } else if (ext === "csv" || ext === "txt") {
+      rows = parseCSV(text);
+    } else {
+      try { rows = parseCSV(text); }
+      catch { rows = parseJSON(text); }
+    }
   }
 
   if (rows.length < 10) throw new Error("Слишком мало данных — минимум 10 строк");

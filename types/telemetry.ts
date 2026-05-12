@@ -7,6 +7,9 @@ export interface TelemetryRow {
   brake: number;      // 0–100 %
   gear: number;       // 1–8
   steerAngle?: number;
+  rpm?: number;
+  lateralG?: number;
+  lonG?: number;
   lapDist?: number;   // metres, synthesised if absent
   posX?: number;
   posY?: number;
