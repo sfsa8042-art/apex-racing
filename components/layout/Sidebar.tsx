@@ -18,14 +18,14 @@ export function Sidebar() {
   const NAV_ITEMS = [
     { href: "/dashboard",  label: t.nav.dashboard,  icon: LayoutDashboard },
     { href: "/telemetry",  label: t.nav.telemetry,  icon: Activity },
-    { href: "/engineer",   label: "AI Engineer",    icon: Radio,  badge: "AI" },
+    { href: "/engineer",   label: t.nav.engineer ?? "AI Engineer", icon: Radio,  badge: "AI" },
     { href: "/sessions",   label: t.nav.sessions,   icon: Layers },
     { href: "/academy",    label: t.nav.academy,    icon: GraduationCap },
     { href: "/profile",    label: t.nav.profile,    icon: User },
     { href: "/tracks",     label: t.nav.tracks,     icon: MapPin },
     { href: "/cars",       label: t.nav.cars,       icon: Car },
     { href: "/community",  label: t.nav.community,  icon: Users },
-    { href: "/download",   label: "Скачать Desktop", icon: Download },
+    { href: "/download",   label: t.nav.download ?? "Скачать Desktop", icon: Download },
   ];
   return (
     <aside className="w-56 shrink-0 h-full border-r border-zinc-800 bg-zinc-950 flex flex-col py-4">

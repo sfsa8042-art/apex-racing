@@ -194,7 +194,7 @@ export default function DownloadPage() {
 
         {/* Footer links */}
         <div className="flex items-center justify-center gap-6 text-xs text-zinc-600">
-          <a href={`https://github.com/${process.env.NEXT_PUBLIC_GITHUB_REPO ?? ""}/releases`}
+          <a href={`https://github.com/${process.env.NEXT_PUBLIC_GITHUB_REPO ?? "sfsa8042-art/apex-racing"}/releases`}
             target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1.5 hover:text-zinc-400 transition-colors font-mono">
             <Github size={12}/> GitHub Releases

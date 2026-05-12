@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO ?? "";
+const GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO ?? "sfsa8042-art/apex-racing";
 const RELEASES_API = `https://api.github.com/repos/${GITHUB_REPO}/releases`;
 
 interface Asset {
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const format = searchParams.get("format") ?? "exe"; // exe | msi | info
 
   // ── No repo configured → instructions page ──────────────────────────────
-  if (!GITHUB_REPO || GITHUB_REPO === "your-username/apex-racing") {
+  if (!GITHUB_REPO) {
     if (format === "info") {
       return NextResponse.json({
         error: "NEXT_PUBLIC_GITHUB_REPO not configured",
