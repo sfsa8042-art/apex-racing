@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Layers, Settings2, RefreshCcw, ExternalLink, Radio } from "lucide-react";
+import { Layers, Settings2, ExternalLink, Radio, Disc } from "lucide-react";
 import { UploadQueue }   from "./components/UploadQueue";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { useAppState }   from "./hooks/useAppState";
@@ -69,6 +69,18 @@ export default function App() {
           <div className={`relative w-1.5 h-1.5 rounded-full ${dot} ${ring ? "ring-pulse" : ""}`}/>
           {label}
         </div>
+
+        {/* ACC indicator */}
+        {state.accRunning && (
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg shrink-0"
+            style={{ background: state.accRecording ? "rgba(163,230,53,0.12)" : "rgba(255,255,255,0.05)",
+                     border: `1px solid ${state.accRecording ? "rgba(163,230,53,0.3)" : "rgba(255,255,255,0.08)"}` }}>
+            <div className={`w-1.5 h-1.5 rounded-full ${state.accRecording ? "bg-lime-400 animate-pulse" : "bg-zinc-500"}`}/>
+            <span className="text-[10px] font-mono" style={{ color: state.accRecording ? "var(--lime)" : "var(--text-3)" }}>
+              {state.accRecording ? `ACC ● Круг ${state.accLap + 1}` : "ACC ○"}
+            </span>
+          </div>
+        )}
 
         {/* Open dashboard */}
         <button onClick={actions.openDashboard}
