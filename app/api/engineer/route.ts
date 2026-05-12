@@ -9,8 +9,8 @@ import type { PersonalityId } from "@/lib/engineer/personalities";
 //   • Без карты
 // Получить ключ: aistudio.google.com → Get API Key (1 минута)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? "";
-const GEMINI_URL     =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const GEMINI_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 export interface ChatMessage {
   role:    "user" | "assistant";
