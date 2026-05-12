@@ -41,3 +41,11 @@ export interface UploadCompleteEvent {
   sessionId:   string | null;
   lapTimeMs:   number | null;
 }
+
+export interface AccStatusEvent {
+  running:   boolean;
+  recording: boolean;
+  lap:       number;
+  car:       string;
+  track:     string;
+}

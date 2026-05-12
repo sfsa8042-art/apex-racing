@@ -49,6 +49,9 @@ tracing            = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dirs               = "5"
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_System_Memory", "Win32_Foundation"] }
+
 [features]
 # Tauri requires custom-protocol in release builds
 custom-protocol = ["tauri/custom-protocol"]
