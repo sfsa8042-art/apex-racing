@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  FolderOpen, Eye, EyeOff, Wifi, Play, Square,
+  FolderOpen, Eye, EyeOff, Wifi, Play, Square, Activity,
   CheckCircle2, XCircle, ChevronRight, Loader2, Save,
 } from "lucide-react";
 import type { AppSettings } from "../types";
@@ -183,6 +183,32 @@ export function SettingsPanel({
             Профиль → Настройки на сайте APEX
           </p>
         </div>
+
+        {/* ── ACC Diagnostic ─────────────────────────────────────────────────── */}
+        <section>
+          <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-600 block mb-2">
+            Диагностика ACC
+          </label>
+          <button
+            onClick={async () => {
+              setChecking(true);
+              try { setAccCheck(await checkAcc()); }
+              catch (e) { setAccCheck(String(e)); }
+              finally { setChecking(false); }
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs text-zinc-400 transition-colors">
+            <Activity size={11}/>
+            {checking ? "Проверка…" : "Проверить ACC"}
+          </button>
+          {accCheck && (
+            <pre className="mt-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-[10px] font-mono text-zinc-400 whitespace-pre-wrap leading-relaxed">
+              {accCheck}
+            </pre>
+          )}
+          <p className="text-[10px] text-zinc-700 font-mono mt-1">
+            Запусти ACC → зайди на трассу → нажми проверить
+          </p>
+        </section>
 
         {/* ── Save ──────────────────────────────────────────────────────────── */}
         <button onClick={handleSave} disabled={saving}
