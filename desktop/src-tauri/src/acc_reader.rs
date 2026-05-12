@@ -121,3 +121,184 @@ mod win {
             String::from_utf16_lossy(&v).to_string()
         }
     }
+
+    impl Drop for Shm {
+        fn drop(&mut self) {
+            unsafe {
+                UnmapViewOfFile(MEMORY_MAPPED_VIEW_ADDRESS { Value: self.view as *mut _ });
+                CloseHandle(self.handle);
+            }
+        }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+mod win {
+    pub struct Shm;
+    impl Shm {
+        pub fn open(_: &str, _: usize) -> Option<Self> { None }
+        pub fn i32_at(&self, _: usize) -> i32 { 0 }
+        pub fn f32_at(&self, _: usize) -> f32 { 0.0 }
+        pub fn utf16_at(&self, _: usize, _: usize) -> String { String::new() }
+    }
+}
+
+// ── Public entry point ────────────────────────────────────────────────────────
+pub struct AccHandle;
+
+pub fn start_acc_reader(queue: Arc<UploadQueue>, app: AppHandle) -> AccHandle {
+    tokio::spawn(reader_loop(queue, app));
+    AccHandle
+}
+
+// ── Main loop (runs in background Tokio task) ─────────────────────────────────
+async fn reader_loop(queue: Arc<UploadQueue>, app: AppHandle) {
+    info!("ACC reader started — polling shared memory");
+
+    let mut prev_laps: i32       = -1;
+    let mut recording            = false;
+    let mut rows: Vec<TRow>      = Vec::new();
+    let mut elapsed:  f32        = 0.0;
+    let mut last_lap_ms: i32     = 0;
+    let mut car   = String::new();
+    let mut track = String::new();
+
+    loop {
+        tokio::time::sleep(Duration::from_millis(40)).await; // 25 Hz
+
+        // ── Connect to ACC ────────────────────────────────────────────────────
+        let Some(phy) = win::Shm::open(PHYSICS_MAP, PHY_SIZE) else {
+            if recording {
+                recording = false;
+                emit_status(&app, false, false, prev_laps, &car, &track);
+            }
+            // Not running — wait longer before retrying
+            tokio::time::sleep(Duration::from_secs(3)).await;
+            continue;
+        };
+        let Some(gfx) = win::Shm::open(GRAPHICS_MAP, GFX_SIZE) else {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            continue;
+        };
+
+        let status    = gfx.i32_at(GFX_STATUS);
+        let laps_done = gfx.i32_at(GFX_LAPS);
+        let last_t_ms = gfx.i32_at(GFX_LAST_MS);
+
+        // ── Read car/track name once ──────────────────────────────────────────
+        if car.is_empty() {
+            if let Some(sta) = win::Shm::open(STATIC_MAP, STA_SIZE) {
+                car   = sta.utf16_at(STA_CAR,   33);
+                track = sta.utf16_at(STA_TRACK, 33);
+                info!("ACC connected: {} @ {}", car, track);
+            }
+        }
+
+        // ── Not in a live session ─────────────────────────────────────────────
+        if status != STATUS_LIVE {
+            if recording && rows.len() > 50 {
+                flush(&rows, &car, &track, last_lap_ms, &queue, &app).await;
+            }
+            rows.clear();
+            recording = false;
+            prev_laps = laps_done;
+            elapsed   = 0.0;
+            continue;
+        }
+
+        // ── Lap completed ─────────────────────────────────────────────────────
+        if laps_done > prev_laps && prev_laps >= 0 {
+            info!("ACC lap {} done — {}ms — {} samples", laps_done, last_t_ms, rows.len());
+            if rows.len() > 50 {
+                flush(&rows, &car, &track, last_t_ms, &queue, &app).await;
+            }
+            rows.clear();
+            elapsed     = 0.0;
+            last_lap_ms = last_t_ms;
+        }
+
+        prev_laps = laps_done;
+        recording = true;
+        elapsed  += 0.04;
+
+        // ── Sample physics ────────────────────────────────────────────────────
+        rows.push(TRow {
+            t:    elapsed,
+            spd:  phy.f32_at(PHY_SPEED),
+            thr:  phy.f32_at(PHY_GAS)   * 100.0,
+            brk:  phy.f32_at(PHY_BRAKE) * 100.0,
+            gear: phy.i32_at(PHY_GEAR),
+            rpm:  phy.i32_at(PHY_RPMS),
+            str_: phy.f32_at(PHY_STEER).to_degrees(),
+            latg: phy.f32_at(PHY_LAT_G),
+            long: phy.f32_at(PHY_LON_G),
+        });
+
+        // Emit UI status every ~2 s
+        if rows.len() % 50 == 0 {
+            emit_status(&app, true, true, laps_done, &car, &track);
+        }
+    }
+}
+
+// ── Write CSV and enqueue upload ──────────────────────────────────────────────
+async fn flush(
+    rows:   &[TRow],
+    car:    &str,
+    track:  &str,
+    lap_ms: i32,
+    queue:  &Arc<UploadQueue>,
+    app:    &AppHandle,
+) {
+    let s       = lap_ms as f32 / 1000.0;
+    let lap_tag = format!("{:02}m{:06.3}s", (s / 60.0) as u32, s % 60.0);
+
+    let mut csv = String::from(
+        "time,speed,throttle,brake,gear,rpm,steerAngle,lateralG,longitudinalG\n"
+    );
+    for r in rows {
+        csv.push_str(&format!(
+            "{:.3},{:.1},{:.1},{:.1},{},{},{:.2},{:.4},{:.4}\n",
+            r.t, r.spd, r.thr, r.brk, r.gear, r.rpm, r.str_, r.latg, r.long,
+        ));
+    }
+
+    let ts   = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+    let c    = sanitize(car);
+    let tr   = sanitize(track);
+    let name = format!("acc_{tr}_{c}_{ts}_{lap_tag}.csv");
+    let path = std::env::temp_dir().join(&name);
+
+    if let Err(e) = std::fs::write(&path, csv.as_bytes()) {
+        warn!("ACC: failed to write CSV: {e}");
+        return;
+    }
+    info!("ACC: saved {} ({} rows, {})", name, rows.len(), lap_tag);
+
+    queue.enqueue(UploadTask {
+        id:        uuid::Uuid::new_v4().to_string(),
+        path,
+        filename:  name,
+        size:      csv.len() as u64,
+        attempts:  0,
+        status:    UploadStatus::Pending,
+        error:     None,
+        queued_at: chrono::Utc::now(),
+    }).await;
+
+    let _ = app.emit("upload-complete", ());
+}
+
+fn emit_status(app: &AppHandle, running: bool, recording: bool, lap: i32, car: &str, track: &str) {
+    let _ = app.emit("acc-status", AccStatusEvent {
+        running, recording, lap,
+        car: car.to_string(), track: track.to_string(),
+    });
+}
+
+fn sanitize(s: &str) -> String {
+    s.chars()
+     .map(|c| if c.is_alphanumeric() { c } else { '_' })
+     .collect::<String>()
+     .to_lowercase()
+}
