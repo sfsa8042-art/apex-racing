@@ -17,10 +17,13 @@ use crate::uploader::{UploadQueue, UploadTask};
 const ACCEPTED_EXTS: &[&str] = &["csv", "json", "ibt", "ld", "ldx", "motec"];
 
 /// Minimum file size to consider (skip empty/partial writes)
-const MIN_FILE_SIZE_BYTES: u64 = 512;
+const MIN_FILE_SIZE_BYTES: u64 = 1_024;
 
 /// Debounce: ignore subsequent events for the same file within this window
-const DEBOUNCE_MS: u128 = 2_000;
+const DEBOUNCE_MS: u128 = 4_000;
+
+/// How long to wait after detecting a file before uploading (lets sim finish writing)
+const WRITE_SETTLE_MS: u64 = 3_000;
 
 // ─── Event emitted to the frontend ───────────────────────────────────────────
 
@@ -118,24 +121,46 @@ pub async fn start_watching(
                     db.insert(path.clone(), now);
                 }
 
-                // Wait briefly to let the sim finish writing the file
-                tokio::time::sleep(Duration::from_millis(800)).await;
+                // ── ACC: .ldx = session ended, upload .ld ─────────────────
+                let upload_path = if ext.as_deref() == Some("ldx") {
+                    let ld = path.with_extension("ld");
+                    if ld.exists() {
+                        info!("ACC .ldx detected — uploading .ld: {:?}", ld);
+                        ld
+                    } else {
+                        continue; // no companion .ld
+                    }
+                } else if ext.as_deref() == Some("ld") {
+                    // Skip .ld if .ldx not yet created (session still running)
+                    if !path.with_extension("ldx").exists() {
+                        debug!("Skipping .ld (no .ldx yet, session running): {:?}", path);
+                        continue;
+                    }
+                    path.clone()
+                } else {
+                    path.clone()
+                };
 
-                // Check file is complete (readable, minimum size)
-                let size = match std::fs::metadata(&path) {
+                // Wait for sim to finish writing
+                tokio::time::sleep(Duration::from_millis(WRITE_SETTLE_MS)).await;
+
+                // Check file size
+                let size = match std::fs::metadata(&upload_path) {
                     Ok(m) => m.len(),
-                    Err(e) => { warn!("Cannot stat {:?}: {e}", path); continue; }
+                    Err(e) => { warn!("Cannot stat {:?}: {e}", upload_path); continue; }
                 };
 
                 if size < MIN_FILE_SIZE_BYTES {
-                    debug!("Skipping tiny file {:?} ({} bytes)", path, size);
+                    debug!("Skipping tiny file {:?} ({} bytes)", upload_path, size);
                     continue;
                 }
 
-                let filename = path.file_name()
+                let filename = upload_path.file_name()
                     .and_then(|n| n.to_str())
-                    .unwrap_or("unknown.csv")
+                    .unwrap_or("unknown.ld")
                     .to_string();
+                
+                let path = upload_path;
 
                 info!("New telemetry file detected: {} ({} bytes)", filename, size);
                 files_seen += 1;
