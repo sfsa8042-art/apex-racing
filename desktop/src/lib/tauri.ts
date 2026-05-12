@@ -13,3 +13,4 @@ export const retryFailedUploads  = ()             : Promise<void>               
 export const openWebDashboard    = ()             : Promise<void>                => invoke("open_web_dashboard");
 export const testConnection      = ()             : Promise<boolean>             => invoke("test_connection");
 export const getAppVersion       = ()             : Promise<string>              => invoke("get_app_version");
+export const checkAcc = (): Promise<string> => invoke('check_acc');

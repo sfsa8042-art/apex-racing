@@ -83,6 +83,7 @@ fn main() {
             commands::open_web_dashboard,
             commands::test_connection,
             commands::get_app_version,
+            commands::check_acc,
         ])
         .run(tauri::generate_context!())
         .expect("Error running APEX Desktop");

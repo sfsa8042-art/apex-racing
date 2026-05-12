@@ -4,6 +4,7 @@ import {
   CheckCircle2, XCircle, ChevronRight, Loader2, Save,
 } from "lucide-react";
 import type { AppSettings } from "../types";
+import { checkAcc } from "../lib/tauri";
 
 interface Props {
   settings:        AppSettings;
@@ -42,6 +43,8 @@ export function SettingsPanel({
   const [showToken, setShowToken] = useState(false);
   const [saving,    setSaving]    = useState(false);
   const [toggling,  setToggling]  = useState(false);
+  const [accCheck,  setAccCheck]  = useState('');
+  const [checking,  setChecking]  = useState(false);
   const [saved,     setSaved]     = useState(false);
 
   const handleSave = async () => {
