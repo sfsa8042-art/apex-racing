@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ArrowRight, X, Activity, BarChart2, BookOpen, User, Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/context/LanguageContext";
-import { saveProfile, loadProfile, getInitials, avatarColor } from "@/lib/profile/store";
+import { saveProfile, loadProfile, getInitials, avatarColor, generateToken } from "@/lib/profile/store";
 import type { UserProfile } from "@/lib/profile/store";
 
 const ONBOARDING_KEY = "apex_onboarded_v3";
@@ -45,7 +45,7 @@ export function OnboardingFlow() {
       email: email.trim(),
       simulator,
       bio: "",
-      apiToken: "",
+      apiToken: generateToken(),
       createdAt: new Date().toISOString(),
     };
     saveProfile(profile);

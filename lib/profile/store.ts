@@ -9,6 +9,14 @@ export interface UserProfile {
 
 const KEY = "apex_user_profile";
 
+export function generateToken(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const rand = Array.from({ length: 24 }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join("");
+  return `apex_${rand}`;
+}
+
 export function loadProfile(): UserProfile | null {
   if (typeof window === "undefined") return null;
   try {

@@ -3,10 +3,10 @@ import { useState, useEffect } from "react";
 import {
   User, Edit3, Save, X, Zap, Trophy, Activity,
   TrendingUp, TrendingDown, Minus, Calendar, CheckCircle,
-  AlertCircle, Eye, EyeOff, Key,
+  AlertCircle, Eye, EyeOff, Key, Copy, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { loadProfile, saveProfile, clearProfile, getInitials, avatarColor } from "@/lib/profile/store";
+import { loadProfile, saveProfile, clearProfile, getInitials, avatarColor, generateToken } from "@/lib/profile/store";
 import type { UserProfile } from "@/lib/profile/store";
 import { computeLevelProgress } from "@/lib/ranking/system";
 import { computeStreak }        from "@/lib/progress/streak";
@@ -29,6 +29,57 @@ function Avatar({ profile, size = "lg" }: { profile: UserProfile; size?: "sm"|"m
   );
 }
 
+// ─── Token display card ────────────────────────────────────────────────────────
+function TokenCard({ token, onRefresh }: { token: string; onRefresh: (t: string) => void }) {
+  const [copied, setCopied] = useState(false);
+  const [show,   setShow]   = useState(false);
+
+  const copy = () => {
+    navigator.clipboard.writeText(token).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const refresh = () => {
+    const t = generateToken();
+    onRefresh(t);
+  };
+
+  if (!token) return null;
+
+  return (
+    <div className="mt-4 rounded-xl border border-lime-400/20 bg-lime-400/5 p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Key size={12} className="text-lime-400" />
+        <span className="text-xs font-mono text-lime-400 uppercase tracking-widest">API Токен для Desktop</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 font-mono text-xs text-zinc-300 truncate">
+          {show ? token : "•".repeat(Math.min(token.length, 28))}
+        </div>
+        <button onClick={() => setShow(v => !v)}
+          className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors">
+          <Eye size={14}/>
+        </button>
+        <button onClick={copy}
+          className={cn("flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all",
+            copied ? "bg-lime-400/20 text-lime-400" : "bg-lime-400 text-zinc-950 hover:bg-lime-300")}>
+          <Copy size={12}/>{copied ? "Скопировано!" : "Скопировать"}
+        </button>
+      </div>
+      <p className="text-[11px] text-zinc-600 mt-2 leading-relaxed">
+        Скопируй и вставь в APEX Desktop → Настройки → API-токен&nbsp;(Ctrl+V)
+      </p>
+      <button onClick={refresh}
+        className="flex items-center gap-1 mt-2 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors font-mono">
+        <RefreshCw size={10}/> Сгенерировать новый токен
+      </button>
+    </div>
+  );
+}
+
+
 // ─── Profile create / edit form ────────────────────────────────────────────────
 function ProfileForm({ existing, onSave, onCancel }: {
   existing: UserProfile | null;
@@ -39,7 +90,7 @@ function ProfileForm({ existing, onSave, onCancel }: {
   const [email,     setEmail]     = useState(existing?.email     ?? "");
   const [simulator, setSimulator] = useState(existing?.simulator ?? "iRacing");
   const [bio,       setBio]       = useState(existing?.bio       ?? "");
-  const [apiToken,  setApiToken]  = useState(existing?.apiToken  ?? "");
+  const [apiToken,  setApiToken]  = useState(existing?.apiToken  || generateToken());
   const [showToken, setShowToken] = useState(false);
   const [error,     setError]     = useState("");
   const [saved,     setSaved]     = useState(false);
