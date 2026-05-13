@@ -34,21 +34,12 @@ pub async fn set_api_token(token: String, state: State<'_, AppState>, app: AppHa
         s.save(&app).map_err(|e| e.to_string())?;
     }
     *state.api_token_arc.lock().await = token_opt;
-    if let Some(win) = app.get_webview_window("main") {
-        let _ = win.set_focus();
-    }
     Ok(())
 }
  
 #[command]
 pub async fn select_watch_folder(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>, String> {
     let selected = app.dialog().file().blocking_pick_folder();
- 
-    // Restore focus after native dialog closes (no unminimize — that causes visual glitch)
-    if let Some(win) = app.get_webview_window("main") {
-        let _ = win.set_focus();
-    }
- 
     if let Some(path) = selected {
         let path_str = path.to_string();
         let mut s = state.settings.lock().await;
