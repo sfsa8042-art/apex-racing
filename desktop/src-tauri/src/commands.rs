@@ -126,7 +126,7 @@ pub async fn retry_failed_uploads(state: State<'_, AppState>) -> Result<(), Stri
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
 #[command]
-pub async fn open_web_dashboard(state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
+pub async fn open_web_dashboard(state: State<'_, AppState>, _app: AppHandle) -> Result<(), String> {
     let url = {
         let s = state.settings.lock().await;
         format!("{}/dashboard", s.api_url.trim_end_matches('/'))
