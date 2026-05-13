@@ -1,4 +1,4 @@
-use tauri::{command, AppHandle, State};
+use tauri::{command, AppHandle, State, Manager};
 use tauri_plugin_dialog::DialogExt;
 use tracing::info;
 
@@ -39,12 +39,14 @@ pub async fn set_api_token(token: String, state: State<'_, AppState>, app: AppHa
 
 #[command]
 pub async fn select_watch_folder(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>, String> {
-    let selected = app.dialog().file().blocking_pick_folder();
+    let app2 = app.clone();
+    let selected = tauri::async_runtime::spawn_blocking(move || {
+        app2.dialog().file().blocking_pick_folder()
+    }).await.map_err(|e| e.to_string())?;
     if let Some(path) = selected {
         let path_str = path.to_string();
         let mut s = state.settings.lock().await;
         s.watch_folder = Some(path_str.clone());
-        s.save(&app).map_err(|e| e.to_string())?;
         info!("Watch folder set: {}", path_str);
         Ok(Some(path_str))
     } else {
