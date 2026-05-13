@@ -8,7 +8,6 @@ use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, Notify};
-use tokio::time::sleep;
 use tokio::time::{sleep, Duration};
 use tracing::{error, info, warn};
 
