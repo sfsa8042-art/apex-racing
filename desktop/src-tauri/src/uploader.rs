@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+
 use tauri::Emitter;
 use std::sync::Arc;
 
@@ -92,10 +93,15 @@ pub fn spawn_upload_worker(
     app:       tauri::AppHandle,
 ) {
     tokio::spawn(async move {
-        let client = Client::builder()
+        let client = match Client::builder()
             .timeout(Duration::from_secs(UPLOAD_TIMEOUT))
-            .build()
-            .expect("Failed to build HTTP client");
+            .build() {
+            Ok(c)  => c,
+            Err(e) => {
+                tracing::error!("Failed to build HTTP client: {e}");
+                Client::new() // fallback to default client
+            }
+        };
 
         loop {
             // Wait for work
