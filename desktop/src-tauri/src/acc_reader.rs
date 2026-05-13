@@ -204,7 +204,7 @@ async fn main_loop(queue: Arc<UploadQueue>, app: AppHandle) {
             if recording {
                 // Save partial data if session ended abruptly
                 if samples.len() > 50 {
-                    flush(&samples, &car, &track, prev_lap_ms, &queue, &app).await;
+                    flush_with_offset(&samples, 0.0, &car, &track, prev_lap_ms, &queue, &app).await;
                 }
                 samples.clear();
                 recording = false;
@@ -224,7 +224,7 @@ async fn main_loop(queue: Arc<UploadQueue>, app: AppHandle) {
         if laps_done > prev_laps && prev_laps >= 0 {
             info!("ACC lap {} done | {}ms | {} samples", laps_done, last_ms, samples.len());
             if samples.len() > 50 {
-                flush(&samples, &car, &track, last_ms, &queue, &app).await;
+                flush_with_offset(&samples, 0.0, &car, &track, last_ms, &queue, &app).await;
             }
             samples.clear();
             elapsed     = 0.0;
