@@ -156,26 +156,58 @@ pub fn get_app_version() -> String {
 pub fn check_acc() -> String {
     #[cfg(target_os = "windows")]
     {
-        use std::ffi::c_void;
-        let names = ["Local\\acpmf_physics", "Local\\acpmf_graphics", "acpmf_physics", "acpmf_graphics"];
-        let mut results = Vec::new();
-        for name in &names {
-            let wide: Vec<u16> = name.encode_utf16().chain([0u16]).collect();
-            let handle = unsafe {
-                windows_sys::Win32::System::Memory::OpenFileMappingW(
-                    0x0004, // FILE_MAP_READ
-                    0,
-                    wide.as_ptr(),
-                )
-            };
-            if !handle.is_null() {
-                unsafe { windows_sys::Win32::Foundation::CloseHandle(handle); }
-                results.push(format!("✓ FOUND: {}", name));
+        use std::ptr;
+        use windows_sys::Win32::System::Memory::{
+            OpenFileMappingW, MapViewOfFile, UnmapViewOfFile,
+            FILE_MAP_READ, MEMORY_MAPPED_VIEW_ADDRESS,
+        };
+        use windows_sys::Win32::Foundation::CloseHandle;
+
+        let mut lines = Vec::new();
+
+        // Try to open and read graphics memory for session status
+        let gfx_name = "Local\acpmf_graphics";
+        let wide: Vec<u16> = gfx_name.encode_utf16().chain([0u16]).collect();
+        let handle = unsafe { OpenFileMappingW(FILE_MAP_READ, 0, wide.as_ptr()) };
+        if handle.is_null() {
+            lines.push("✗ ACC не запущен или версия не поддерживается".to_string());
+        } else {
+            let mapped = unsafe { MapViewOfFile(handle, FILE_MAP_READ, 0, 0, 1600) };
+            if !mapped.Value.is_null() {
+                let view = mapped.Value as *const u8;
+                let mut buf = [0u8; 4];
+                unsafe { ptr::copy_nonoverlapping(view.add(4), buf.as_mut_ptr(), 4); }
+                let status = i32::from_le_bytes(buf);
+                unsafe { ptr::copy_nonoverlapping(view.add(132), buf.as_mut_ptr(), 4); }
+                let laps = i32::from_le_bytes(buf);
+
+                lines.push(format!("✓ ACC найден"));
+                let status_name = match status {
+                    0 => "ВЫКЛ / главное меню",
+                    1 => "ПОВТОР",
+                    2 => "✓ LIVE — запись идёт!",
+                    3 => "ПАУЗА",
+                    _ => "неизвестно",
+                };
+                lines.push(format!("Статус сессии: {} ({})", status, status_name));
+                lines.push(format!("Кругов завершено: {}", laps));
+
+                if status != 2 {
+                    lines.push("".to_string());
+                    lines.push("→ Зайди на трассу в ACC".to_string());
+                    lines.push("→ Начни ехать — запись стартует автоматически".to_string());
+                }
+
+                unsafe {
+                    UnmapViewOfFile(MEMORY_MAPPED_VIEW_ADDRESS { Value: mapped.Value });
+                    CloseHandle(handle);
+                }
             } else {
-                results.push(format!("✗ not found: {}", name));
+                unsafe { CloseHandle(handle); }
+                lines.push("✗ Не удалось прочитать память".to_string());
             }
         }
-        results.join("\n")
+        lines.join("\n")
     }
     #[cfg(not(target_os = "windows"))]
     {
