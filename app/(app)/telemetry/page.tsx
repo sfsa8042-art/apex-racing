@@ -49,7 +49,7 @@ function UploadZone({ onFile, onSample }: { onFile: (f: File) => void; onSample:
           className={cn("rounded-2xl border-2 border-dashed p-12 text-center cursor-pointer transition-all",
             dragging ? "border-lime-400 bg-lime-400/5" : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/50")}>
           <Upload size={28} className={cn("mx-auto mb-3 transition-colors", dragging ? "text-lime-400" : "text-zinc-600")} />
-          <p className="text-sm font-medium text-zinc-300 mb-1">Drop your lap file here</p>
+          <p className="text-sm font-medium text-zinc-300 mb-1">Перетащите файл круга сюда</p>
           <p className="text-xs text-zinc-600 mb-4">CSV or JSON · time, speed, throttle, brake, gear</p>
           <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}>
             Choose file
@@ -59,7 +59,7 @@ function UploadZone({ onFile, onSample }: { onFile: (f: File) => void; onSample:
         </div>
         <button onClick={onSample}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900 text-sm text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-all">
-          <FileText size={14} className="text-lime-400" />Load sample data<ChevronRight size={13} className="text-zinc-600" />
+          <FileText size={14} className="text-lime-400" />Загрузить пример<ChevronRight size={13} className="text-zinc-600" />
         </button>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
           <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-2">CSV format</p>
@@ -76,7 +76,7 @@ function ProcessingOverlay({ status }: { status: string }) {
     <div className="flex-1 flex items-center justify-center">
       <div className="text-center space-y-3">
         <div className="w-10 h-10 rounded-full border-2 border-lime-400 border-t-transparent animate-spin mx-auto" />
-        <p className="text-sm text-zinc-400">{labels[status] ?? "Loading..."}</p>
+        <p className="text-sm text-zinc-400">{labels[status] ?? "Загрузка..."}</p>
       </div>
     </div>
   );
@@ -271,7 +271,7 @@ export default function TelemetryPage() {
             const inp = document.createElement("input"); inp.type="file"; inp.accept=".csv,.json,.txt,.ld";
             inp.onchange = (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) handleFile(f); };
             inp.click();
-          }}><Upload size={13} />Upload Lap</Button>
+          }}><Upload size={13} />Загрузить круг</Button>
         )}
       </div>
 
@@ -368,9 +368,9 @@ export default function TelemetryPage() {
               {/* Left-panel view tabs */}
               <div className="flex gap-1 border-b border-zinc-800 pb-3">
                 {([
-                  ["channels", "Channels",  Activity],
-                  ["heatmap",  "Track Map", Map],
-                  ["ghost",    "Ghost Comparison", Layers],
+                  ["channels", "Каналы",  Activity],
+                  ["heatmap",  "Карта трассы", Map],
+                  ["ghost",    "Сравнение", Layers],
                 ] as const).map(([k, label, Icon]) => (
                   <button key={k} onClick={() => setLeftTab(k)}
                     className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
