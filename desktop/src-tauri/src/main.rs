@@ -13,7 +13,7 @@ use tokio::sync::Mutex;
 
 use crate::settings::AppSettings;
 use crate::state::AppState;
-use crate::uploader::UploadQueue;
+use crate::uploader::{UploadQueue, spawn_upload_worker};
 use crate::watcher::WatchHandle;
 
 fn main() {
@@ -24,6 +24,13 @@ fn main() {
             let upload_queue = Arc::new(UploadQueue::new());
             let api_url      = Arc::new(Mutex::new(settings.api_url.clone()));
             let api_token    = Arc::new(Mutex::new(settings.api_token.clone()));
+
+            spawn_upload_worker(
+                upload_queue.clone(),
+                api_url.clone(),
+                api_token.clone(),
+                app.handle().clone(),
+            );
 
             app.manage(AppState {
                 settings:      Arc::new(Mutex::new(settings)),
