@@ -32,14 +32,16 @@ pub async fn set_api_url(url: String, state: State<'_, AppState>, app: AppHandle
 #[command]
 pub async fn set_api_token(token: String, state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
     let token_opt = if token.is_empty() { None } else { Some(token.clone()) };
-    // Update settings
     {
         let mut s = state.settings.lock().await;
         s.api_token = token_opt.clone();
         s.save(&app).map_err(|e| e.to_string())?;
     }
-    // Update shared arc so upload worker uses new token immediately
     *state.api_token_arc.lock().await = token_opt;
+    // Restore focus
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.set_focus();
+    }
     Ok(())
 }
 
@@ -48,6 +50,12 @@ pub async fn set_api_token(token: String, state: State<'_, AppState>, app: AppHa
 #[command]
 pub async fn select_watch_folder(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>, String> {
     let selected = app.dialog().file().blocking_pick_folder();
+
+    // Restore window focus after native dialog closes
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.unminimize();
+        let _ = win.set_focus();
+    }
 
     if let Some(path) = selected {
         let path_str = path.to_string();
@@ -126,7 +134,7 @@ pub async fn retry_failed_uploads(state: State<'_, AppState>) -> Result<(), Stri
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
 #[command]
-pub async fn open_web_dashboard(state: State<'_, AppState>, _app: AppHandle) -> Result<(), String> {
+pub async fn open_web_dashboard(state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
     let url = {
         let s = state.settings.lock().await;
         format!("{}/dashboard", s.api_url.trim_end_matches('/'))
@@ -179,7 +187,7 @@ pub fn check_acc() -> String {
         let mut lines = Vec::new();
 
         // Try to open and read graphics memory for session status
-        let gfx_name = r"Local\acpmf_graphics";
+        let gfx_name = "Local\acpmf_graphics";
         let wide: Vec<u16> = gfx_name.encode_utf16().chain([0u16]).collect();
         let handle = unsafe { OpenFileMappingW(FILE_MAP_READ, 0, wide.as_ptr()) };
         if handle.is_null() {
