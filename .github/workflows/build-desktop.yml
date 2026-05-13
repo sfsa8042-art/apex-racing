@@ -1,19 +1,15 @@
+name: Build Desktop (Windows)
 on:
   push:
     branches: [main]
     paths:
       - 'desktop/**'
   workflow_dispatch:
-name: Build Desktop (Windows)
-
-on:
-  push:
-    branches: [main]
-    tags:     ["v*"]
-  workflow_dispatch:
-
 permissions:
   contents: write
+jobs:
+  build-windows:
+    name: Windows .exe / .msi
 
 jobs:
   build-windows:
