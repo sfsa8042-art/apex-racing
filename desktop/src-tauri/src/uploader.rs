@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, Notify};
+use tokio::time::sleep;
 use tokio::time::{sleep, Duration};
 use tracing::{error, info, warn};
 
@@ -135,10 +136,14 @@ pub fn spawn_upload_worker(
                 let token = api_token.lock().await.clone();
 
                 // Get task details (clone what we need)
-                let (path, filename, attempts) = {
+                let task_data = {
                     let tasks = queue.tasks.lock().await;
-                    let t = tasks.iter().find(|t| t.id == task_id).unwrap();
-                    (t.path.clone(), t.filename.clone(), t.attempts)
+                    tasks.iter().find(|t| t.id == task_id)
+                        .map(|t| (t.path.clone(), t.filename.clone(), t.attempts))
+                };
+                let (path, filename, attempts) = match task_data {
+                    Some(d) => d,
+                    None => continue, // task was removed, skip
                 };
 
                 info!("Uploading {} (attempt {})", filename, attempts + 1);
