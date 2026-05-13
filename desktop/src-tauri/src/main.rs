@@ -10,7 +10,6 @@ mod watcher;
 use std::sync::Arc;
 use tauri::Manager;
 use tokio::sync::Mutex;
-use tracing::info;
 
 use crate::settings::AppSettings;
 use crate::state::AppState;
