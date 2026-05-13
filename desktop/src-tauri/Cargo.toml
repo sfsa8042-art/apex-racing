@@ -30,7 +30,7 @@ tauri-plugin-notification = "2"
 notify = { version = "6", features = ["serde"] }
 
 # HTTP client for telemetry uploads
-reqwest = { version = "0.12", features = ["multipart", "json", "stream"] }
+reqwest = { version = "0.12", features = ["multipart", "json", "stream", "rustls-tls"], default-features = false }
 
 # Async runtime
 tokio      = { version = "1", features = ["full"] }
