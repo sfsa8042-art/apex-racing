@@ -19,13 +19,25 @@
         "minHeight": 580,
         "resizable": true,
         "fullscreen": false,
-        "center": true
+        "decorations": true,
+        "transparent": false,
+        "center": true,
+        "shadow": true,
+        "focus": true,
+        "skipTaskbar": false
       }
-    ]
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "tooltip": "APEX \u2014 Sim Racing Telemetry"
+    },
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* https://*.netlify.app"
+    }
   },
   "bundle": {
     "active": true,
-    "targets": "nsis",
+    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -34,13 +46,22 @@
       "icons/icon.ico"
     ],
     "shortDescription": "Automatic telemetry upload for sim racing",
+    "longDescription": "APEX Desktop monitors your simulator telemetry folders and automatically uploads new sessions to the APEX coaching platform.",
     "category": "Utility",
-    "copyright": "© 2025 APEX Racing Technologies",
+    "copyright": "\u00a9 2025 APEX Racing Technologies",
     "windows": {
       "nsis": {
+        "installerIcon": "icons/icon.ico",
         "installMode": "currentUser",
-        "languages": ["English"]
+        "languages": [
+          "English"
+        ]
       }
+    }
+  },
+  "plugins": {
+    "store": {
+      "path": "apex-settings.bin"
     }
   }
 }
