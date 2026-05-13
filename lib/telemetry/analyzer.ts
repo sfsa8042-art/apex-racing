@@ -116,9 +116,9 @@ function ruleEarlyBrake(inp: SegmentRuleInput): SegmentInsight | null {
   return {
     type: "early_brake",
     descriptionRu:
-      `Вы тормозите на ${Math.round(diffM)} м раньше референса. ` +
-      `Скорость въезда: ${Math.round(userSeg.maxSpeed)} км/ч (референс: ${Math.round(refSeg.maxSpeed)} км/ч). ` +
-      `Попробуйте тормозить позже с более высоким начальным давлением.`,
+      `Точка торможения на ${Math.round(diffM)} м раньше чем у референса. ` +
+      `Скорость въезда: ${Math.round(userSeg.maxSpeed)} км/ч vs ${Math.round(refSeg.maxSpeed)} км/ч у референса. ` +
+      `Подвигай точку торможения вперёд на 5-8 м за раз — сохраняй высокое давление в начале замедления.`,
     timeCostMs: costMs,
     academyModuleId: module.id,
     academyModuleTitleRu: module.titleRu,
@@ -143,9 +143,9 @@ function ruleLateThrottle(inp: SegmentRuleInput): SegmentInsight | null {
   return {
     type: "late_throttle",
     descriptionRu:
-      `Газ открывается на ${Math.round(diffM)} м позже референса. ` +
-      `Скорость при открытии: ${Math.round(userSeg.minSpeed)} км/ч. ` +
-      `Раннее открытие газа даст дополнительную скорость на всей следующей прямой.`,
+      `Газ открывается на ${Math.round(diffM)} м позже чем у референса. ` +
+      `Мин. скорость в повороте: ${Math.round(userSeg.minSpeed)} км/ч. ` +
+      `Открывай газ сразу после апекса — даже 10% тяги уже помогают стабилизировать машину и набрать скорость на выходе.`,
     timeCostMs: costMs,
     academyModuleId: module.id,
     academyModuleTitleRu: module.titleRu,
@@ -169,9 +169,9 @@ function ruleLowApexSpeed(inp: SegmentRuleInput): SegmentInsight | null {
   return {
     type: "low_apex_speed",
     descriptionRu:
-      `Скорость в апексе: ${Math.round(uApex)} км/ч (референс: ${Math.round(rApex)} км/ч). ` +
-      `Разница ${Math.round(diff)} км/ч. ` +
-      `Возможные причины: слишком ранний апекс или избыточное торможение перед поворотом.`,
+      `Минимальная скорость в апексе: ${Math.round(uApex)} км/ч против ${Math.round(rApex)} км/ч у референса (-${Math.round(diff)} км/ч). ` +
+      `Каждый км/ч в апексе даёт скорость на всей следующей прямой. ` +
+      `Причины: ранний апекс, избыток торможения или недостаточно плавная дуга поворота.`,
     timeCostMs: costMs,
     academyModuleId: module.id,
     academyModuleTitleRu: module.titleRu,
@@ -195,26 +195,81 @@ function ruleGoodSegment(inp: SegmentRuleInput): SegmentInsight | null {
 }
 
 
+function getExitSpeed(rows: TelemetryRow[], seg: TrackSegment): number {
+  // Speed at the last 15% of the corner (exit zone)
+  const exitStart = seg.startDist + (seg.endDist - seg.startDist) * 0.75;
+  const exitRows = rows.filter(r => (r.lapDist ?? 0) >= exitStart && (r.lapDist ?? 0) <= seg.endDist);
+  if (exitRows.length === 0) return seg.maxSpeed;
+  return Math.max(...exitRows.map(r => r.speed));
+}
+
 function ruleSlowExit(inp: SegmentRuleInput): SegmentInsight | null {
-  const { userSeg, refSeg, totalDist } = inp;
-  // Compare speed at exit of corner (first 15% of next straight)
-  const uExit = userSeg.maxSpeed;
-  const rExit = refSeg.maxSpeed;
+  const { userSeg, refSeg, userRows, refRows } = inp;
+  if (userSeg.type !== "corner") return null;
+
+  // Compare actual exit speeds (last quarter of corner)
+  const uExit = getExitSpeed(userRows, userSeg);
+  const rExit = getExitSpeed(refRows, refSeg);
   const diff = rExit - uExit;
 
-  if (diff < 8 || userSeg.type !== "corner") return null;
-  // Only flag if not already flagged by apex speed
+  if (diff < 7) return null;
+  // Only flag if apex speed is OK (otherwise low apex rule covers it)
   const apexDiff = (refSeg.apexSpeed ?? refSeg.minSpeed) - (userSeg.apexSpeed ?? userSeg.minSpeed);
-  if (apexDiff >= 4) return null; // covered by low apex rule
+  if (apexDiff >= 5) return null;
 
-  const costMs = Math.round(Math.min(diff * 12, 200));
+  const costMs = Math.round(Math.min(diff * 14, 220));
   return {
     type: "speed_deficit" as const,
     descriptionRu:
-      `Низкая скорость выхода из поворота: ${Math.round(uExit)} км/ч (референс: ${Math.round(rExit)} км/ч). ` +
-      `Это снижает скорость на всей следующей прямой. ` +
-      `Работайте над ранним и плавным открытием газа.`,
+      `Скорость выхода: ${Math.round(uExit)} км/ч (референс: ${Math.round(rExit)} км/ч). ` +
+      `Разница ${Math.round(diff)} км/ч снижает скорость на всей следующей прямой. ` +
+      `Открывай газ раньше и плавнее сразу после апекса.`,
     timeCostMs: costMs,
+  };
+}
+
+
+function ruleNoTrailBraking(inp: SegmentRuleInput): SegmentInsight | null {
+  const { userSeg, refSeg, userRows, refRows } = inp;
+  if (userSeg.type !== "corner") return null;
+
+  // Check if user releases brakes BEFORE apex vs reference
+  const userApexDist = userSeg.apexDist ?? (userSeg.startDist + userSeg.endDist) / 2;
+  const refApexDist  = refSeg.apexDist  ?? (refSeg.startDist  + refSeg.endDist)  / 2;
+
+  // Find last braking point before apex (within 80m)
+  const findLastBrake = (rows: TelemetryRow[], apexDist: number) => {
+    const searchStart = apexDist - 80;
+    const relevant = rows.filter(r => {
+      const d = r.lapDist ?? 0;
+      return d >= searchStart && d <= apexDist;
+    });
+    // Last row where brake > 5%
+    for (let i = relevant.length - 1; i >= 0; i--) {
+      if (relevant[i].brake > 5) return relevant[i].lapDist ?? 0;
+    }
+    return searchStart;
+  };
+
+  const uLastBrakeDist = findLastBrake(userRows, userApexDist);
+  const rLastBrakeDist = findLastBrake(refRows,  refApexDist);
+
+  // Reference trails brake closer to apex
+  const refTrailM = refApexDist - rLastBrakeDist;
+  const userTrailM = userApexDist - uLastBrakeDist;
+  const trailDiff = refTrailM - userTrailM; // positive = ref brakes later (trail brakes more)
+
+  if (trailDiff < 15) return null; // not significant
+
+  const costMs = Math.round(Math.min(trailDiff * 5, 150));
+  return {
+    type: "late_brake" as const,
+    descriptionRu:
+      `Трейл-брейкинг: референс держит тормоз ещё ${Math.round(trailDiff)} м после вас. ` +
+      `Плавное снижение давления в тормозах до апекса помогает повернуть и сохранить скорость.`,
+    timeCostMs: costMs,
+    academyModuleId: "trail_braking",
+    academyModuleTitleRu: "Трейл-брейкинг",
   };
 }
 
@@ -233,17 +288,19 @@ function analyseSegment(
 
   if (refSeg && userSeg.type === "corner") {
     const inp: SegmentRuleInput = { userSeg, refSeg, userRows, refRows, segDeltaMs, totalDist };
-    const earlyBrake = ruleEarlyBrake(inp);
-    const lateThrottle = ruleLateThrottle(inp);
-    const lowApex = ruleLowApexSpeed(inp);
-    const slowExit = ruleSlowExit(inp);
-    const good = ruleGoodSegment(inp);
+    const earlyBrake    = ruleEarlyBrake(inp);
+    const noTrailBrake  = ruleNoTrailBraking(inp);
+    const lateThrottle  = ruleLateThrottle(inp);
+    const lowApex       = ruleLowApexSpeed(inp);
+    const slowExit      = ruleSlowExit(inp);
+    const good          = ruleGoodSegment(inp);
 
-    if (earlyBrake)   insights.push(earlyBrake);
-    if (lateThrottle) insights.push(lateThrottle);
-    if (lowApex)      insights.push(lowApex);
-    if (slowExit && !lowApex) insights.push(slowExit);
-    if (good && !earlyBrake && !lateThrottle && !lowApex && !slowExit) insights.push(good);
+    if (earlyBrake)                     insights.push(earlyBrake);
+    if (noTrailBrake && !earlyBrake)    insights.push(noTrailBrake);
+    if (lateThrottle)                   insights.push(lateThrottle);
+    if (lowApex)                        insights.push(lowApex);
+    if (slowExit && !lowApex)           insights.push(slowExit);
+    if (good && insights.length === 0)  insights.push(good);
   }
 
   const deltaFraction = totalLoss > 0 ? Math.max(0, segDeltaMs) / totalLoss : 0;

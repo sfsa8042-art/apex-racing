@@ -27,12 +27,12 @@ import type { TelemetryRow, TrackSegment } from "@/types/telemetry";
 
 // ─── Tuning ───────────────────────────────────────────────────────────────────
 
-const SPEED_DROP_FOR_CORNER       = 18;   // km/h: minimum speed drop to count as a corner
-const MIN_DIST_BETWEEN_CORNERS    = 70;   // m: corners closer than this are merged
-const CORNER_PRE_BRAKE_MARGIN     = 35;   // m: extend corner start before brake point
+const SPEED_DROP_FOR_CORNER       = 22;   // km/h: GT3 cars carry speed, need higher threshold
+const MIN_DIST_BETWEEN_CORNERS    = 55;   // m: allow tighter chicanes
+const CORNER_PRE_BRAKE_MARGIN     = 45;   // m: GT3 brakes harder and earlier
 const CORNER_POST_THROTTLE_MARGIN = 40;   // m: extend corner end after throttle open
-const BRAKE_THRESHOLD_PCT         = 8;    // %: brake above this = braking event
-const THROTTLE_OPEN_PCT           = 18;   // %: throttle above this = throttle open
+const BRAKE_THRESHOLD_PCT         = 6;    // %: detect light trail braking too
+const THROTTLE_OPEN_PCT           = 20;   // %: meaningful throttle application
 const STRAIGHT_MIN_SPEED          = 0.72; // fraction of lap max speed
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
