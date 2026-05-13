@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Layers, Settings2, ExternalLink, Radio, Disc } from "lucide-react";
 import { UploadQueue }   from "./components/UploadQueue";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -6,7 +6,7 @@ import { useAppState }   from "./hooks/useAppState";
 
 type Tab = "queue" | "settings";
 
-// в”Ђв”Ђв”Ђ Status badge colours в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// ─── Status badge colours ─────────────────────────────────────────────────────
 function statusConfig(watcherActive: boolean, connected: boolean | null) {
   if (watcherActive)          return { dot: "bg-lime-400",  ring: true,  label: "LIVE",    cls: "text-lime-400 border-lime-400/25 bg-lime-400/8" };
   if (connected === false)    return { dot: "bg-red-400",   ring: false, label: "OFFLINE", cls: "text-red-400 border-red-400/25 bg-red-400/8" };
@@ -17,7 +17,7 @@ export default function App() {
   const { state, actions } = useAppState();
   const [tab, setTab] = useState<Tab>("queue");
 
-  // в”Ђв”Ђ Splash в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // ── Splash ────────────────────────────────────────────────────────────────
   if (state.loading) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4" style={{ background: "var(--surface)" }}>
@@ -29,7 +29,7 @@ export default function App() {
             <div className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-pulse"/>
           </div>
         </div>
-        <p className="text-xs font-mono" style={{ color: "var(--text-3)" }}>Р·Р°РїСѓСЃРєвЂ¦</p>
+        <p className="text-xs font-mono" style={{ color: "var(--text-3)" }}>запуск…</p>
       </div>
     );
   }
@@ -45,7 +45,7 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: "var(--surface)" }}>
 
-      {/* в”Ђв”Ђ Top bar в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
+      {/* ── Top bar ──────────────────────────────────────────────────────────── */}
       <header className="flex items-center gap-3 px-4 pt-4 pb-3 shrink-0"
         style={{ borderBottom: "1px solid var(--border)" }}>
 
@@ -60,7 +60,7 @@ export default function App() {
             APEX Desktop
           </p>
           <p className="text-[11px] font-mono mt-0.5 truncate" style={{ color: "var(--text-3)" }}>
-            {folderName ?? "РїР°РїРєР° РЅРµ РІС‹Р±СЂР°РЅР°"}
+            {folderName ?? "папка не выбрана"}
           </p>
         </div>
 
@@ -73,12 +73,12 @@ export default function App() {
         {/* Open dashboard */}
         <button onClick={actions.openDashboard}
           className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/5"
-          style={{ color: "var(--text-3)" }} title="РћС‚РєСЂС‹С‚СЊ РґР°С€Р±РѕСЂРґ">
+          style={{ color: "var(--text-3)" }} title="Открыть дашборд">
           <ExternalLink size={13}/>
         </button>
       </header>
 
-      {/* в”Ђв”Ђ Content в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
+      {/* ── Content ──────────────────────────────────────────────────────────── */}
       <main className="flex-1 overflow-hidden min-h-0">
         {tab === "queue" && (
           <UploadQueue
@@ -107,11 +107,11 @@ export default function App() {
         )}
       </main>
 
-      {/* в”Ђв”Ђ Bottom tab bar в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
+      {/* ── Bottom tab bar ────────────────────────────────────────────────────── */}
       <nav className="flex items-stretch shrink-0" style={{ borderTop: "1px solid var(--border)", background: "var(--surface-2)" }}>
         {([
-          { id: "queue"    as Tab, icon: Layers,   label: "РњРѕРЅРёС‚РѕСЂРёРЅРі", badge: (pending + failed) || 0 },
-          { id: "settings" as Tab, icon: Settings2, label: "РќР°СЃС‚СЂРѕР№РєРё",  badge: 0 },
+          { id: "queue"    as Tab, icon: Layers,   label: "Мониторинг", badge: (pending + failed) || 0 },
+          { id: "settings" as Tab, icon: Settings2, label: "Настройки",  badge: 0 },
         ]).map(({ id, icon: Icon, label, badge }) => (
           <button key={id} onClick={() => setTab(id)}
             className="relative flex-1 flex flex-col items-center gap-1 py-3 transition-colors"
@@ -136,4 +136,3 @@ export default function App() {
     </div>
   );
 }
-
