@@ -54,14 +54,7 @@ export function SettingsPanel({
       await onSaveToken(token);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-      // Restore window focus after save (prevents minimize on some Windows configs)
-      try {
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        const win = getCurrentWindow();
-        await win.setFocus();
-        await win.unminimize();
-      } catch {}
-    } finally {
+} finally {
       setSaving(false);
     }
   };
