@@ -1,3 +1,4 @@
+use tauri::{command, AppHandle, State, Manager};
 use tauri::{command, AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 use tracing::info;
@@ -187,7 +188,7 @@ pub fn check_acc() -> String {
         let mut lines = Vec::new();
 
         // Try to open and read graphics memory for session status
-        let gfx_name = "Local\acpmf_graphics";
+        let gfx_name = r"Local\acpmf_graphics";
         let wide: Vec<u16> = gfx_name.encode_utf16().chain([0u16]).collect();
         let handle = unsafe { OpenFileMappingW(FILE_MAP_READ, 0, wide.as_ptr()) };
         if handle.is_null() {
