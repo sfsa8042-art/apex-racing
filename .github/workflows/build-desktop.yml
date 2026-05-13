@@ -27,7 +27,7 @@ jobs:
           toolchain: stable
           targets:   x86_64-pc-windows-msvc
 
-      # ── 4. Cargo cache (saves ~5–10 min on subsequent builds) ───────────────
+      # ── 4. Cargo cache ───────────────────────────────────────────────────────
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "desktop/src-tauri -> target"
@@ -47,9 +47,6 @@ jobs:
           TAURI_ENV_ARCH:     x86_64
           TAURI_ENV_FAMILY:   windows
           TAURI_ENV_DEBUG:    "false"
-          # Code signing (optional — add these secrets in GitHub Settings)
-          # TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          # TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         run: npm run tauri:build -- --target x86_64-pc-windows-msvc
 
       # ── 7. List built files ──────────────────────────────────────────────────
@@ -104,22 +101,26 @@ jobs:
             echo "prerelease=false"                    >> $env:GITHUB_OUTPUT
             echo "name=APEX Desktop ${{ github.ref_name }}" >> $env:GITHUB_OUTPUT
           } else {
-            echo "tag=latest"                          >> $env:GITHUB_OUTPUT
+            echo "tag=latest-build"                    >> $env:GITHUB_OUTPUT
             echo "prerelease=true"                     >> $env:GITHUB_OUTPUT
             echo "name=Latest Build (auto)"            >> $env:GITHUB_OUTPUT
           }
 
-      # ── 11. Delete existing 'latest' pre-release before recreating ───────────
+      # ── 11. Delete existing pre-release ──────────────────────────────────────
       - name: Delete existing latest pre-release
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete latest --yes --repo ${{ github.repository }} 2>$null || $true
-          git push origin :refs/tags/latest 2>$null              || $true
+          try {
+            gh release delete latest-build --yes --repo ${{ github.repository }}
+          } catch { Write-Host "No existing release to delete" }
+          try {
+            git push origin :refs/tags/latest-build
+          } catch { Write-Host "No existing tag to delete" }
 
-      # ── 12. Create / update GitHub Release ──────────────────────────────────
+      # ── 12. Create GitHub Release ────────────────────────────────────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -130,16 +131,13 @@ jobs:
           body: |
             ## APEX Desktop — Windows Installer
 
-            ### Install
-            1. Download the `.exe` (NSIS, recommended) or `.msi` file below
-            2. Run the installer — no admin rights required
-            3. Launch APEX Desktop and set your telemetry folder
-            4. Enter your API token from the web profile page
+            ### Установка
+            1. Скачай `.exe` файл ниже
+            2. Запусти установщик
+            3. Открой APEX Desktop → вставь API-токен из профиля на сайте
+            4. Выбери папку телеметрии → нажми Старт
 
-            ### What's new
             Built from: `${{ github.sha }}`
-            Branch: `${{ github.ref_name }}`
-
           files: |
             ${{ steps.find.outputs.exe_path }}
             ${{ steps.find.outputs.msi_path }}
