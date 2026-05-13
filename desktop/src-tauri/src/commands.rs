@@ -1,4 +1,4 @@
-use tauri::{command, AppHandle, State, Manager};
+use tauri::{command, AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 use tracing::info;
  
