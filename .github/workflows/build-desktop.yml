@@ -1,3 +1,9 @@
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/**'
+  workflow_dispatch:
 name: Build Desktop (Windows)
 
 on:
