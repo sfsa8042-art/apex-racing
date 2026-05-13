@@ -150,7 +150,7 @@ mod shm {
 pub struct AccHandle;
 
 pub fn start_acc_reader(queue: Arc<UploadQueue>, app: AppHandle) -> AccHandle {
-    tokio::spawn(main_loop(queue, app));
+    tauri::async_runtime::spawn(main_loop(queue, app));
     AccHandle
 }
 

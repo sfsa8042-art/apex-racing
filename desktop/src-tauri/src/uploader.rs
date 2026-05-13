@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, Notify};
+use tokio::time::sleep;
 use tokio::time::{sleep, Duration};
 use tracing::{error, info, warn};
 
@@ -92,7 +93,7 @@ pub fn spawn_upload_worker(
     api_token: Arc<Mutex<Option<String>>>,
     app:       tauri::AppHandle,
 ) {
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         let client = match Client::builder()
             .timeout(Duration::from_secs(UPLOAD_TIMEOUT))
             .build() {
