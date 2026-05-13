@@ -1,11 +1,11 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 
 use anyhow::Result;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, Mutex};
 use tracing::{debug, info, warn};
