@@ -18,16 +18,29 @@ pub async fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, Str
 
 #[command]
 pub async fn set_api_url(url: String, state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
-    let mut s = state.settings.lock().await;
-    s.api_url = url;
-    s.save(&app).map_err(|e| e.to_string())
+    // Update settings
+    {
+        let mut s = state.settings.lock().await;
+        s.api_url = url.clone();
+        s.save(&app).map_err(|e| e.to_string())?;
+    }
+    // Update shared arc so upload worker picks up new URL immediately
+    *state.api_url_arc.lock().await = url;
+    Ok(())
 }
 
 #[command]
 pub async fn set_api_token(token: String, state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
-    let mut s = state.settings.lock().await;
-    s.api_token = if token.is_empty() { None } else { Some(token) };
-    s.save(&app).map_err(|e| e.to_string())
+    let token_opt = if token.is_empty() { None } else { Some(token.clone()) };
+    // Update settings
+    {
+        let mut s = state.settings.lock().await;
+        s.api_token = token_opt.clone();
+        s.save(&app).map_err(|e| e.to_string())?;
+    }
+    // Update shared arc so upload worker uses new token immediately
+    *state.api_token_arc.lock().await = token_opt;
+    Ok(())
 }
 
 // ─── Folder selection & watcher ───────────────────────────────────────────────
