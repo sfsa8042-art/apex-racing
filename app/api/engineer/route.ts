@@ -24,9 +24,7 @@ async function callGroq(
   messages:     ChatMessage[],
   maxTokens:    number = 400,
 ): Promise<string> {
-  if (!GROQ_API_KEY) {
-    throw new Error("GROQ_API_KEY не задан");
-  }
+  if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY не задан");
 
   const res = await fetch(GROQ_URL, {
     method:  "POST",
@@ -80,7 +78,7 @@ export async function POST(req: NextRequest) {
     const msg = err instanceof Error ? err.message : "Ошибка";
     console.error("[engineer POST]", msg);
     const userMsg = msg.includes("не задан")
-      ? "AI инженер не настроен. Добавь GROQ_API_KEY в настройки сайта."
+      ? "AI инженер не настроен. Добавь GROQ_API_KEY в Vercel."
       : msg.includes("лимит")
       ? "Слишком много запросов — подожди минуту."
       : "AI инженер временно недоступен.";
@@ -112,7 +110,7 @@ export async function GET(req: NextRequest) {
     const briefing = await callGroq(systemPrompt, [{ role: "user", content: prompt }], 150);
     return NextResponse.json({ briefing });
 
-  } catch (err: unknown) {
+  } catch {
     const fallback = lang === "ru"
       ? "Анализ загружен. Задай вопрос по своему кругу."
       : "Analysis loaded. Ask a question about your lap.";
