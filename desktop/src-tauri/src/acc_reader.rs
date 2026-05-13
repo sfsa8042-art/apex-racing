@@ -256,24 +256,26 @@ async fn main_loop(queue: Arc<UploadQueue>, app: AppHandle) {
 }
 
 // ── Build CSV and enqueue upload ──────────────────────────────────────────────
-async fn flush(
-    samples: &[Sample],
-    car:     &str,
-    track:   &str,
-    lap_ms:  i32,
-    queue:   &Arc<UploadQueue>,
-    app:     &AppHandle,
+async fn flush_with_offset(
+    samples:     &[Sample],
+    time_offset: f32,
+    car:         &str,
+    track:       &str,
+    lap_ms:      i32,
+    queue:       &Arc<UploadQueue>,
+    app:         &AppHandle,
 ) {
     let s   = lap_ms as f32 / 1000.0;
     let tag = format!("{:02}m{:06.3}s", (s / 60.0) as u32, s % 60.0);
 
-    // Build CSV
+    // Build CSV — apply time offset so times align with real lap start
     let mut csv = String::with_capacity(samples.len() * 60);
     csv.push_str("time,speed,throttle,brake,gear,rpm,steerAngle,lateralG,longitudinalG\n");
     for p in samples {
+        let t = (p.t + time_offset).max(0.0);
         csv.push_str(&format!(
             "{:.3},{:.1},{:.1},{:.1},{},{},{:.2},{:.4},{:.4}\n",
-            p.t, p.spd, p.thr, p.brk, p.gear, p.rpm, p.str_, p.latg, p.long,
+            t, p.spd, p.thr, p.brk, p.gear, p.rpm, p.str_, p.latg, p.long,
         ));
     }
 
