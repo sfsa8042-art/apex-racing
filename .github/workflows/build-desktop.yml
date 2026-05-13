@@ -5,6 +5,9 @@
       - 'desktop/**'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     name: Windows .exe
@@ -55,7 +58,7 @@ jobs:
           tag_name: latest-build
           name: Latest Build
           prerelease: true
-          overwrite: true
+          overwrite_files: true
           files: ${{ steps.find.outputs.exe_path }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
