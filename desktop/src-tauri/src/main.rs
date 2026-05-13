@@ -32,6 +32,11 @@ fn main() {
                 app.handle().clone(),
             );
 
+            acc_reader::start_acc_reader(
+                upload_queue.clone(),
+                app.handle().clone(),
+            );
+
             app.manage(AppState {
                 settings:      Arc::new(Mutex::new(settings)),
                 watcher:       Arc::new(Mutex::new(None::<WatchHandle>)),
