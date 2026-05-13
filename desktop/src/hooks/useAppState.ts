@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import type { AppSettings, UploadTask, FileDetectedEvent, WatcherStatusEvent, UploadCompleteEvent } from "../types";
 import * as tauri from "../lib/tauri";
@@ -10,12 +10,7 @@ export interface AppState {
   connected:     boolean | null;
   loading:       boolean;
   lastDetected:  FileDetectedEvent | null;
-  accRunning:    boolean;
-  accRecording:  boolean;
-  accLap:        number;
-  accCar:        string;
-  accTrack:      string;
-}
+  }
 
 const DEFAULT: AppState = {
   settings: null, watcherActive: false, queue: [],
@@ -61,12 +56,7 @@ export function useAppState() {
       // ACC shared memory events
       try { uns.push(await listen<{running:boolean;recording:boolean;lap:number;car:string;track:string}>("acc-status", ({ payload }) => {
         setState(s => ({ ...s,
-          accRunning:   payload.running,
-          accRecording: payload.recording,
-          accLap:       payload.lap,
-          accCar:       payload.car,
-          accTrack:     payload.track,
-        }));
+                  }));
       })); } catch {}
     };
 
@@ -123,3 +113,4 @@ export function useAppState() {
 
   return { state, actions };
 }
+
