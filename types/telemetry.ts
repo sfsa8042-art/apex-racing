@@ -165,6 +165,13 @@ export interface SectorAnalysis {
   endFraction: number;
 }
 
+export interface SubScores {
+  braking:     number;  // 0-100
+  throttle:    number;  // 0-100
+  lines:       number;  // 0-100
+  consistency: number;  // 0-100
+}
+
 export interface LapAnalysisResult {
   lapId: string;
   totalTimeDeltaMs: number;
@@ -174,6 +181,7 @@ export interface LapAnalysisResult {
   delta: DeltaResult;
   optimalLap: OptimalLap;
   overallScore: number;
+  subScores: SubScores;
   dominantWeakness: AnalysisInsight["category"] | null;
 }
 

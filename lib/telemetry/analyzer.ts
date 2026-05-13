@@ -12,7 +12,7 @@
 
 import type {
   ParsedLap, TelemetryRow, LapAnalysisResult, AnalysisInsight,
-  SectorAnalysis, SegmentAnalysis, SegmentInsight, TrackSegment, OptimalLap,
+  SectorAnalysis, SegmentAnalysis, SegmentInsight, TrackSegment, OptimalLap, SubScores,
 } from "@/types/telemetry";
 import { computeDelta, deltaPerSegment } from "./delta";
 import { detectSegments, matchSegments } from "./segments";
@@ -111,7 +111,7 @@ function ruleEarlyBrake(inp: SegmentRuleInput): SegmentInsight | null {
 
   if (diffM < 12) return null;
 
-  const costMs = Math.round(Math.min(diffM * 11, 350));   // ~11 ms per metre, capped
+  const costMs = Math.round(Math.min(diffM * 7, 280));   // ~7 ms per metre (calibrated)
   const module = ACADEMY_MAP["early_brake"];
   return {
     type: "early_brake",
@@ -138,7 +138,7 @@ function ruleLateThrottle(inp: SegmentRuleInput): SegmentInsight | null {
 
   if (diffM < 10) return null;
 
-  const costMs = Math.round(Math.min(diffM * 9, 280));
+  const costMs = Math.round(Math.min(diffM * 6, 220));
   const module = ACADEMY_MAP["late_throttle"];
   return {
     type: "late_throttle",
@@ -163,8 +163,8 @@ function ruleLowApexSpeed(inp: SegmentRuleInput): SegmentInsight | null {
 
   if (diff < 4) return null;
 
-  // Time cost: each km/h in a corner ≈ 25 ms (increases with corner radius)
-  const costMs = Math.round(Math.min(diff * 25, 400));
+  // Time cost: each km/h in a corner ≈ 18 ms (calibrated against real data)
+  const costMs = Math.round(Math.min(diff * 18, 320));
   const module = ACADEMY_MAP["low_apex_speed"];
   return {
     type: "low_apex_speed",
@@ -194,6 +194,30 @@ function ruleGoodSegment(inp: SegmentRuleInput): SegmentInsight | null {
   };
 }
 
+
+function ruleSlowExit(inp: SegmentRuleInput): SegmentInsight | null {
+  const { userSeg, refSeg, totalDist } = inp;
+  // Compare speed at exit of corner (first 15% of next straight)
+  const uExit = userSeg.maxSpeed;
+  const rExit = refSeg.maxSpeed;
+  const diff = rExit - uExit;
+
+  if (diff < 8 || userSeg.type !== "corner") return null;
+  // Only flag if not already flagged by apex speed
+  const apexDiff = (refSeg.apexSpeed ?? refSeg.minSpeed) - (userSeg.apexSpeed ?? userSeg.minSpeed);
+  if (apexDiff >= 4) return null; // covered by low apex rule
+
+  const costMs = Math.round(Math.min(diff * 12, 200));
+  return {
+    type: "speed_deficit" as const,
+    descriptionRu:
+      `Низкая скорость выхода из поворота: ${Math.round(uExit)} км/ч (референс: ${Math.round(rExit)} км/ч). ` +
+      `Это снижает скорость на всей следующей прямой. ` +
+      `Работайте над ранним и плавным открытием газа.`,
+    timeCostMs: costMs,
+  };
+}
+
 // ─── Segment analysis ─────────────────────────────────────────────────────────
 
 function analyseSegment(
@@ -212,12 +236,14 @@ function analyseSegment(
     const earlyBrake = ruleEarlyBrake(inp);
     const lateThrottle = ruleLateThrottle(inp);
     const lowApex = ruleLowApexSpeed(inp);
+    const slowExit = ruleSlowExit(inp);
     const good = ruleGoodSegment(inp);
 
     if (earlyBrake)   insights.push(earlyBrake);
     if (lateThrottle) insights.push(lateThrottle);
     if (lowApex)      insights.push(lowApex);
-    if (good && !earlyBrake && !lateThrottle && !lowApex) insights.push(good);
+    if (slowExit && !lowApex) insights.push(slowExit);
+    if (good && !earlyBrake && !lateThrottle && !lowApex && !slowExit) insights.push(good);
   }
 
   const deltaFraction = totalLoss > 0 ? Math.max(0, segDeltaMs) / totalLoss : 0;
@@ -415,9 +441,61 @@ export function analyseLap(userLap: ParsedLap, refLap: ParsedLap): LapAnalysisRe
   // ── 7. Optimal lap ──
   const optimalLap = buildOptimalLap(userSegments, segmentAnalyses, userLap.lapTimeMs);
 
-  // ── 8. Score & dominant weakness ──
-  const penaltySeconds = Math.max(0, delta.totalDeltaMs / 1000);
-  const overallScore = Math.max(0, Math.min(100, Math.round(100 - penaltySeconds * 7)));
+  // ── 8. Score, sub-scores & dominant weakness ──────────────────────────────
+
+  // Overall score: based on delta time relative to lap time (more realistic)
+  // e.g. 0.5s delta on 100s lap = 99.5% efficiency ≈ score 97
+  // e.g. 3s delta on 100s lap = 97% efficiency ≈ score 82
+  const lapTimeS = userLap.lapTimeMs / 1000;
+  const deltaS   = Math.max(0, delta.totalDeltaMs / 1000);
+  const efficiency = lapTimeS > 0 ? Math.max(0, (lapTimeS - deltaS) / lapTimeS) : 1;
+  // Score: efficiency^0.3 mapped to 0-100, with 95%+ efficiency giving 90+
+  const overallScore = Math.max(0, Math.min(100, Math.round(
+    efficiency > 0.99  ? 98 + efficiency * 2 :
+    efficiency > 0.97  ? 92 + (efficiency - 0.97) * 200 :
+    efficiency > 0.93  ? 78 + (efficiency - 0.93) * 350 :
+    efficiency > 0.88  ? 58 + (efficiency - 0.88) * 400 :
+    efficiency > 0.80  ? 30 + (efficiency - 0.80) * 350 :
+    efficiency * 37.5
+  )));
+
+  // Sub-scores: computed from category-specific insights
+  const brakingInsights    = rawInsights.filter(i => i.category === "brake");
+  const throttleInsights   = rawInsights.filter(i => i.category === "throttle");
+  const speedInsights      = rawInsights.filter(i => i.category === "speed");
+  const corners            = segmentAnalyses.filter(s => s.segment.type === "corner");
+  const goodCorners        = corners.filter(s => s.deltaMs < 50).length;
+  const totalCorners       = Math.max(corners.length, 1);
+
+  // Braking score: penalise early/late brake mistakes
+  const brakingCost  = brakingInsights.reduce((s, i) => s + i.timeCostMs, 0);
+  const brakingScore = Math.max(20, Math.min(100,
+    Math.round(100 - Math.min(brakingCost / 30, 80))
+  ));
+
+  // Throttle score: penalise late throttle mistakes
+  const throttleCost  = throttleInsights.reduce((s, i) => s + i.timeCostMs, 0);
+  const throttleScore = Math.max(20, Math.min(100,
+    Math.round(100 - Math.min(throttleCost / 25, 80))
+  ));
+
+  // Lines score: apex speed vs reference
+  const speedCost  = speedInsights.reduce((s, i) => s + i.timeCostMs, 0);
+  const linesScore = Math.max(20, Math.min(100,
+    Math.round(100 - Math.min(speedCost / 20, 80))
+  ));
+
+  // Consistency: ratio of good corners
+  const consistencyScore = Math.max(20, Math.min(100,
+    Math.round(20 + 80 * (goodCorners / totalCorners))
+  ));
+
+  const subScores: SubScores = {
+    braking:     brakingScore,
+    throttle:    throttleScore,
+    lines:       linesScore,
+    consistency: consistencyScore,
+  };
 
   const categoryCosts: Record<string, number> = {};
   rawInsights.filter((i) => i.severity !== "good").forEach((i) => {
@@ -436,6 +514,7 @@ export function analyseLap(userLap: ParsedLap, refLap: ParsedLap): LapAnalysisRe
     delta,
     optimalLap,
     overallScore,
+    subScores,
     dominantWeakness,
   };
 }

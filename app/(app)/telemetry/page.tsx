@@ -340,10 +340,35 @@ export default function TelemetryPage() {
                 </div>
               )}
 
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700">
-                <Gauge size={13} className="text-lime-400" />
-                <span className="text-xs font-mono text-zinc-400">Score</span>
-                <span className="text-sm font-bold font-mono text-lime-400">{analysisResult.overallScore}</span>
+              {/* Overall score + sub-scores */}
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700">
+                  <Gauge size={13} className="text-lime-400" />
+                  <span className="text-xs font-mono text-zinc-400">Скор</span>
+                  <span className={cn("text-sm font-bold font-mono",
+                    analysisResult.overallScore >= 90 ? "text-lime-400" :
+                    analysisResult.overallScore >= 75 ? "text-yellow-400" : "text-red-400")}>
+                    {analysisResult.overallScore}
+                  </span>
+                </div>
+                {analysisResult.subScores && (
+                  <div className="hidden sm:flex items-center gap-1">
+                    {([
+                      ["Торм", analysisResult.subScores.braking],
+                      ["Газ",  analysisResult.subScores.throttle],
+                      ["Лин",  analysisResult.subScores.lines],
+                      ["Пост", analysisResult.subScores.consistency],
+                    ] as [string, number][]).map(([label, val]) => (
+                      <div key={label} className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-zinc-900 border border-zinc-800">
+                        <span className="text-[9px] font-mono text-zinc-500">{label}</span>
+                        <span className={cn("text-[11px] font-bold font-mono",
+                          val >= 85 ? "text-lime-400" : val >= 70 ? "text-yellow-400" : "text-red-400")}>
+                          {val}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Channel toggles (hidden in simple mode) */}
