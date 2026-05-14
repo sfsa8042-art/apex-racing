@@ -434,7 +434,7 @@ export default function TelemetryPage() {
               )}
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="px-3 pt-3 pb-4 space-y-3">
               {/* Left-panel view tabs */}
               <div className="flex gap-1 border-b border-zinc-800 pb-3">
                 {([
@@ -453,23 +453,12 @@ export default function TelemetryPage() {
               {/* ── CHANNELS VIEW ── */}
               {leftTab === "channels" && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-4 text-[11px] text-zinc-500 font-mono">
-                    <div className="flex items-center gap-1.5"><div className="w-6 h-0.5 bg-lime-400 rounded" />Your lap</div>
-                    <div className="flex items-center gap-1.5"><div className="w-6 border-t border-dashed border-zinc-500" />Reference</div>
-                  </div>
-
                   {/* Main chart */}
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
-                    <div className="px-4 pt-3 pb-1 border-b border-zinc-800">
-                      <p className="text-xs font-medium text-zinc-400">All channels · Distance axis</p>
-                    </div>
-                    <div className="p-4">
-                      <TelemetryChart
-                        channels={channels as Parameters<typeof TelemetryChart>[0]["channels"]}
-                        visibleChannels={visibleChannels}
-                      />
-                    </div>
-                  </div>
+                  <TelemetryChart
+                    channels={channels as Parameters<typeof TelemetryChart>[0]["channels"]}
+                    visibleChannels={visibleChannels}
+                    className="w-full"
+                  />
 
                   {/* Delta chart */}
                   <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
