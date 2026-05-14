@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildSystemPrompt } from "@/lib/engineer/personalities";
 import type { PersonalityId } from "@/lib/engineer/personalities";
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY ?? "";
-const GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL        = "llama-3.3-70b-versatile";
+const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY ?? "";
+const MISTRAL_URL     = "https://api.mistral.ai/v1/chat/completions";
+const MODEL           = "mistral-small-latest";
 
 export interface ChatMessage {
   role:    "user" | "assistant";
@@ -19,18 +19,18 @@ interface EngineerRequest {
   lang:           "en" | "ru";
 }
 
-async function callGroq(
+async function callMistral(
   systemPrompt: string,
   messages:     ChatMessage[],
   maxTokens:    number = 400,
 ): Promise<string> {
-  if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY не задан");
+  if (!MISTRAL_API_KEY) throw new Error("MISTRAL_API_KEY не задан");
 
-  const res = await fetch(GROQ_URL, {
+  const res = await fetch(MISTRAL_URL, {
     method:  "POST",
     headers: {
       "Content-Type":  "application/json",
-      "Authorization": `Bearer ${GROQ_API_KEY}`,
+      "Authorization": `Bearer ${MISTRAL_API_KEY}`,
     },
     body: JSON.stringify({
       model:       MODEL,
@@ -46,7 +46,8 @@ async function callGroq(
   if (!res.ok) {
     const err = await res.text();
     if (res.status === 429) throw new Error("Превышен лимит — подожди минуту");
-    throw new Error(`Groq ${res.status}: ${err.slice(0, 200)}`);
+    if (res.status === 401) throw new Error("MISTRAL_API_KEY неверный");
+    throw new Error(`Mistral ${res.status}: ${err.slice(0, 200)}`);
   }
 
   const data = await res.json();
@@ -71,14 +72,14 @@ export async function POST(req: NextRequest) {
       { role: "user", content: body.message },
     ];
 
-    const reply = await callGroq(systemPrompt, messages, 400);
+    const reply = await callMistral(systemPrompt, messages, 400);
     return NextResponse.json({ reply });
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Ошибка";
     console.error("[engineer POST]", msg);
     const userMsg = msg.includes("не задан")
-      ? "AI инженер не настроен. Добавь GROQ_API_KEY в Vercel."
+      ? "AI инженер не настроен. Добавь MISTRAL_API_KEY в Vercel."
       : msg.includes("лимит")
       ? "Слишком много запросов — подожди минуту."
       : "AI инженер временно недоступен.";
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
 
   if (!ctx) return NextResponse.json({ error: "Нет ctx" }, { status: 400 });
 
-  if (!GROQ_API_KEY) {
+  if (!MISTRAL_API_KEY) {
     const fallback = lang === "ru"
       ? "Данные загружены. Задай вопрос по своему кругу."
       : "Data loaded. Ask me about your lap.";
@@ -107,9 +108,8 @@ export async function GET(req: NextRequest) {
       ? "Дай краткий брифинг по сессии. Главный фокус. Максимум 3 предложения."
       : "Give a concise session briefing. Main focus. Max 3 sentences.";
 
-    const briefing = await callGroq(systemPrompt, [{ role: "user", content: prompt }], 150);
+    const briefing = await callMistral(systemPrompt, [{ role: "user", content: prompt }], 150);
     return NextResponse.json({ briefing });
-
   } catch {
     const fallback = lang === "ru"
       ? "Анализ загружен. Задай вопрос по своему кругу."
