@@ -6,12 +6,12 @@ import type { TelemetryChannel } from "@/types";
 interface TelemetryChartProps {
   channels:        TelemetryChannel[];
   visibleChannels: string[];
-  height?:         number;
+  height?:         number;   // overrides default total height if provided
   className?:      string;
 }
 
 // ── Layout ────────────────────────────────────────────────────────────────────
-const PAD_LEFT   = 48;
+const PAD_LEFT   = 56;
 const PAD_RIGHT  = 16;
 const PAD_TOP    = 4;
 const PAD_BOTTOM = 24;
@@ -20,13 +20,13 @@ const SVG_W      = 800;
 
 // Lane heights per channel type
 const LANE_H: Record<string, number> = {
-  speed:    72,
-  throttle: 44,
-  brake:    44,
-  gear:     36,
-  delta:    52,
+  speed:    100,
+  throttle:  64,
+  brake:     64,
+  gear:      44,
+  delta:     72,
 };
-const DEFAULT_LANE_H = 48;
+const DEFAULT_LANE_H = 60;
 
 // Friendly unit labels & scale per channel
 const CHANNEL_META: Record<string, { unit: string; scale: (v: number) => number; fmt: (v: number) => string }> = {
@@ -46,7 +46,7 @@ const FILL_COLORS: Record<string, string> = {
   delta:    "rgba(96,165,250,0.10)",
 };
 
-export function TelemetryChart({ channels, visibleChannels, className }: TelemetryChartProps) {
+export function TelemetryChart({ channels, visibleChannels, height, className }: TelemetryChartProps) {
   const svgRef   = useRef<SVGSVGElement>(null);
   const [cursor, setCursor] = useState<number | null>(null);
 
@@ -54,14 +54,19 @@ export function TelemetryChart({ channels, visibleChannels, className }: Telemet
 
   // ── Compute layout ──────────────────────────────────────────────────────────
   const lanes = useMemo(() => {
+    const naturalHeights = visible.map(ch => LANE_H[ch.id] ?? DEFAULT_LANE_H);
+    const naturalTotal   = naturalHeights.reduce((s, h) => s + h + LANE_GAP, 0);
+    const innerTarget    = height ? height - PAD_TOP - PAD_BOTTOM : naturalTotal;
+    const scale          = height ? innerTarget / naturalTotal : 1;
+
     let y = PAD_TOP;
-    return visible.map(ch => {
-      const h = LANE_H[ch.id] ?? DEFAULT_LANE_H;
+    return visible.map((ch, i) => {
+      const h = Math.round((LANE_H[ch.id] ?? DEFAULT_LANE_H) * scale);
       const lane = { ch, y, h };
       y += h + LANE_GAP;
       return lane;
     });
-  }, [visible]);
+  }, [visible, height]);
 
   const totalH = PAD_TOP + lanes.reduce((s, l) => s + l.h + LANE_GAP, 0) + PAD_BOTTOM;
   const chartW = SVG_W - PAD_LEFT - PAD_RIGHT;
@@ -174,7 +179,7 @@ export function TelemetryChart({ channels, visibleChannels, className }: Telemet
                   <line x1={PAD_LEFT} y1={fy} x2={PAD_LEFT + chartW} y2={fy}
                     stroke="#3f3f46" strokeWidth="0.5" strokeDasharray="3,4" />
                   <text x={PAD_LEFT - 6} y={fy + 3.5} textAnchor="end"
-                    fill="#52525b" fontSize="8" fontFamily="monospace">
+                    fill="#71717a" fontSize="10" fontFamily="monospace">
                     {CHANNEL_META[ch.id]?.fmt(tick) ?? tick.toFixed(0)}
                   </text>
                 </g>
@@ -190,9 +195,9 @@ export function TelemetryChart({ channels, visibleChannels, className }: Telemet
             })()}
 
             {/* Lane label */}
-            <text x={PAD_LEFT + 6} y={y + 12}
-              fill={ch.color} fontSize="9" fontFamily="monospace"
-              fontWeight="600" opacity="0.8">
+            <text x={PAD_LEFT + 8} y={y + 16}
+              fill={ch.color} fontSize="11" fontFamily="monospace"
+              fontWeight="700" letterSpacing="0.5" opacity="0.9">
               {ch.label.toUpperCase()}
               {CHANNEL_META[ch.id]?.unit ? ` (${CHANNEL_META[ch.id].unit})` : ""}
             </text>
@@ -204,7 +209,7 @@ export function TelemetryChart({ channels, visibleChannels, className }: Telemet
 
             {/* Ref line */}
             <path d={buildPath(ch.refData, li, ch)}
-              fill="none" stroke={ch.color} strokeWidth="1"
+              fill="none" stroke={ch.color} strokeWidth="1.2"
               strokeOpacity="0.3" strokeDasharray="4,3" />
 
             {/* User area */}
@@ -214,7 +219,7 @@ export function TelemetryChart({ channels, visibleChannels, className }: Telemet
 
             {/* User line */}
             <path d={buildPath(ch.data, li, ch)}
-              fill="none" stroke={ch.color} strokeWidth="1.8"
+              fill="none" stroke={ch.color} strokeWidth="2.2"
               strokeLinejoin="round" strokeLinecap="round" />
 
             {/* Lane bottom border */}
@@ -224,7 +229,7 @@ export function TelemetryChart({ channels, visibleChannels, className }: Telemet
             {/* Cursor dot */}
             {cursor !== null && cursor < ch.data.length && (
               <circle cx={toX(cursor)} cy={toY(ch.data[cursor], li, ch)}
-                r="3.5" fill={ch.color} stroke="#09090b" strokeWidth="1.5" />
+                r="4.5" fill={ch.color} stroke="#09090b" strokeWidth="2" />
             )}
 
             {/* Cursor value label */}
@@ -239,7 +244,7 @@ export function TelemetryChart({ channels, visibleChannels, className }: Telemet
                   <rect x={lx - 2} y={cy - 10} width={36} height={13}
                     rx="2" fill="#09090b" opacity="0.85" />
                   <text x={lx + 16} y={cy} textAnchor="middle"
-                    fill={ch.color} fontSize="9" fontFamily="monospace" fontWeight="700">
+                    fill={ch.color} fontSize="11" fontFamily="monospace" fontWeight="700">
                     {fmt}{CHANNEL_META[ch.id]?.unit ? ` ${CHANNEL_META[ch.id].unit}` : ""}
                   </text>
                 </g>
@@ -265,7 +270,7 @@ export function TelemetryChart({ channels, visibleChannels, className }: Telemet
               <line x1={x} y1={PAD_TOP} x2={x} y2={totalH - PAD_BOTTOM}
                 stroke="#3f3f46" strokeWidth="0.5" strokeDasharray="2,6" opacity="0.4" />
               <text x={x} y={totalH - 8} textAnchor="middle"
-                fill="#52525b" fontSize="9" fontFamily="monospace">
+                fill="#71717a" fontSize="10" fontFamily="monospace">
                 {pct}%
               </text>
             </g>

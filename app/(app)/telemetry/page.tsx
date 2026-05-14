@@ -467,7 +467,6 @@ export default function TelemetryPage() {
                       <TelemetryChart
                         channels={channels as Parameters<typeof TelemetryChart>[0]["channels"]}
                         visibleChannels={visibleChannels}
-                        height={simpleMode ? 180 : 260}
                       />
                     </div>
                   </div>
@@ -528,7 +527,7 @@ export default function TelemetryPage() {
                             <span className="text-[10px] font-mono text-zinc-600 ml-auto">{ch.unit}</span>
                           </div>
                           <div className="p-3">
-                            <TelemetryChart channels={[ch]} visibleChannels={[ch.id]} height={120} />
+                            <TelemetryChart channels={[ch]} visibleChannels={[ch.id]} height={140} />
                           </div>
                         </div>
                       ))}
