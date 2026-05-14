@@ -1,233 +1,116 @@
 "use client";
-import React from "react";
-import { useState, useRef, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
-  Upload, Eye, EyeOff, Settings2, RefreshCw, FileText,
-  ChevronRight, AlertCircle, CheckCircle2, TrendingDown,
-  Gauge, Zap, BarChart2, Map, Layers, Activity, Radio,
+  Upload, RefreshCw, AlertCircle, Zap, BarChart2,
+  Map, Layers, Activity, ChevronRight, TrendingDown, TrendingUp,
+  Gauge, Clock, Flame,
 } from "lucide-react";
 import { TelemetryChart }  from "@/components/charts/TelemetryChart";
 import { DeltaChart }      from "@/components/charts/DeltaChart";
 import { SegmentPanel }    from "@/components/charts/SegmentPanel";
 import { TrackHeatmap }    from "@/components/charts/TrackHeatmap";
 import { GhostComparison } from "@/components/charts/GhostComparison";
-import { TrackRenderer } from "@/components/charts/TrackRenderer";
-import { useLang } from "@/context/LanguageContext";
 import { WowScreen }       from "./components/WowScreen";
-import { NextActionPanel }  from "./components/NextAction";
-import { CoachPanel }       from "./components/CoachPanel";
+import { CoachPanel }      from "./components/CoachPanel";
 import { BeforeAfter }     from "./components/BeforeAfter";
-import { Badge }           from "@/components/ui/Badge";
-import { Button }          from "@/components/ui/Button";
+import { useLang }         from "@/context/LanguageContext";
 import { useTelemetry }    from "@/context/TelemetryContext";
 import { cn }              from "@/lib/utils";
 import type { AnalysisInsight } from "@/types/telemetry";
 
-// ─── Severity helpers ─────────────────────────────────────────────────────────
-function useSev(s: string) {
-  const { t } = useLang();
-  if (s === "critical") return { dot:"bg-red-400",    text:"text-red-400",    label: t.feedback.severity.critical };
-  if (s === "warning")  return { dot:"bg-yellow-400", text:"text-yellow-400", label: t.feedback.severity.warning  };
-  if (s === "good")     return { dot:"bg-lime-400",   text:"text-lime-400",   label: t.feedback.severity.good     };
-  return                       { dot:"bg-blue-400",   text:"text-blue-400",   label: t.feedback.severity.info     };
+// ─── helpers ─────────────────────────────────────────────────────────────────
+const fmtMs = (ms: number) =>
+  `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2,"0")}.${String(ms % 1000).padStart(3,"0")}`;
+
+const scoreColor = (v: number) =>
+  v >= 90 ? "text-lime-400" : v >= 75 ? "text-yellow-400" : "text-red-400";
+const scoreBg = (v: number) =>
+  v >= 90 ? "bg-lime-400/10 border-lime-400/25" : v >= 75 ? "bg-yellow-400/10 border-yellow-400/25" : "bg-red-400/10 border-red-400/25";
+
+type Ch = { id: string; label: string; color: string; unit: string;
+  data: number[]; refData: number[]; min: number; max: number; };
+type RightTab = "segments" | "insights" | "coach";
+type LeftView  = "channels" | "heatmap" | "ghost";
+
+// ─── IDLE / UPLOAD STATE ──────────────────────────────────────────────────────
+interface DesktopSession { id: string; filename: string; uploadedAt: string; }
+
+function formatAge(d: string) {
+  const mins = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
+  if (mins < 1) return "только что";
+  if (mins < 60) return `${mins} мин`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} ч`;
+  return `${Math.floor(hrs / 24)} дн`;
 }
 
-// ─── Upload zone ──────────────────────────────────────────────────────────────
-function UploadZone({ onFile, onSample }: { onFile: (f: File) => void; onSample: () => void }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
-  const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); setDragging(false);
-    const f = e.dataTransfer.files[0]; if (f) onFile(f);
-  }, [onFile]);
-  return (
-    <div className="flex-1 flex items-center justify-center p-8">
-      <div className="max-w-lg w-full space-y-4">
-        <div onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)} onDrop={onDrop}
-          onClick={() => inputRef.current?.click()}
-          className={cn("rounded-2xl border-2 border-dashed p-12 text-center cursor-pointer transition-all",
-            dragging ? "border-lime-400 bg-lime-400/5" : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/50")}>
-          <Upload size={28} className={cn("mx-auto mb-3 transition-colors", dragging ? "text-lime-400" : "text-zinc-600")} />
-          <p className="text-sm font-medium text-zinc-300 mb-1">Перетащите файл круга сюда</p>
-          <p className="text-xs text-zinc-600 mb-4">CSV or JSON · time, speed, throttle, brake, gear</p>
-          <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}>
-            Choose file
-          </Button>
-          <input ref={inputRef} type="file" accept=".csv,.json,.txt,.ld" className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
-        </div>
-        <button onClick={onSample}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900 text-sm text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-all">
-          <FileText size={14} className="text-lime-400" />Загрузить пример<ChevronRight size={13} className="text-zinc-600" />
-        </button>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-2">CSV format</p>
-          <pre className="text-[11px] font-mono text-zinc-400 leading-relaxed overflow-x-auto">{`time,speed,throttle,brake,gear\n0.00,280,100,0,6\n0.50,248,0,60,5\n1.20,128,5,5,2`}</pre>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProcessingOverlay({ status }: { status: string }) {
-  const labels: Record<string, string> = { parsing: "Reading file...", analyzing: "Analysing lap..." };
-  return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-center space-y-3">
-        <div className="w-10 h-10 rounded-full border-2 border-lime-400 border-t-transparent animate-spin mx-auto" />
-        <p className="text-sm text-zinc-400">{labels[status] ?? "Загрузка..."}</p>
-      </div>
-    </div>
-  );
-}
-
-function InsightCard({ insight, selected, onSelect }: {
-  insight: AnalysisInsight; selected: boolean; onSelect: () => void;
-}) {
-  const s = useSev(insight.severity);
-  return (
-    <div onClick={onSelect}
-      className={cn("px-4 py-3 cursor-pointer transition-all border-b border-zinc-800 last:border-0",
-        selected ? "bg-zinc-800/40 border-l-2 border-l-lime-400/40" : "hover:bg-zinc-800/30")}>
-      <div className="flex items-start gap-2.5 mb-1">
-        <div className={cn("w-1.5 h-1.5 rounded-full shrink-0 mt-1.5", s.dot)} />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-zinc-200 leading-snug">{insight.titleRu}</p>
-          <p className="text-[10px] font-mono text-zinc-500 mt-0.5">
-            Sector {insight.sectorIdx + 1}
-            {insight.timeCostMs > 0 && ` · −${(insight.timeCostMs / 1000).toFixed(3)}s`}
-          </p>
-        </div>
-        <span className={cn("text-[10px] font-mono uppercase tracking-wide shrink-0", s.text)}>{s.label}</span>
-      </div>
-      {selected && (
-        <div className="mt-2 space-y-2 animate-slide-up">
-          <p className="text-xs text-zinc-400 leading-relaxed">{insight.descriptionRu}</p>
-          {insight.userValue !== undefined && insight.refValue !== undefined && (
-            <div className="flex gap-3 text-xs font-mono">
-              <span className="text-zinc-500">You: <span className="text-zinc-200">{insight.userValue} {insight.unit}</span></span>
-              <span className="text-zinc-500">Ref: <span className="text-lime-400">{insight.refValue} {insight.unit}</span></span>
-            </div>
-          )}
-          {insight.academyModuleId && (
-            <a href={`/academy?module=${insight.academyModuleId}`}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 hover:border-zinc-600 transition-colors">
-              <span className="text-[10px] font-mono text-lime-400">→</span>
-              <span className="text-xs text-zinc-300">{insight.academyModuleTitleRu ?? "Related lesson"}</span>
-            </a>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-type RightTab = "insights" | "segments" | "coach" | "engineer";
-type LeftTab  = "channels" | "heatmap" | "ghost";
-
-// ─── Banner: load latest desktop upload ───────────────────────────────────────
-interface DesktopSession {
-  id: string;
-  filename: string;
-  uploadedAt: string;
-  size?: number;
-}
-
-function formatAge(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  const hrs  = Math.floor(mins / 60);
-  if (mins < 1)   return "только что";
-  if (mins < 60)  return `${mins} мин назад`;
-  if (hrs < 24)   return `${hrs} ч назад`;
-  return `${Math.floor(hrs / 24)} дн назад`;
-}
-
-function DesktopUploadBanner({ onFile }: { onFile: (f: File) => void }) {
-  const [sessions,   setSessions]   = React.useState<DesktopSession[]>([]);
-  const [expanded,   setExpanded]   = React.useState(false);
-  const [fetching,   setFetching]   = React.useState<string | null>(null);
-  const [dismissed,  setDismissed]  = React.useState(false);
+function DesktopUploads({ onFile }: { onFile: (f: File) => void }) {
+  const [sessions, setSessions] = React.useState<DesktopSession[]>([]);
+  const [expanded, setExpanded] = React.useState(false);
+  const [loading, setLoading]   = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const check = async () => {
+    const fetch_ = async () => {
       try {
-        const res = await fetch("/api/sessions?all=1");
-        if (!res.ok) return;
-        const { sessions: all } = await res.json();
-        const desktop = (all ?? [])
-          .filter((s: DesktopSession) => {
-            // Accept sessions from desktop source
-            return true; // show all for now
-          })
+        const r = await fetch("/api/sessions?all=1");
+        if (!r.ok) return;
+        const { sessions: all } = await r.json();
+        setSessions((all ?? [])
           .sort((a: DesktopSession, b: DesktopSession) =>
-            new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
-          )
-          .slice(0, 10); // last 10 uploads
-        if (desktop.length > 0) setSessions(desktop);
+            new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
+          .slice(0, 10));
       } catch {}
     };
-    check();
-    const t = setInterval(check, 15_000);
+    fetch_();
+    const t = setInterval(fetch_, 15000);
     return () => clearInterval(t);
   }, []);
 
-  const handleLoad = async (s: DesktopSession) => {
-    setFetching(s.id);
+  const load = async (s: DesktopSession) => {
+    setLoading(s.id);
     try {
-      const res = await fetch(`/api/sessions/${s.id}/file`);
-      if (!res.ok) throw new Error();
-      const blob = await res.blob();
-      const file = new File([blob], s.filename, { type: "text/plain" });
-      onFile(file);
-    } catch {
-      alert("Файл недоступен. Перетащи его вручную.");
-    } finally {
-      setFetching(null);
-    }
+      const r = await fetch(`/api/sessions/${s.id}/file`);
+      if (!r.ok) throw new Error();
+      const blob = await r.blob();
+      onFile(new File([blob], s.filename, { type: "text/plain" }));
+    } catch { alert("Файл недоступен. Загрузи вручную."); }
+    finally { setLoading(null); }
   };
 
-  if (sessions.length === 0 || dismissed) return null;
-
+  if (!sessions.length) return null;
   const latest = sessions[0];
-  const hasMore = sessions.length > 1;
 
   return (
-    <div className="mx-4 mt-3 rounded-xl border border-zinc-700 bg-zinc-900/80 overflow-hidden">
-      {/* Header row */}
+    <div className="w-full max-w-lg rounded-2xl border border-zinc-700 overflow-hidden bg-zinc-900/60">
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="w-2 h-2 rounded-full bg-lime-400 shrink-0"/>
+        <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-lime-400">Загрузки от десктопа</p>
           <p className="text-[11px] text-zinc-400 font-mono truncate">{latest.filename}</p>
         </div>
-        <button onClick={() => handleLoad(latest)} disabled={fetching === latest.id}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-400 hover:bg-lime-300 text-zinc-950 text-xs font-semibold transition-all shrink-0 disabled:opacity-60">
-          {fetching === latest.id ? "Загрузка…" : "Анализировать"}
+        <button onClick={() => load(latest)} disabled={loading === latest.id}
+          className="px-3 py-1.5 rounded-lg bg-lime-400 hover:bg-lime-300 text-zinc-950 text-xs font-bold transition-all disabled:opacity-50 shrink-0">
+          {loading === latest.id ? "…" : "Открыть"}
         </button>
-        {hasMore && (
+        {sessions.length > 1 && (
           <button onClick={() => setExpanded(v => !v)}
-            className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 shrink-0 transition-colors px-1">
-            {expanded ? "▲" : `▼ ещё ${sessions.length - 1}`}
+            className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 shrink-0 px-1">
+            {expanded ? "▲" : `▼ ${sessions.length - 1}`}
           </button>
         )}
-        <button onClick={() => setDismissed(true)} className="text-zinc-600 hover:text-zinc-400 shrink-0 text-base leading-none px-1">×</button>
       </div>
-
-      {/* Expanded list */}
       {expanded && (
         <div className="border-t border-zinc-800 divide-y divide-zinc-800/60">
           {sessions.map((s, i) => (
-            <div key={s.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-800/40 transition-colors">
-              <span className="text-[10px] font-mono text-zinc-600 w-4 shrink-0">{i + 1}</span>
+            <div key={s.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-800/40">
+              <span className="text-[10px] font-mono text-zinc-600 w-4">{i + 1}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-mono text-zinc-300 truncate">{s.filename}</p>
-                <p className="text-[10px] text-zinc-600 font-mono">{formatAge(s.uploadedAt)}</p>
+                <p className="text-[10px] text-zinc-600">{formatAge(s.uploadedAt)} назад</p>
               </div>
-              <button onClick={() => handleLoad(s)} disabled={fetching === s.id}
-                className="text-[11px] font-mono px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-all shrink-0 border border-zinc-700 disabled:opacity-50">
-                {fetching === s.id ? "…" : "Открыть"}
+              <button onClick={() => load(s)} disabled={loading === s.id}
+                className="text-[11px] px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 disabled:opacity-50">
+                {loading === s.id ? "…" : "Открыть"}
               </button>
             </div>
           ))}
@@ -237,391 +120,438 @@ function DesktopUploadBanner({ onFile }: { onFile: (f: File) => void }) {
   );
 }
 
+function IdleState({ onFile, onSample }: { onFile: (f: File) => void; onSample: () => void }) {
+  const [dragging, setDragging] = React.useState(false);
+  const ref = React.useRef<HTMLInputElement>(null);
 
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setDragging(false);
+    const f = e.dataTransfer.files[0]; if (f) onFile(f);
+  };
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-8 p-8">
+      {/* Drop zone */}
+      <div
+        onDragOver={e => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        onClick={() => ref.current?.click()}
+        className={cn(
+          "w-full max-w-lg rounded-2xl border-2 border-dashed flex flex-col items-center gap-4 py-16 px-8 cursor-pointer transition-all",
+          dragging
+            ? "border-lime-400 bg-lime-400/5"
+            : "border-zinc-700 hover:border-zinc-500 hover:bg-zinc-900/40"
+        )}
+      >
+        <input ref={ref} type="file" className="hidden" accept=".csv,.json,.txt,.ld"
+          onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
+        <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center transition-all",
+          dragging ? "bg-lime-400/15 border border-lime-400/30" : "bg-zinc-800 border border-zinc-700")}>
+          <Upload size={28} className={dragging ? "text-lime-400" : "text-zinc-400"} />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium text-zinc-200 mb-1">Перетащи файл круга сюда</p>
+          <p className="text-xs text-zinc-500">CSV · JSON · .ld · любой симулятор</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <button onClick={e => { e.stopPropagation(); onSample(); }}
+            className="text-xs text-zinc-500 hover:text-lime-400 transition-colors font-mono underline underline-offset-2">
+            Загрузить пример →
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop uploads */}
+      <DesktopUploads onFile={onFile} />
+
+      {/* Tips */}
+      <div className="flex items-center gap-6 text-[11px] text-zinc-600 font-mono">
+        {["iRacing .ibt", "ACC CSV", "MoTeC .ld", "rFactor 2"].map(s => (
+          <span key={s} className="flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-zinc-700" />{s}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── SCORE RING ───────────────────────────────────────────────────────────────
+function ScoreRing({ value, label, size = 52 }: { value: number; label: string; size?: number }) {
+  const r = (size - 8) / 2;
+  const circ = 2 * Math.PI * r;
+  const stroke = circ * (1 - value / 100);
+  const color = value >= 90 ? "#a3e635" : value >= 75 ? "#facc15" : "#f87171";
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#27272a" strokeWidth="5" />
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="5"
+            strokeDasharray={circ} strokeDashoffset={stroke}
+            strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.6s ease" }} />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[11px] font-bold font-mono" style={{ color }}>{value}</span>
+        </div>
+      </div>
+      <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider">{label}</span>
+    </div>
+  );
+}
+
+// ─── INSIGHT ITEM ─────────────────────────────────────────────────────────────
+function InsightRow({ ins, selected, onSelect }: {
+  ins: AnalysisInsight & { _segLabel?: string }; selected: boolean; onSelect: () => void;
+}) {
+  const cat = ins.category;
+  const colors: Record<string, { dot: string; ring: string }> = {
+    brake:    { dot: "bg-red-400",    ring: "border-red-400/30" },
+    throttle: { dot: "bg-green-400",  ring: "border-green-400/30" },
+    speed:    { dot: "bg-yellow-400", ring: "border-yellow-400/30" },
+    good:     { dot: "bg-lime-400",   ring: "border-lime-400/30" },
+  };
+  const c = colors[cat] ?? { dot: "bg-zinc-400", ring: "border-zinc-700" };
+
+  return (
+    <button onClick={onSelect}
+      className={cn(
+        "w-full text-left px-4 py-3 border-b border-zinc-800/60 transition-all",
+        selected ? "bg-zinc-800/60" : "hover:bg-zinc-800/30"
+      )}>
+      <div className="flex items-start gap-3">
+        <div className={cn("w-1.5 h-1.5 rounded-full shrink-0 mt-1.5", c.dot)} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">{(ins as any)._segLabel}</span>
+            {ins.timeCostMs > 0 && (
+              <span className="text-[10px] font-mono text-red-400 ml-auto shrink-0">
+                −{(ins.timeCostMs / 1000).toFixed(3)}с
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-zinc-300 leading-relaxed line-clamp-2">{ins.descriptionRu}</p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function TelemetryPage() {
   const { t } = useLang();
   const {
     uploadState, chartChannels, handleFile, reset, loadSampleData,
     driverProfile, wowSummary, heatmapData, showWow, dismissWow,
-    coachMessage, patternReport, nextActions, positives,
-    levelProgress, driverRank,
+    coachMessage, nextActions,
   } = useTelemetry();
   const { status, error, filename, parsedLap, analysisResult } = uploadState;
 
-  const [visibleChannels, setVisibleChannels] = useState(["speed", "throttle", "brake", "delta"]);
-  const [selectedInsight, setSelectedInsight]  = useState<AnalysisInsight | null>(null);
-  const [rightTab, setRightTab]  = useState<RightTab>("segments");
-  const [leftTab,  setLeftTab]   = useState<LeftTab>("channels");
-  const [simpleMode, setSimpleMode] = useState(false);
+  const [visibleCh, setVisibleCh] = useState(["speed", "throttle", "brake", "delta"]);
+  const [rightTab, setRightTab]   = useState<RightTab>("segments");
+  const [leftView, setLeftView]   = useState<LeftView>("channels");
+  const [selIns, setSelIns]       = useState<(AnalysisInsight & { _segLabel?: string }) | null>(null);
 
-  const toggleChannel = (id: string) => {
-    setVisibleChannels((prev) =>
-      prev.includes(id) ? (prev.length > 1 ? prev.filter((c) => c !== id) : prev) : [...prev, id]
-    );
-  };
+  const toggleCh = (id: string) =>
+    setVisibleCh(prev => prev.includes(id)
+      ? prev.length > 1 ? prev.filter(c => c !== id) : prev
+      : [...prev, id]);
 
-  const fmtMs = (ms: number) =>
-    `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2,"0")}.${String(ms % 1000).padStart(3,"0")}`;
-
+  const channels = (chartChannels as Ch[] | null) ?? [];
   const lapTimeStr = parsedLap ? fmtMs(parsedLap.lapTimeMs) : "—";
   const refTimeMs  = analysisResult ? parsedLap!.lapTimeMs - analysisResult.totalTimeDeltaMs : 0;
   const refTimeStr = refTimeMs ? fmtMs(refTimeMs) : "—";
-  const totalDistM = parsedLap ? (parsedLap.rows[parsedLap.rows.length - 1].lapDist ?? 0) : 0;
+  const gapMs      = analysisResult?.totalTimeDeltaMs ?? 0;
+  const totalDistM = parsedLap ? (parsedLap.rows.at(-1)?.lapDist ?? 0) : 0;
 
-  type Ch = { id: string; label: string; color: string; unit: string; data: number[]; refData: number[]; min: number; max: number; rawData?: number[]; rawRefData?: number[] };
-  const channels = (chartChannels as Ch[] | null) ?? [];
+  const allInsights = (analysisResult?.segmentAnalyses
+    .flatMap(sa => sa.insights.map(i => ({ ...i, segment: sa.segment.label })))
+    .filter(i => i.type !== "good_segment") ?? []) as any[];
 
   return (
-    <div className="h-full flex flex-col animate-fade-in">
-      {/* Wow screen overlay */}
+    <div className="h-full flex flex-col bg-zinc-950 overflow-hidden">
+
+      {/* ── WOW OVERLAY ─────────────────────────────────────────────────────── */}
       {showWow && wowSummary && (
-        <WowScreen
-          summary={wowSummary}
-          onDismiss={dismissWow}
-          lapTimeStr={lapTimeStr}
-          levelProgress={levelProgress}
-          driverRank={driverRank}
-          xpEarned={50}
-        />
+        <WowScreen summary={wowSummary} onDismiss={dismissWow}
+          lapTimeStr={lapTimeStr} levelProgress={null} driverRank={null} xpEarned={50} />
       )}
 
-      {/* Toolbar */}
-      <div className="px-5 py-3 border-b border-zinc-800 flex items-center gap-3 flex-wrap shrink-0">
-        <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Telemetry Analysis</p>
-        <div className="h-4 w-px bg-zinc-800" />
+      {/* ── TOP BAR ─────────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-3 px-4 h-11 border-b border-zinc-800/80 shrink-0 bg-zinc-950">
+        <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">Телеметрия</span>
+
         {status === "done" && filename && (
           <>
-            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-lime-400/30 bg-lime-400/8 text-xs text-lime-400 font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-lime-400" />{filename}
+            <div className="w-px h-4 bg-zinc-800" />
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-800/80 border border-zinc-700/60">
+              <div className="w-1.5 h-1.5 rounded-full bg-lime-400" />
+              <span className="text-[11px] font-mono text-zinc-300 max-w-[180px] truncate">{filename}</span>
             </div>
-            <div className="h-4 w-px bg-zinc-800" />
           </>
         )}
+
         <div className="flex-1" />
 
-        {/* Simple mode toggle */}
         {status === "done" && (
-          <button onClick={() => setSimpleMode((v) => !v)}
-            className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border transition-all",
-              simpleMode ? "border-blue-400/40 bg-blue-400/10 text-blue-400" : "border-zinc-700 text-zinc-500 hover:text-zinc-300")}>
-            {simpleMode ? t.common.simple : t.common.detailed}
-          </button>
-        )}
-
-        {status === "done" && (
-          <Button variant="ghost" size="sm" onClick={reset}><RefreshCw size={13} />New lap</Button>
-        )}
-        {(status === "idle" || status === "error") && (
-          <Button variant="primary" size="sm" onClick={() => {
-            const inp = document.createElement("input"); inp.type="file"; inp.accept=".csv,.json,.txt,.ld";
-            inp.onchange = (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) handleFile(f); };
-            inp.click();
-          }}><Upload size={13} />Загрузить круг</Button>
-        )}
-      </div>
-
-      {/* Idle / error */}
-      {(status === "idle" || status === "error") && (
-        <div className="flex flex-col flex-1 min-h-0">
-          {status === "error" && (
-            <div className="mx-5 mt-4 flex items-center gap-3 px-4 py-3 rounded-xl border border-red-400/30 bg-red-400/8">
-              <AlertCircle size={15} className="text-red-400 shrink-0" />
-              <div><p className="text-xs font-medium text-red-400">Parse error</p><p className="text-xs text-zinc-400 mt-0.5">{error}</p></div>
-              <Button variant="ghost" size="sm" className="ml-auto" onClick={reset}>Retry</Button>
-            </div>
-          )}
-<DesktopUploadBanner onFile={handleFile} />
-          <UploadZone onFile={handleFile} onSample={loadSampleData} />
-        </div>
-      )}
-
-      {(status === "parsing" || status === "analyzing") && <ProcessingOverlay status={status} />}
-
-      {status === "done" && analysisResult && channels.length > 0 && (
-        <div className="flex-1 flex min-h-0">
-          {/* ── Left: charts ── */}
-          <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-            {/* Summary bar */}
-            <div className="px-5 py-3 border-b border-zinc-800 flex items-center gap-5 flex-wrap shrink-0">
-              <div>
-                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">Your lap</p>
-                <p className="text-lg font-mono tabular font-semibold text-lime-400">{lapTimeStr}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">Reference</p>
-                <p className="text-lg font-mono tabular font-semibold text-zinc-300">{refTimeStr}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">Gap</p>
-                <p className={cn("text-lg font-mono tabular font-semibold",
-                  analysisResult.totalTimeDeltaMs > 0 ? "text-red-400" : "text-lime-400")}>
-                  {analysisResult.totalTimeDeltaMs > 0 ? "+" : ""}
-                  {(analysisResult.totalTimeDeltaMs / 1000).toFixed(3)}s
-                </p>
-              </div>
-              <div className="h-8 w-px bg-zinc-800" />
-              {analysisResult.sectors.map((s) => (
-                <div key={s.sectorIdx}>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">S{s.sectorIdx + 1}</p>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-mono tabular text-zinc-200">
-                      {Math.floor(s.userTimeMs / 1000)}.{String(s.userTimeMs % 1000).padStart(3,"0")}
-                    </span>
-                    <span className={cn("text-xs font-mono tabular", s.deltaMs > 0 ? "text-red-400" : "text-lime-400")}>
-                      {s.deltaMs > 0 ? "+" : ""}{(s.deltaMs / 1000).toFixed(3)}s
-                    </span>
-                  </div>
-                </div>
+          <>
+            {/* View switcher */}
+            <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-zinc-900 border border-zinc-800">
+              {([["channels", Activity, "Каналы"], ["heatmap", Map, "Карта"], ["ghost", Layers, "Ghost"]] as const).map(([v, Icon, label]) => (
+                <button key={v} onClick={() => setLeftView(v as LeftView)}
+                  className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all",
+                    leftView === v ? "bg-zinc-700 text-zinc-100" : "text-zinc-500 hover:text-zinc-300")}>
+                  <Icon size={11} />{label}
+                </button>
               ))}
-              <div className="flex-1" />
-
-              {/* Driver profile pill */}
-              {driverProfile && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-700 text-xs font-mono">
-                  <span>{driverProfile.emoji}</span>
-                  <span className="text-zinc-400">{driverProfile.styleLabel}</span>
-                  <span className="text-zinc-600">·</span>
-                  <span className="text-lime-400">{driverProfile.overallRating}</span>
-                </div>
-              )}
-
-              {/* Overall score + sub-scores */}
-              <div className="flex items-center gap-1.5">
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700">
-                  <Gauge size={13} className="text-lime-400" />
-                  <span className="text-xs font-mono text-zinc-400">Скор</span>
-                  <span className={cn("text-sm font-bold font-mono",
-                    analysisResult.overallScore >= 90 ? "text-lime-400" :
-                    analysisResult.overallScore >= 75 ? "text-yellow-400" : "text-red-400")}>
-                    {analysisResult.overallScore}
-                  </span>
-                </div>
-                {analysisResult.subScores && (
-                  <div className="hidden sm:flex items-center gap-1">
-                    {([
-                      ["Торм", analysisResult.subScores.braking],
-                      ["Газ",  analysisResult.subScores.throttle],
-                      ["Лин",  analysisResult.subScores.lines],
-                      ["Пост", analysisResult.subScores.consistency],
-                    ] as [string, number][]).map(([label, val]) => (
-                      <div key={label} className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-zinc-900 border border-zinc-800">
-                        <span className="text-[9px] font-mono text-zinc-500">{label}</span>
-                        <span className={cn("text-[11px] font-bold font-mono",
-                          val >= 85 ? "text-lime-400" : val >= 70 ? "text-yellow-400" : "text-red-400")}>
-                          {val}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Channel toggles (hidden in simple mode) */}
-              {!simpleMode && (
-                <div className="flex items-center gap-1">
-                  <Settings2 size={12} className="text-zinc-600 mr-1" />
-                  {channels.filter((c) => c.id !== "delta" || true).map((ch) => (
-                    <button key={ch.id} onClick={() => toggleChannel(ch.id)}
-                      className={cn("flex items-center gap-1.5 px-2 py-1 rounded-md text-xs border transition-all",
-                        visibleChannels.includes(ch.id)
-                          ? "border-zinc-600 bg-zinc-800 text-zinc-200"
-                          : "border-zinc-800 text-zinc-600 hover:border-zinc-700")}>
-                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: visibleChannels.includes(ch.id) ? ch.color : "#52525b" }} />
-                      {ch.label}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
-            <div className="px-3 pt-3 pb-4 space-y-3">
-              {/* Left-panel view tabs */}
-              <div className="flex gap-1 border-b border-zinc-800 pb-3">
-                {([
-                  ["channels", "Каналы",  Activity],
-                  ["heatmap",  "Карта трассы", Map],
-                  ["ghost",    "Сравнение", Layers],
-                ] as const).map(([k, label, Icon]) => (
-                  <button key={k} onClick={() => setLeftTab(k)}
-                    className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                      leftTab === k ? "bg-zinc-800 text-zinc-100" : "text-zinc-500 hover:text-zinc-300")}>
-                    <Icon size={12} />{label}
+            {/* Channel toggles */}
+            {leftView === "channels" && (
+              <div className="flex items-center gap-1">
+                {channels.map(ch => (
+                  <button key={ch.id} onClick={() => toggleCh(ch.id)}
+                    className={cn("flex items-center gap-1 px-2 py-1 rounded-md text-[11px] border transition-all",
+                      visibleCh.includes(ch.id)
+                        ? "bg-zinc-800 border-zinc-600 text-zinc-200"
+                        : "border-zinc-800 text-zinc-600 hover:border-zinc-700")}>
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: visibleCh.includes(ch.id) ? ch.color : "#52525b" }} />
+                    {ch.label}
                   </button>
                 ))}
               </div>
+            )}
 
-              {/* ── CHANNELS VIEW ── */}
-              {leftTab === "channels" && (
-                <div className="space-y-3">
-                  {/* Main chart */}
-                  <TelemetryChart
-                    channels={channels as Parameters<typeof TelemetryChart>[0]["channels"]}
-                    visibleChannels={visibleChannels}
-                    className="w-full"
-                  />
+            <div className="w-px h-4 bg-zinc-800" />
+            <button onClick={reset}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-all border border-transparent hover:border-zinc-700">
+              <RefreshCw size={11} /> Новый круг
+            </button>
+          </>
+        )}
 
-                  {/* Delta chart */}
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
-                    <div className="px-4 pt-3 pb-1 border-b border-zinc-800 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <BarChart2 size={13} className="text-blue-400" />
-                        <p className="text-xs font-medium text-zinc-400">Delta Time</p>
-                        <Badge variant="info">Key</Badge>
-                      </div>
-                      <div className="flex items-center gap-3 text-[11px] font-mono">
-                        <span className="text-red-400 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-400" />Losing</span>
-                        <span className="text-lime-400 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-lime-400" />Gaining</span>
+        {(status === "idle" || status === "error") && (
+          <button onClick={() => {
+            const i = document.createElement("input"); i.type = "file"; i.accept = ".csv,.json,.txt,.ld";
+            i.onchange = e => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) handleFile(f); };
+            i.click();
+          }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-400 hover:bg-lime-300 text-zinc-950 text-xs font-semibold transition-all">
+            <Upload size={12} /> Загрузить
+          </button>
+        )}
+      </div>
+
+      {/* ── IDLE / ERROR ─────────────────────────────────────────────────────── */}
+      {(status === "idle" || status === "error") && (
+        <div className="flex-1 flex flex-col min-h-0">
+          {status === "error" && (
+            <div className="mx-5 mt-4 flex items-center gap-3 px-4 py-3 rounded-xl border border-red-400/25 bg-red-400/6">
+              <AlertCircle size={14} className="text-red-400 shrink-0" />
+              <p className="text-xs text-red-300 flex-1">{error}</p>
+              <button onClick={reset} className="text-xs text-zinc-400 hover:text-zinc-200 px-2 py-1 rounded hover:bg-zinc-800">Повтор</button>
+            </div>
+          )}
+          <IdleState onFile={handleFile} onSample={loadSampleData} />
+        </div>
+      )}
+
+      {/* ── PROCESSING ───────────────────────────────────────────────────────── */}
+      {(status === "parsing" || status === "analyzing") && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin mx-auto" />
+            <p className="text-sm font-mono text-zinc-400">
+              {status === "parsing" ? "Парсинг данных…" : "Анализ круга…"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── ANALYSIS VIEW ────────────────────────────────────────────────────── */}
+      {status === "done" && analysisResult && channels.length > 0 && (
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+
+          {/* ══ LEFT: DATA CANVAS ══════════════════════════════════════════════ */}
+          <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+
+            {/* ── METRICS STRIP ─────────────────────────────────────────────── */}
+            <div className="flex items-center gap-0 shrink-0 border-b border-zinc-800/60 bg-zinc-950/80">
+
+              {/* Lap times */}
+              <div className="flex items-center gap-6 px-5 py-3 border-r border-zinc-800/60">
+                <div>
+                  <p className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest mb-0.5">Ваш круг</p>
+                  <p className="text-xl font-mono font-bold text-lime-400 tabular-nums">{lapTimeStr}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest mb-0.5">Референс</p>
+                  <p className="text-xl font-mono font-semibold text-zinc-300 tabular-nums">{refTimeStr}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest mb-0.5">Разрыв</p>
+                  <p className={cn("text-xl font-mono font-bold tabular-nums",
+                    gapMs > 0 ? "text-red-400" : "text-lime-400")}>
+                    {gapMs > 0 ? "+" : ""}{(gapMs / 1000).toFixed(3)}с
+                  </p>
+                </div>
+              </div>
+
+              {/* Sector deltas */}
+              {analysisResult.sectors.length > 0 && (
+                <div className="flex items-center gap-4 px-5 py-3 border-r border-zinc-800/60">
+                  {analysisResult.sectors.map(s => (
+                    <div key={s.sectorIdx}>
+                      <p className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest mb-0.5">S{s.sectorIdx + 1}</p>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-mono tabular-nums text-zinc-200">
+                          {(s.userTimeMs / 1000).toFixed(3)}
+                        </span>
+                        <span className={cn("text-[11px] font-mono tabular-nums",
+                          s.deltaMs > 0 ? "text-red-400" : "text-lime-400")}>
+                          {s.deltaMs > 0 ? "+" : ""}{(s.deltaMs / 1000).toFixed(3)}
+                        </span>
                       </div>
                     </div>
-                    <div className="p-4">
-                      <DeltaChart delta={analysisResult.delta} totalDistM={totalDistM} height={160} className="w-full" />
-                    </div>
-                  </div>
+                  ))}
+                </div>
+              )}
 
-                  {/* Optimal lap */}
-                  <div className="rounded-xl border border-lime-400/20 bg-lime-400/5 p-4">
-                    <div className="flex items-start gap-3">
-                      <Zap size={16} className="text-lime-400 shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-[10px] font-mono uppercase tracking-widest text-lime-400/70 mb-1">Optimal Lap</p>
-                        <p className="text-sm font-medium text-zinc-100 mb-2">{analysisResult.optimalLap.summaryRu}</p>
-                        {analysisResult.optimalLap.segmentContributions.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {analysisResult.optimalLap.segmentContributions.map((c) => (
-                              <span key={c.segmentLabel}
-                                className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300">
-                                {c.segmentLabel}: −{(c.gainMs/1000).toFixed(3)}s
-                              </span>
-                            ))}
-                          </div>
-                        )}
+              {/* Scores */}
+              <div className="flex items-center gap-4 px-5 py-2 border-r border-zinc-800/60">
+                <ScoreRing value={analysisResult.overallScore} label="Общий" />
+                {analysisResult.subScores && (
+                  <>
+                    <ScoreRing value={analysisResult.subScores.braking}     label="Торм"  size={44} />
+                    <ScoreRing value={analysisResult.subScores.throttle}    label="Газ"   size={44} />
+                    <ScoreRing value={analysisResult.subScores.lines}       label="Линии" size={44} />
+                    <ScoreRing value={analysisResult.subScores.consistency} label="Пост"  size={44} />
+                  </>
+                )}
+              </div>
+
+              {/* Stats */}
+              {parsedLap && (
+                <div className="flex items-center gap-4 px-5 py-3 flex-1">
+                  {[
+                    { icon: Flame, label: "MAX SPEED", value: `${Math.round(parsedLap.channelStats.maxSpeed)} km/h`, color: "text-lime-400" },
+                    { icon: BarChart2, label: "AVG THROTTLE", value: `${Math.round(parsedLap.channelStats.avgThrottle)}%`, color: "text-green-400" },
+                    { icon: Clock, label: "BRAKE ZONES", value: parsedLap.channelStats.brakingEvents.length, color: "text-red-400" },
+                  ].map(({ icon: Icon, label, value, color }) => (
+                    <div key={label} className="min-w-0">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Icon size={9} className={color} />
+                        <p className="text-[9px] font-mono text-zinc-600 uppercase tracking-wider">{label}</p>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-[10px] font-mono text-zinc-500 mb-0.5">Potential</p>
-                        <p className="text-2xl font-mono font-bold text-lime-400">
-                          −{(analysisResult.optimalLap.potentialGainMs/1000).toFixed(3)}s
+                      <p className={cn("text-sm font-mono font-semibold tabular-nums", color)}>{value}</p>
+                    </div>
+                  ))}
+                  {/* Optimal gain */}
+                  {analysisResult.optimalLap.potentialGainMs > 0 && (
+                    <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg border border-lime-400/20 bg-lime-400/6">
+                      <Zap size={11} className="text-lime-400" />
+                      <div>
+                        <p className="text-[9px] font-mono text-zinc-500 uppercase">Потенциал</p>
+                        <p className="text-sm font-mono font-bold text-lime-400">
+                          −{(analysisResult.optimalLap.potentialGainMs / 1000).toFixed(3)}с
                         </p>
                       </div>
                     </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ── CHART CANVAS ──────────────────────────────────────────────── */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {leftView === "channels" && (
+                <div className="space-y-0">
+                  {/* Main channels */}
+                  <TelemetryChart
+                    channels={channels as any}
+                    visibleChannels={visibleCh}
+                    className="w-full rounded-none border-0 border-b border-zinc-800/60"
+                  />
+
+                  {/* Delta chart */}
+                  <div className="bg-zinc-950">
+                    <div className="flex items-center gap-3 px-4 py-2 border-b border-zinc-800/40">
+                      <BarChart2 size={11} className="text-blue-400" />
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Delta Time</span>
+                      <div className="flex items-center gap-3 ml-auto text-[10px] font-mono">
+                        <span className="text-red-400 flex items-center gap-1">
+                          <TrendingDown size={9} /> Отставание
+                        </span>
+                        <span className="text-lime-400 flex items-center gap-1">
+                          <TrendingUp size={9} /> Опережение
+                        </span>
+                      </div>
+                    </div>
+                    <DeltaChart delta={analysisResult.delta} totalDistM={totalDistM}
+                      height={140} className="w-full" />
                   </div>
 
-                  {/* Per-channel detail (hidden in simple mode) */}
-                  {!simpleMode && (
-                    <div className="grid grid-cols-2 gap-3">
-                      {channels.filter((ch) => visibleChannels.includes(ch.id) && ch.id !== "delta").map((ch) => (
-                        <div key={ch.id} className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
-                          <div className="px-4 pt-3 pb-1 border-b border-zinc-800 flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ background: ch.color }} />
-                            <p className="text-xs font-medium text-zinc-400">{ch.label}</p>
-                            <span className="text-[10px] font-mono text-zinc-600 ml-auto">{ch.unit}</span>
-                          </div>
-                          <div className="p-3">
-                            <TelemetryChart channels={[ch]} visibleChannels={[ch.id]} height={140} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Stats strip */}
-                  {parsedLap && (
-                    <div className="grid grid-cols-4 gap-3">
-                      {[
-                        { label: t.telemetry.stats.maxSpeed,    value: `${Math.round(parsedLap.channelStats.maxSpeed)} km/h` },
-                        { label: t.telemetry.stats.avgThrottle, value: `${Math.round(parsedLap.channelStats.avgThrottle)}%` },
-                        { label: t.telemetry.stats.maxBrake,    value: `${Math.round(parsedLap.channelStats.maxBrake)}%`    },
-                        { label: t.telemetry.stats.brakeZones,  value: parsedLap.channelStats.brakingEvents.length },
-                      ].map(({ label, value }) => (
-                        <div key={label} className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                          <p className="text-[10px] font-mono uppercase tracking-wide text-zinc-500 mb-1">{label}</p>
-                          <p className="text-sm font-mono font-medium text-zinc-200">{value}</p>
-                        </div>
+                  {/* Optimal lap banner */}
+                  {analysisResult.optimalLap.summaryRu && (
+                    <div className="flex items-center gap-4 px-4 py-3 border-t border-zinc-800/60 bg-zinc-900/40">
+                      <Zap size={14} className="text-lime-400 shrink-0" />
+                      <p className="text-xs text-zinc-300 flex-1">{analysisResult.optimalLap.summaryRu}</p>
+                      {analysisResult.optimalLap.segmentContributions.slice(0, 3).map(c => (
+                        <span key={c.segmentLabel}
+                          className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 shrink-0">
+                          {c.segmentLabel} −{(c.gainMs / 1000).toFixed(3)}с
+                        </span>
                       ))}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* ── HEATMAP VIEW ── */}
-              {leftTab === "heatmap" && heatmapData && (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-200">{t.telemetry.trackMap}</p>
-                      <p className="text-xs text-zinc-500 mt-0.5">Delta time distribution — red zones are where you lose the most time</p>
+              {leftView === "heatmap" && heatmapData && (
+                <div className="p-4 space-y-4">
+                  <TrackHeatmap data={heatmapData}
+                    segmentAnalyses={analysisResult.segmentAnalyses} trackId="monza" height={340} />
+                  {analysisResult.segmentAnalyses.filter(sa => sa.segment.type === "corner" && sa.deltaMs > 0)
+                    .sort((a, b) => b.deltaMs - a.deltaMs).slice(0, 3).map(sa => (
+                    <div key={sa.segment.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-zinc-800 bg-zinc-900">
+                      <div className="w-8 h-8 rounded-lg bg-red-400/10 border border-red-400/20 flex items-center justify-center shrink-0">
+                        <TrendingDown size={14} className="text-red-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-zinc-200">{sa.segment.label}</p>
+                        <p className="text-[11px] text-zinc-500">{sa.insights[0]?.descriptionRu?.slice(0, 80)}…</p>
+                      </div>
+                      <p className="text-red-400 font-mono text-sm font-bold">−{(sa.deltaMs / 1000).toFixed(3)}с</p>
                     </div>
-                  </div>
-                  <TrackHeatmap
-                    data={heatmapData}
-                    segmentAnalyses={analysisResult.segmentAnalyses}
-                    trackId="monza"
-                    height={340}
-                  />
-                  {/* Worst segment callout */}
-                  {analysisResult.segmentAnalyses.filter((sa) => sa.deltaMs > 0).length > 0 && (
-                    <div className="mt-3 grid grid-cols-3 gap-3">
-                      {analysisResult.segmentAnalyses
-                        .filter((sa) => sa.segment.type === "corner" && sa.deltaMs > 0)
-                        .sort((a,b) => b.deltaMs - a.deltaMs)
-                        .slice(0, 3)
-                        .map((sa) => (
-                          <div key={sa.segment.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
-                            <p className="text-[10px] font-mono text-zinc-500 mb-1">{sa.segment.label}</p>
-                            <p className="text-red-400 font-mono text-sm font-medium">−{(sa.deltaMs/1000).toFixed(3)}s</p>
-                            {sa.insights[0] && <p className="text-[11px] text-zinc-500 mt-1">{sa.insights[0].type.replace(/_/g," ")}</p>}
-                          </div>
-                        ))}
-                    </div>
-                  )}
+                  ))}
                 </div>
               )}
 
-              {/* ── GHOST COMPARISON VIEW ── */}
-              {leftTab === "ghost" && channels.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-200">Ghost Comparison</p>
-                      <p className="text-xs text-zinc-500 mt-0.5">Your lap (solid) vs reference (dashed) — shaded area shows the difference</p>
-                    </div>
-                  </div>
-                  <GhostComparison
-                    channels={channels.filter((c) => c.id !== "delta") as Parameters<typeof GhostComparison>[0]["channels"]}
-                  />
-
-                  {/* Before / After for top issue */}
+              {leftView === "ghost" && channels.length > 0 && (
+                <div className="p-4 space-y-4">
+                  <GhostComparison channels={channels.filter(c => c.id !== "delta") as any} />
                   {(() => {
-                    const topIssue = analysisResult.segmentAnalyses
-                      .filter((sa) => sa.segment.type === "corner" && sa.insights.length > 0)
-                      .sort((a,b) => b.deltaMs - a.deltaMs)[0];
-                    const ins = topIssue?.insights[0];
+                    const top = analysisResult.segmentAnalyses
+                      .filter(sa => sa.segment.type === "corner" && sa.insights.length)
+                      .sort((a, b) => b.deltaMs - a.deltaMs)[0];
+                    const ins = top?.insights[0];
                     if (!ins || ins.type === "good_segment") return null;
-
                     const chId = ins.type.includes("brake") ? "brake" : ins.type.includes("throttle") ? "throttle" : "speed";
-                    const ch = channels.find((c) => c.id === chId);
+                    const ch = channels.find(c => c.id === chId);
                     if (!ch) return null;
-
-                    const totalDist = parsedLap?.rows[parsedLap.rows.length - 1].lapDist ?? 1;
-                    const startFrac = topIssue.segment.startDist / totalDist;
-                    const endFrac   = topIssue.segment.endDist   / totalDist;
-                    const startIdx  = Math.round(startFrac * ch.data.length);
-                    const endIdx    = Math.round(endFrac   * ch.data.length);
-                    const slice     = (arr: number[]) => arr.slice(startIdx, Math.min(endIdx, startIdx + 60));
-
+                    const total = parsedLap?.rows.at(-1)?.lapDist ?? 1;
+                    const si = Math.round((top.segment.startDist / total) * ch.data.length);
+                    const ei = Math.min(si + 60, Math.round((top.segment.endDist / total) * ch.data.length));
                     return (
-                      <div className="mt-4">
-                        <p className="text-xs font-medium text-zinc-400 mb-2">Biggest issue — before / after</p>
+                      <div>
+                        <p className="text-xs font-medium text-zinc-400 mb-2">Главная проблема — до/после</p>
                         <BeforeAfter data={{
-                          segmentLabel: topIssue.segment.label,
-                          issueType:    ins.type,
-                          currentData:  slice(ch.data),
-                          optimalData:  slice(ch.refData),
-                          channelLabel: ch.label,
-                          channelColor: ch.color,
-                          unit:         ch.unit,
-                          gainS:        ins.timeCostMs / 1000,
-                          tipShort:     ins.type.replace(/_/g, " "),
-                          tipDetail:    ins.descriptionRu,
+                          segmentLabel: top.segment.label, issueType: ins.type,
+                          currentData: ch.data.slice(si, ei), optimalData: ch.refData.slice(si, ei),
+                          channelLabel: ch.label, channelColor: ch.color, unit: ch.unit,
+                          gainS: ins.timeCostMs / 1000, tipShort: ins.type.replace(/_/g, " "),
+                          tipDetail: ins.descriptionRu,
                         }} />
                       </div>
                     );
@@ -631,105 +561,104 @@ export default function TelemetryPage() {
             </div>
           </div>
 
-          {/* ── Right panel ── */}
-          <div className="w-80 shrink-0 border-l border-zinc-800 flex flex-col">
-            <div className="flex border-b border-zinc-800 shrink-0">
-              {([["segments",t.telemetry.segments],["insights",t.telemetry.insights],["coach",t.telemetry.coach],["engineer","Engineer"]] as const).map(([k,label]) => (
+          {/* ══ RIGHT: ANALYSIS PANEL ══════════════════════════════════════════ */}
+          <div className="w-96 shrink-0 border-l border-zinc-800/60 flex flex-col bg-zinc-950">
+
+            {/* Tabs */}
+            <div className="flex shrink-0 border-b border-zinc-800/60">
+              {([
+                ["segments", "Участки"],
+                ["insights", "Инсайты"],
+                ["coach",    "Тренер"],
+              ] as const).map(([k, label]) => (
                 <button key={k} onClick={() => setRightTab(k)}
-                  className={cn("flex-1 px-3 py-2.5 text-xs font-medium transition-colors",
-                    rightTab === k ? "bg-zinc-800 text-zinc-100 border-b-2 border-lime-400" : "text-zinc-500 hover:text-zinc-300")}>
+                  className={cn("flex-1 py-3 text-xs font-medium transition-colors relative",
+                    rightTab === k ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300")}>
                   {label}
+                  {rightTab === k && (
+                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-lime-400 rounded-t" />
+                  )}
                 </button>
               ))}
             </div>
 
-            {rightTab === "segments" && (
-              <SegmentPanel
-                segmentAnalyses={analysisResult.segmentAnalyses}
-                totalTimeDeltaMs={analysisResult.totalTimeDeltaMs}
-              />
-            )}
-
-            {rightTab === "insights" && (
-              <div className="flex flex-col flex-1 min-h-0">
-                <div className="px-4 py-3 border-b border-zinc-800 shrink-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-xs font-medium text-zinc-300">Lap Analysis</h3>
-                    <span className="text-[10px] font-mono text-red-400 flex items-center gap-1">
-                      <TrendingDown size={10} />−{(analysisResult.totalTimeDeltaMs/1000).toFixed(3)}s
-                    </span>
-                  </div>
-                  {analysisResult.dominantWeakness && (
-                    <p className="text-[11px] font-mono text-yellow-400">
-                      Main issue: {analysisResult.dominantWeakness.replace("_"," ")}
-                    </p>
-                  )}
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                  {analysisResult.insights.length === 0 ? (
-                    <div className="p-6 text-center">
-                      <CheckCircle2 size={20} className="text-lime-400 mx-auto mb-2" />
-                      <p className="text-xs text-zinc-500">No significant deviations from reference</p>
-                    </div>
-                  ) : (
-                    analysisResult.insights.map((insight) => (
-                      <InsightCard key={insight.id} insight={insight}
-                        selected={selectedInsight?.id === insight.id}
-                        onSelect={() => setSelectedInsight((p) => p?.id === insight.id ? null : insight)}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {rightTab === "coach" && coachMessage && (
-              <div className="flex flex-col flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-                <CoachPanel
-                  message={coachMessage}
-                  positives={positives}
-                  patterns={patternReport}
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto">
+              {rightTab === "segments" && (
+                <SegmentPanel
+                  segmentAnalyses={analysisResult.segmentAnalyses}
+                  totalTimeDeltaMs={analysisResult.totalTimeDeltaMs}
                 />
-                {nextActions.length > 0 && (
-                  <NextActionPanel actions={nextActions} />
-                )}
-              </div>
-            )}
+              )}
 
-            {rightTab === "coach" && !coachMessage && (
-              <div className="p-4 text-center text-xs text-zinc-600">
-                Upload a lap to get coach feedback.
-              </div>
-            )}
-
-            {/* AI Engineer link — always visible at bottom of right panel */}
-            {uploadState.status === "done" && (
-              <div className="border-t border-zinc-800 p-3">
-                <a href="/engineer"
-                  className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl border border-lime-400/25 bg-lime-400/6 hover:bg-lime-400/12 transition-all">
-                  <Radio size={14} className="text-lime-400 shrink-0"/>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-lime-400 leading-none">AI Race Engineer</p>
-                    <p className="text-[10px] text-zinc-500 mt-0.5">Ask about this lap →</p>
+              {rightTab === "insights" && (
+                <div className="flex flex-col">
+                  {/* Summary */}
+                  <div className="px-4 py-3 border-b border-zinc-800/60">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-zinc-300">Анализ круга</p>
+                      <span className={cn("text-xs font-mono font-bold", gapMs > 0 ? "text-red-400" : "text-lime-400")}>
+                        {gapMs > 0 ? "−" : "+"}{Math.abs(gapMs / 1000).toFixed(3)}с
+                      </span>
+                    </div>
+                    {analysisResult.dominantWeakness && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-400/6 border border-red-400/15">
+                        <AlertCircle size={11} className="text-red-400 shrink-0" />
+                        <p className="text-[11px] text-red-300">
+                          Главная слабость: <strong>{analysisResult.dominantWeakness}</strong>
+                        </p>
+                      </div>
+                    )}
                   </div>
-                </a>
-              </div>
-            )}
 
-            {rightTab === "engineer" && (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
-                  <Radio size={28} className="text-lime-400"/>
+                  {/* Issues */}
+                  {allInsights.length === 0 ? (
+                    <div className="flex flex-col items-center py-12 text-center px-4">
+                      <div className="text-4xl mb-3">🏆</div>
+                      <p className="text-sm font-medium text-zinc-300">Отличный круг!</p>
+                      <p className="text-xs text-zinc-500 mt-1">Существенных ошибок не найдено</p>
+                    </div>
+                  ) : allInsights.map((ins, i) => (
+                    <InsightRow key={i} ins={ins}
+                      selected={selIns === ins}
+                      onSelect={() => setSelIns(selIns === ins ? null : ins)} />
+                  ))}
+
+                  {/* Expanded insight */}
+                  {selIns && (
+                    <div className="mx-3 mb-3 mt-1 rounded-xl border border-zinc-700 bg-zinc-900 p-4">
+                      <p className="text-xs text-zinc-300 leading-relaxed">{selIns.descriptionRu}</p>
+                      {selIns.timeCostMs > 0 && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                            <div className="h-full bg-red-400 rounded-full transition-all"
+                              style={{ width: `${Math.min(100, selIns.timeCostMs / 4)}%` }} />
+                          </div>
+                          <span className="text-[11px] font-mono text-red-400 shrink-0">
+                            −{(selIns.timeCostMs / 1000).toFixed(3)}с
+                          </span>
+                        </div>
+                      )}
+                      {selIns.academyModuleTitleRu && (
+                        <div className="mt-2 flex items-center gap-1.5 text-[10px] font-mono text-zinc-500">
+                          <ChevronRight size={9} className="text-lime-400" />
+                          <span>Академия: </span>
+                          <span className="text-lime-400">{selIns.academyModuleTitleRu}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-zinc-200 mb-1">AI Race Engineer</p>
-                  <p className="text-xs text-zinc-500 leading-relaxed">Telemetry-aware coaching.<br/>Ask about your lap, corner techniques, or setup.</p>
-                </div>
-                <a href="/engineer" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-lime-400 hover:bg-lime-300 text-zinc-950 font-semibold text-sm transition-all">
-                  Open Engineer <ChevronRight size={14}/>
-                </a>
-              </div>
-            )}
+              )}
+
+              {rightTab === "coach" && (
+                <CoachPanel
+                  message={coachMessage ?? { tone: "analytical", headline: "Анализ завершён", body: "", actionLine: "" }}
+                  positives={[]}
+                  patterns={null}
+                />
+              )}
+            </div>
           </div>
         </div>
       )}
