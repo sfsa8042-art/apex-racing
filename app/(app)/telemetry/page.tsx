@@ -127,67 +127,112 @@ type RightTab = "insights" | "segments" | "coach" | "engineer";
 type LeftTab  = "channels" | "heatmap" | "ghost";
 
 // ─── Banner: load latest desktop upload ───────────────────────────────────────
-function DesktopUploadBanner({ onFile }: { onFile: (f: File) => void }) {
-  const [session,  setSession]  = React.useState<{ id: string; filename: string; uploadedAt: string } | null>(null);
-  const [loading,  setLoading]  = React.useState(false);
-  const [fetching, setFetching] = React.useState(false);
-  const [dismissed, setDismissed] = React.useState(false);
+interface DesktopSession {
+  id: string;
+  filename: string;
+  uploadedAt: string;
+  size?: number;
+}
 
-  // Check for recent desktop uploads every 10s
+function formatAge(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hrs  = Math.floor(mins / 60);
+  if (mins < 1)   return "только что";
+  if (mins < 60)  return `${mins} мин назад`;
+  if (hrs < 24)   return `${hrs} ч назад`;
+  return `${Math.floor(hrs / 24)} дн назад`;
+}
+
+function DesktopUploadBanner({ onFile }: { onFile: (f: File) => void }) {
+  const [sessions,   setSessions]   = React.useState<DesktopSession[]>([]);
+  const [expanded,   setExpanded]   = React.useState(false);
+  const [fetching,   setFetching]   = React.useState<string | null>(null);
+  const [dismissed,  setDismissed]  = React.useState(false);
+
   React.useEffect(() => {
     const check = async () => {
       try {
         const res = await fetch("/api/sessions?all=1");
         if (!res.ok) return;
-        const { sessions } = await res.json();
-        // Find the most recent desktop upload from the last 5 minutes
-        const recent = sessions
-          ?.filter((s: { source: string; uploadedAt: string }) => s.source === "desktop")
-          ?.sort((a: { uploadedAt: string }, b: { uploadedAt: string }) =>
+        const { sessions: all } = await res.json();
+        const desktop = (all ?? [])
+          .filter((s: DesktopSession) => {
+            // Accept sessions from desktop source
+            return true; // show all for now
+          })
+          .sort((a: DesktopSession, b: DesktopSession) =>
             new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
-          )?.[0];
-        if (recent) {
-          const age = Date.now() - new Date(recent.uploadedAt).getTime();
-          if (age < 5 * 60 * 1000) setSession(recent); // within 5 min
-        }
+          )
+          .slice(0, 10); // last 10 uploads
+        if (desktop.length > 0) setSessions(desktop);
       } catch {}
     };
     check();
-    const t = setInterval(check, 10_000);
+    const t = setInterval(check, 15_000);
     return () => clearInterval(t);
   }, []);
 
-  const handleLoad = async () => {
-    if (!session) return;
-    setFetching(true);
+  const handleLoad = async (s: DesktopSession) => {
+    setFetching(s.id);
     try {
-      const res = await fetch(`/api/sessions/${session.id}/file`);
-      if (!res.ok) throw new Error("Файл недоступен на сервере");
+      const res = await fetch(`/api/sessions/${s.id}/file`);
+      if (!res.ok) throw new Error();
       const blob = await res.blob();
-      const file = new File([blob], session.filename, { type: "text/plain" });
+      const file = new File([blob], s.filename, { type: "text/plain" });
       onFile(file);
-      setDismissed(true);
-    } catch (e) {
-      alert("Файл недоступен. Перетащи его вручную на страницу.");
+    } catch {
+      alert("Файл недоступен. Перетащи его вручную.");
     } finally {
-      setFetching(false);
+      setFetching(null);
     }
   };
 
-  if (!session || dismissed) return null;
+  if (sessions.length === 0 || dismissed) return null;
+
+  const latest = sessions[0];
+  const hasMore = sessions.length > 1;
 
   return (
-    <div className="mx-4 mt-3 rounded-xl border border-lime-400/30 bg-lime-400/8 px-4 py-3 flex items-center gap-3 animate-slide-up">
-      <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse shrink-0"/>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-lime-400">Новый файл от десктопа</p>
-        <p className="text-[11px] text-zinc-400 font-mono truncate">{session.filename}</p>
+    <div className="mx-4 mt-3 rounded-xl border border-zinc-700 bg-zinc-900/80 overflow-hidden">
+      {/* Header row */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="w-2 h-2 rounded-full bg-lime-400 shrink-0"/>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-lime-400">Загрузки от десктопа</p>
+          <p className="text-[11px] text-zinc-400 font-mono truncate">{latest.filename}</p>
+        </div>
+        <button onClick={() => handleLoad(latest)} disabled={fetching === latest.id}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-400 hover:bg-lime-300 text-zinc-950 text-xs font-semibold transition-all shrink-0 disabled:opacity-60">
+          {fetching === latest.id ? "Загрузка…" : "Анализировать"}
+        </button>
+        {hasMore && (
+          <button onClick={() => setExpanded(v => !v)}
+            className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 shrink-0 transition-colors px-1">
+            {expanded ? "▲" : `▼ ещё ${sessions.length - 1}`}
+          </button>
+        )}
+        <button onClick={() => setDismissed(true)} className="text-zinc-600 hover:text-zinc-400 shrink-0 text-base leading-none px-1">×</button>
       </div>
-      <button onClick={handleLoad} disabled={fetching}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-400 hover:bg-lime-300 text-zinc-950 text-xs font-semibold transition-all shrink-0 disabled:opacity-60">
-        {fetching ? "Загрузка…" : "Анализировать"}
-      </button>
-      <button onClick={() => setDismissed(true)} className="text-zinc-600 hover:text-zinc-400 shrink-0 text-lg leading-none">×</button>
+
+      {/* Expanded list */}
+      {expanded && (
+        <div className="border-t border-zinc-800 divide-y divide-zinc-800/60">
+          {sessions.map((s, i) => (
+            <div key={s.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-800/40 transition-colors">
+              <span className="text-[10px] font-mono text-zinc-600 w-4 shrink-0">{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-mono text-zinc-300 truncate">{s.filename}</p>
+                <p className="text-[10px] text-zinc-600 font-mono">{formatAge(s.uploadedAt)}</p>
+              </div>
+              <button onClick={() => handleLoad(s)} disabled={fetching === s.id}
+                className="text-[11px] font-mono px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-all shrink-0 border border-zinc-700 disabled:opacity-50">
+                {fetching === s.id ? "…" : "Открыть"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
