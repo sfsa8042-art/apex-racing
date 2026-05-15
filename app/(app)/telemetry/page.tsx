@@ -492,6 +492,29 @@ export default function TelemetryPage() {
                       height={140} className="w-full" />
                   </div>
 
+                  {/* Per-channel detail charts */}
+                  {channels.filter(ch => visibleCh.includes(ch.id) && ch.id !== "delta").length > 0 && (
+                    <div className="grid grid-cols-2 gap-px bg-zinc-800/60 border-t border-zinc-800/60">
+                      {channels.filter(ch => visibleCh.includes(ch.id) && ch.id !== "delta").map(ch => (
+                        <div key={ch.id} className="bg-zinc-950">
+                          <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-800/40">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: ch.color }} />
+                            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider" style={{ color: ch.color }}>
+                              {ch.label}
+                            </span>
+                            <span className="text-[10px] font-mono text-zinc-600 ml-auto">{ch.unit}</span>
+                          </div>
+                          <TelemetryChart
+                            channels={[ch] as any}
+                            visibleChannels={[ch.id]}
+                            height={130}
+                            className="rounded-none border-0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Optimal lap banner */}
                   {analysisResult.optimalLap.summaryRu && (
                     <div className="flex items-center gap-4 px-4 py-3 border-t border-zinc-800/60 bg-zinc-900/40">
