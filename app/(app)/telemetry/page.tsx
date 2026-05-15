@@ -29,7 +29,7 @@ const scoreBg = (v: number) =>
 
 type Ch = { id: string; label: string; color: string; unit: string;
   data: number[]; refData: number[]; min: number; max: number; };
-type RightTab = "segments" | "insights" | "coach";
+type RightTab = "segments" | "insights" | "coach" | "engineer";
 type LeftView  = "channels" | "heatmap" | "ghost";
 
 // ─── IDLE / UPLOAD STATE ──────────────────────────────────────────────────────
@@ -238,6 +238,121 @@ function InsightRow({ ins, selected, onSelect }: {
   );
 }
 
+
+// ─── INLINE ENGINEER TAB ─────────────────────────────────────────────────────
+function EngineerInlineTab({ analysisResult, lapTimeStr }: {
+  analysisResult: import("@/types/telemetry").LapAnalysisResult;
+  lapTimeStr: string;
+}) {
+  const [messages, setMessages] = React.useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [input, setInput] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const bottomRef = React.useRef<HTMLDivElement>(null);
+
+  const context = React.useMemo(() => {
+    const issues = analysisResult.segmentAnalyses
+      .flatMap(sa => sa.insights)
+      .filter(i => i.type !== "good_segment")
+      .slice(0, 5)
+      .map(i => i.descriptionRu)
+      .join("; ");
+    return `Время круга: ${lapTimeStr}. Скор: ${analysisResult.overallScore}/100. Проблемы: ${issues}`;
+  }, [analysisResult, lapTimeStr]);
+
+  const send = async (text: string) => {
+    if (!text.trim() || loading) return;
+    const userMsg = { role: "user" as const, content: text };
+    const history = [...messages, userMsg];
+    setMessages(history);
+    setInput("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/engineer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contextSummary: context, message: text, history: messages, personality: "calm", lang: "ru" }),
+      });
+      const data = await res.json();
+      if (data.reply) setMessages([...history, { role: "assistant", content: data.reply }]);
+    } catch {}
+    setLoading(false);
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+  };
+
+  React.useEffect(() => {
+    if (!messages.length) {
+      fetch(`/api/engineer?ctx=${encodeURIComponent(context)}&lang=ru`)
+        .then(r => r.json())
+        .then(d => { if (d.briefing) setMessages([{ role: "assistant", content: d.briefing }]); })
+        .catch(() => {});
+    }
+  }, []);
+
+  const QUICK = ["Где я теряю больше всего?", "Как улучшить апекс?", "Советы по торможению"];
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {messages.map((m, i) => (
+          <div key={i} className={cn("flex gap-2", m.role === "user" ? "justify-end" : "justify-start")}>
+            {m.role === "assistant" && (
+              <div className="w-6 h-6 rounded-full bg-lime-400/15 border border-lime-400/25 flex items-center justify-center shrink-0 mt-0.5">
+                <Zap size={10} className="text-lime-400" />
+              </div>
+            )}
+            <div className={cn("max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed",
+              m.role === "user"
+                ? "bg-zinc-800 text-zinc-200 rounded-tr-sm"
+                : "bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-tl-sm")}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex gap-2">
+            <div className="w-6 h-6 rounded-full bg-lime-400/15 border border-lime-400/25 flex items-center justify-center shrink-0">
+              <Zap size={10} className="text-lime-400" />
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl rounded-tl-sm px-3 py-2">
+              <div className="flex gap-1">
+                {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-zinc-600 animate-bounce" style={{ animationDelay: `${i*150}ms` }} />)}
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Quick questions */}
+      {messages.length < 2 && (
+        <div className="px-3 pb-2 flex flex-wrap gap-1">
+          {QUICK.map(q => (
+            <button key={q} onClick={() => send(q)}
+              className="text-[10px] font-mono px-2 py-1 rounded-lg border border-zinc-700 text-zinc-400 hover:border-lime-400/30 hover:text-lime-400 transition-all">
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="p-3 border-t border-zinc-800 flex gap-2">
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && send(input)}
+          placeholder="Задай вопрос..."
+          className="flex-1 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-zinc-200 placeholder-zinc-600 outline-none focus:border-lime-400/40 transition-colors"
+        />
+        <button onClick={() => send(input)} disabled={!input.trim() || loading}
+          className="w-8 h-8 rounded-lg bg-lime-400 hover:bg-lime-300 text-zinc-950 flex items-center justify-center disabled:opacity-40 transition-all">
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function TelemetryPage() {
   const { t } = useLang();
@@ -252,6 +367,7 @@ export default function TelemetryPage() {
   const [rightTab, setRightTab]   = useState<RightTab>("segments");
   const [leftView, setLeftView]   = useState<LeftView>("channels");
   const [selIns, setSelIns]       = useState<(AnalysisInsight & { _segLabel?: string }) | null>(null);
+  const [cursorProg, setCursorProg] = useState<number | null>(null);
 
   const toggleCh = (id: string) =>
     setVisibleCh(prev => prev.includes(id)
@@ -472,6 +588,7 @@ export default function TelemetryPage() {
                     channels={channels as any}
                     visibleChannels={visibleCh}
                     className="w-full rounded-none border-0 border-b border-zinc-800/60"
+                    onCursorChange={setCursorProg}
                   />
 
                   {/* Delta chart */}
@@ -534,7 +651,8 @@ export default function TelemetryPage() {
               {leftView === "heatmap" && heatmapData && (
                 <div className="p-4 space-y-4">
                   <TrackHeatmap data={heatmapData}
-                    segmentAnalyses={analysisResult.segmentAnalyses} trackId="monza" height={340} />
+                    segmentAnalyses={analysisResult.segmentAnalyses} trackId="monza" height={340}
+                    cursorProgress={cursorProg} />
                   {analysisResult.segmentAnalyses.filter(sa => sa.segment.type === "corner" && sa.deltaMs > 0)
                     .sort((a, b) => b.deltaMs - a.deltaMs).slice(0, 3).map(sa => (
                     <div key={sa.segment.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-zinc-800 bg-zinc-900">
@@ -593,6 +711,7 @@ export default function TelemetryPage() {
                 ["segments", "Участки"],
                 ["insights", "Инсайты"],
                 ["coach",    "Тренер"],
+                ["engineer", "AI"],
               ] as const).map(([k, label]) => (
                 <button key={k} onClick={() => setRightTab(k)}
                   className={cn("flex-1 py-3 text-xs font-medium transition-colors relative",
@@ -672,6 +791,10 @@ export default function TelemetryPage() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {rightTab === "engineer" && (
+                <EngineerInlineTab analysisResult={analysisResult} lapTimeStr={lapTimeStr} />
               )}
 
               {rightTab === "coach" && (

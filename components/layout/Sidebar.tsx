@@ -17,8 +17,7 @@ export function Sidebar() {
   useEffect(() => { setProfile(loadProfile()); }, []);
   const NAV_ITEMS = [
     { href: "/dashboard",  label: t.nav.dashboard,  icon: LayoutDashboard },
-    { href: "/telemetry",  label: t.nav.telemetry,  icon: Activity },
-    { href: "/engineer",   label: t.nav.engineer ?? "AI Engineer", icon: Radio,  badge: "AI" },
+    { href: "/telemetry",  label: t.nav.telemetry,  icon: Activity, highlight: true },
     { href: "/sessions",   label: t.nav.sessions,   icon: Layers },
     { href: "/academy",    label: t.nav.academy,    icon: GraduationCap },
     { href: "/profile",    label: t.nav.profile,    icon: User },
@@ -30,8 +29,22 @@ export function Sidebar() {
   return (
     <aside className="w-56 shrink-0 h-full border-r border-zinc-800 bg-zinc-950 flex flex-col py-4">
       <nav className="flex-1 px-3 space-y-0.5">
-        {NAV_ITEMS.map(({ href, label, icon: Icon, badge }) => {
+        {NAV_ITEMS.map(({ href, label, icon: Icon, badge, highlight }: any) => {
           const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+          if (highlight) {
+            return (
+              <Link key={href} href={href}
+                className={cn("flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-all group mt-1 mb-1 border",
+                  isActive
+                    ? "bg-lime-400/12 text-lime-400 border-lime-400/30 shadow-sm shadow-lime-400/10"
+                    : "text-zinc-300 border-zinc-800 hover:border-lime-400/20 hover:bg-lime-400/6 hover:text-lime-400"
+                )}>
+                <Icon size={16} className={cn("shrink-0", isActive ? "text-lime-400" : "text-zinc-400 group-hover:text-lime-400")} />
+                <span className="flex-1">{label}</span>
+                <div className={cn("w-1.5 h-1.5 rounded-full", isActive ? "bg-lime-400" : "bg-zinc-700 group-hover:bg-lime-400/50")} />
+              </Link>
+            );
+          }
           return (
             <Link key={href} href={href}
               className={cn("flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors group",

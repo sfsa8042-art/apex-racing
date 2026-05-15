@@ -4,10 +4,11 @@ import { cn } from "@/lib/utils";
 import type { TelemetryChannel } from "@/types";
 
 interface TelemetryChartProps {
-  channels:        TelemetryChannel[];
-  visibleChannels: string[];
-  height?:         number;
-  className?:      string;
+  channels:         TelemetryChannel[];
+  visibleChannels:  string[];
+  height?:          number;
+  className?:       string;
+  onCursorChange?:  (progress: number | null) => void;
 }
 
 const SVG_W      = 900;
@@ -56,7 +57,7 @@ function smoothPath(pts: [number, number][]): string {
   return d;
 }
 
-export function TelemetryChart({ channels, visibleChannels, height, className }: TelemetryChartProps) {
+export function TelemetryChart({ channels, visibleChannels, height, className, onCursorChange }: TelemetryChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [cursor, setCursor] = useState<number | null>(null);
 
@@ -127,7 +128,8 @@ export function TelemetryChart({ channels, visibleChannels, height, className }:
     const px = ((e.clientX - rect.left) / rect.width) * SVG_W;
     const idx = Math.min(dataLen - 1, Math.max(0, Math.round(((px - PAD_L) / chartW) * (dataLen - 1))));
     setCursor(idx);
-  }, [chartW, dataLen]);
+    onCursorChange?.(idx / Math.max(1, dataLen - 1));
+  }, [chartW, dataLen, onCursorChange]);
 
   // ── Y-axis ticks ────────────────────────────────────────────────────────────
   const yTicks = (li: number) => {
@@ -154,7 +156,7 @@ export function TelemetryChart({ channels, visibleChannels, height, className }:
         className="w-full"
         style={{ height: totalH }}
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => setCursor(null)}
+        onMouseLeave={() => { setCursor(null); onCursorChange?.(null); }}
         aria-label="Telemetry channels"
       >
         <defs>
