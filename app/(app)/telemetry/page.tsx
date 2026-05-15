@@ -148,48 +148,58 @@ function DesktopUploads({ onFile }: { onFile:(f:File)=>void }) {
 // ── Idle state ────────────────────────────────────────────────────────────────
 function IdleState({ onFile, onSample }: { onFile:(f:File)=>void; onSample:()=>void }) {
   const [dragging, setDragging] = useState(false);
-  const ref = useRef<HTMLInputElement>(null);
+  const inputId = "telemetry-file-input";
 
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setDragging(false);
-    const f = e.dataTransfer.files[0]; if (f) onFile(f);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setDragging(false);
+    const f = e.dataTransfer.files?.[0]; if (f) onFile(f);
+  };
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragging(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setDragging(false); };
+  const handleChange   = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]; if (f) { onFile(f); e.target.value = ""; }
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-6 p-10 relative overflow-hidden">
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0 opacity-[0.015]"
-        style={{ backgroundImage: "radial-gradient(circle, #a3e635 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-lime-400/20 to-transparent" />
+    <div className="flex-1 flex flex-col items-center justify-center gap-8 p-10 relative overflow-hidden">
+      {/* Dot-grid background */}
+      <div className="absolute inset-0 opacity-[0.018] pointer-events-none"
+        style={{ backgroundImage: "radial-gradient(circle, #a3e635 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-lime-400/20 to-transparent pointer-events-none" />
 
-      {/* Drop zone */}
-      <div
-        onDragOver={e => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        onClick={() => ref.current?.click()}
+      {/* Hidden file input */}
+      <input
+        id={inputId}
+        type="file"
+        accept=".csv,.json,.txt,.ld"
+        onChange={handleChange}
+        style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
+      />
+
+      {/* Drop zone — label wraps so clicking anywhere triggers picker */}
+      <label
+        htmlFor={inputId}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         className={cn(
-          "w-full max-w-md rounded-3xl border-2 border-dashed flex flex-col items-center gap-5 py-14 px-8 cursor-pointer transition-all duration-300",
+          "w-full max-w-md rounded-3xl border-2 border-dashed flex flex-col items-center gap-5 py-16 px-8 cursor-pointer transition-all duration-300 select-none",
           dragging
-            ? "border-lime-400 bg-lime-400/6 scale-[1.02]"
-            : "border-zinc-700 hover:border-zinc-500 hover:bg-zinc-900/40 bg-zinc-950/50"
+            ? "border-lime-400 bg-lime-400/6 scale-[1.01]"
+            : "border-zinc-700 bg-zinc-950/60 hover:border-zinc-500 hover:bg-zinc-900/30"
         )}>
-        <input ref={ref} type="file" className="hidden" accept=".csv,.json,.txt,.ld"
-          onChange={e => { const f=e.target.files?.[0]; if(f) onFile(f); }} />
-
-        <div className={cn("w-18 h-18 rounded-2xl flex items-center justify-center transition-all duration-300",
+        <div className={cn("w-20 h-20 rounded-2xl flex items-center justify-center transition-all duration-300",
           dragging ? "bg-lime-400/15 border border-lime-400/40 scale-110" : "bg-zinc-900 border border-zinc-700")}>
-          <Upload size={30} className={dragging ? "text-lime-400" : "text-zinc-400"} />
+          <Upload size={32} className={dragging ? "text-lime-400" : "text-zinc-400"} />
         </div>
-
-        <div className="text-center space-y-1.5">
-          <p className="text-sm font-semibold text-zinc-200">
-            {dragging ? "Отпусти файл" : "Перетащи файл телеметрии"}
+        <div className="text-center space-y-2 pointer-events-none">
+          <p className="text-base font-semibold text-zinc-200">
+            {dragging ? "Отпусти файл здесь" : "Перетащи файл или нажми здесь"}
           </p>
-          <p className="text-xs text-zinc-500">CSV · JSON · .ld · любой симулятор</p>
+          <p className="text-sm text-zinc-500">CSV · JSON · .ld · любой симулятор</p>
         </div>
-
-        <div className="flex items-center gap-1 text-xs text-zinc-600">
+        <div className="flex items-center gap-2 text-xs text-zinc-600 pointer-events-none">
           {["iRacing", "ACC", "MoTeC", "rFactor 2"].map((s, i) => (
             <React.Fragment key={s}>
               {i > 0 && <span className="text-zinc-800">·</span>}
@@ -197,18 +207,15 @@ function IdleState({ onFile, onSample }: { onFile:(f:File)=>void; onSample:()=>v
             </React.Fragment>
           ))}
         </div>
-      </div>
+      </label>
 
-      {/* CTA buttons */}
+      {/* Separate sample button — not inside label, no picker conflict */}
       <div className="flex items-center gap-3">
-        <button onClick={onSample}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-zinc-700 text-xs text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 transition-all bg-zinc-900/50">
-          <Target size={12} /> Загрузить пример
-        </button>
-        <span className="text-zinc-700 text-xs">или</span>
-        <button onClick={() => ref.current?.click()}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-lime-400 hover:bg-lime-300 text-zinc-950 text-xs font-semibold transition-all">
-          <Upload size={12} /> Выбрать файл
+        <button
+          type="button"
+          onClick={() => onSample()}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-700 text-sm text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/50 transition-all">
+          <Target size={13} /> Загрузить пример
         </button>
       </div>
 
@@ -216,6 +223,7 @@ function IdleState({ onFile, onSample }: { onFile:(f:File)=>void; onSample:()=>v
     </div>
   );
 }
+
 
 // ── Processing state ──────────────────────────────────────────────────────────
 function ProcessingState({ status }: { status: string }) {
