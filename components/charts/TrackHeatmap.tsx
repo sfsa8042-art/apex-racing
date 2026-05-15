@@ -1,7 +1,6 @@
 "use client";
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { getSmoothedLine, getCircuit } from "@/lib/tracks/geometry";
-import { useLang } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 import type { TrackHeatmapData } from "@/types/extended";
 import type { SegmentAnalysis } from "@/types/telemetry";
@@ -16,209 +15,270 @@ interface TrackHeatmapProps {
   onSegmentClick?:  (seg: SegmentAnalysis) => void;
 }
 
-const W = 800;
-const H = 480;
+const W = 800, H = 480;
 
 function toSVG(x: number, y: number): [number, number] {
   return [x * W, (1 - y) * H];
 }
 
-/**
- * Smooth heat colour: gain (blue/green) → neutral → loss (orange/red)
- * Uses proper colour space blending with 5 control stops.
- */
-function heatColor(intensity: number): string {
-  const stops: Array<[number, [number, number, number]]> = [
-    [0.00, [30,  200, 80 ]],  // gaining — vivid green
-    [0.20, [90,  220, 60 ]],  // slight gain
-    [0.40, [200, 220, 20 ]],  // neutral-ish yellow
-    [0.60, [240, 160, 0  ]],  // losing — orange
-    [0.80, [255, 80,  0  ]],  // losing more
-    [1.00, [255, 20,  20 ]],  // big loss — red
+// Professional speed colour: deep blue → cyan → lime → yellow → orange → red
+function speedColor(intensity: number): string {
+  const t = Math.max(0, Math.min(1, intensity));
+  const stops: [number, [number,number,number]][] = [
+    [0.00, [20, 40, 120]],   // slow — deep blue
+    [0.25, [20, 160, 220]],  // medium slow — cyan
+    [0.50, [80, 220, 100]],  // optimal — lime green
+    [0.70, [220, 220, 20]],  // fast — yellow
+    [0.85, [255, 120, 0]],   // braking — orange
+    [1.00, [255, 30, 30]],   // hard brake — red
   ];
-
-  const clamped = Math.max(0, Math.min(1, intensity));
-
   for (let i = 0; i < stops.length - 1; i++) {
     const [t0, c0] = stops[i];
     const [t1, c1] = stops[i + 1];
-    if (clamped >= t0 && clamped <= t1) {
-      const t = (clamped - t0) / (t1 - t0);
-      const r = Math.round(c0[0] + (c1[0] - c0[0]) * t);
-      const g = Math.round(c0[1] + (c1[1] - c0[1]) * t);
-      const b = Math.round(c0[2] + (c1[2] - c0[2]) * t);
+    if (t >= t0 && t <= t1) {
+      const f = (t - t0) / (t1 - t0);
+      const r = Math.round(c0[0] + (c1[0] - c0[0]) * f);
+      const g = Math.round(c0[1] + (c1[1] - c0[1]) * f);
+      const b = Math.round(c0[2] + (c1[2] - c0[2]) * f);
       return `rgb(${r},${g},${b})`;
     }
   }
-  return "rgb(255,20,20)";
+  return "rgb(255,30,30)";
 }
 
-/** Gaussian blur: smooth the intensity array to remove abrupt transitions */
-function smoothIntensity(values: number[], sigma = 6): number[] {
+function gaussian(values: number[], sigma = 6): number[] {
   const n = values.length;
   const r = Math.ceil(sigma * 2.5);
   const kernel: number[] = [];
   let ksum = 0;
-  for (let k = -r; k <= r; k++) {
-    const w = Math.exp(-(k * k) / (2 * sigma * sigma));
-    kernel.push(w); ksum += w;
+  for (let i = -r; i <= r; i++) {
+    const k = Math.exp(-(i * i) / (2 * sigma * sigma));
+    kernel.push(k); ksum += k;
   }
-  const norm = kernel.map(w => w / ksum);
+  const norm = kernel.map(k => k / ksum);
   return values.map((_, i) => {
     let v = 0;
-    for (let k = -r; k <= r; k++) {
-      const j = Math.min(n - 1, Math.max(0, i + k));
-      v += values[j] * norm[k + r];
+    for (let j = -r; j <= r; j++) {
+      v += (values[(i + j + n) % n] ?? 0) * norm[j + r];
     }
     return v;
   });
 }
 
 export function TrackHeatmap({
+<<<<<<< HEAD
   data, segmentAnalyses, trackId = "monza", className, height = 360, cursorProgress, onSegmentClick,
+=======
+  data, segmentAnalyses, trackId = "monza", className, height = 400,
+  cursorProgress, onSegmentClick,
+>>>>>>> c5c715c (wow telemetry - live map cursor, F1 pit wall layout)
 }: TrackHeatmapProps) {
-  const { t }           = useLang();
-  const [tooltip, setTooltip] = useState<{
-    x: number; y: number; label: string; deltaS: number; dist: number;
-  } | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoveredSeg, setHoveredSeg] = useState<SegmentAnalysis | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string; deltaS: number } | null>(null);
+  const [trailHistory, setTrailHistory] = useState<number[]>([]);
 
-  const circuit   = useMemo(() => getCircuit(trackId),          [trackId]);
-  const smoothed  = useMemo(() => getSmoothedLine(trackId, 16), [trackId]);
+  const smoothedRaw = useMemo(() => getSmoothedLine(trackId, 16), [trackId]);
+  const smoothed = smoothedRaw ?? [];
 
-  // Map heatmap points onto the smoothed track line + smooth intensities
-  const heatSegments = useMemo(() => {
-    if (!smoothed || !data.points.length) return [];
+  // Build intensities from heatmap data (brake pressure → colour)
+  const intensities = useMemo(() => {
+    if (!smoothed.length || !data.points.length) return [];
     const n = smoothed.length;
-
-    // First build raw intensities mapped by lap fraction
-    const rawIntensities = smoothed.map((_, i) => {
-      const frac = i / (n - 1);
-      // Find nearest heatmap data point
-      const hp = data.points.reduce((best, p) =>
-        Math.abs(p.dist / data.totalDistM - frac) < Math.abs(best.dist / data.totalDistM - frac)
-          ? p : best,
+    const totalDist = data.totalDistM || 4000;
+    const raw = smoothed.map((_, i) => {
+      const dist = (i / n) * totalDist;
+      const nearest = data.points.reduce((best, p) =>
+        Math.abs(p.dist - dist) < Math.abs(best.dist - dist) ? p : best,
         data.points[0]
       );
-      return hp ? hp.intensity : 0;
+      return nearest ? nearest.intensity : 0;
     });
-
-    // Apply Gaussian smoothing to remove hard edges
-    const smoothedIntensities = smoothIntensity(rawIntensities, 8);
-
-    return smoothed.slice(0, -1).map((pt, i) => {
-      const [x1, y1] = toSVG(pt.x, pt.y);
-      const [x2, y2] = toSVG(smoothed[i + 1].x, smoothed[i + 1].y);
-      const frac      = i / (n - 1);
-      const hp        = data.points.reduce((best, p) =>
-        Math.abs(p.dist / data.totalDistM - frac) < Math.abs(best.dist / data.totalDistM - frac)
-          ? p : best,
-        data.points[0]
-      );
-      return {
-        x1, y1, x2, y2,
-        color: heatColor(smoothedIntensities[i]),
-        intensity: smoothedIntensities[i],
-        deltaS: hp?.deltaS ?? 0,
-        dist:   hp?.dist   ?? 0,
-      };
-    });
+    return gaussian(raw, 8);
   }, [smoothed, data]);
 
-  const trackWidth = useMemo(() => {
-    if (!circuit) return 12;
-    return circuit.trackWidthNorm * Math.min(W, H) * 0.65;
-  }, [circuit]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mx   = ((e.clientX - rect.left) / rect.width)  * W;
-    const my   = ((e.clientY - rect.top)  / rect.height) * H;
-
-    if (!smoothed) return;
-
-    let best = 0; let bestDist = Infinity;
-    smoothed.forEach((pt, i) => {
-      const [sx, sy] = toSVG(pt.x, pt.y);
-      const d = (sx - mx) ** 2 + (sy - my) ** 2;
-      if (d < bestDist) { bestDist = d; best = i; }
+  // Build segment overlap map
+  const segmentMap = useMemo(() => {
+    if (!smoothed.length) return new Map<number, SegmentAnalysis>();
+    const m = new Map<number, SegmentAnalysis>();
+    const totalDist = data.totalDistM || 4000;
+    segmentAnalyses.forEach(sa => {
+      const startFrac = sa.segment.startDist / totalDist;
+      const endFrac   = sa.segment.endDist   / totalDist;
+      const si = Math.round(startFrac * smoothed.length);
+      const ei = Math.round(endFrac   * smoothed.length);
+      for (let i = si; i < ei; i++) m.set(i % smoothed.length, sa);
     });
+    return m;
+  }, [smoothed, segmentAnalyses, data.totalDistM]);
 
-    if (bestDist < 800 && heatSegments[best]) {
-      const seg  = heatSegments[best];
-      const frac = best / smoothed.length;
-      const corner = circuit?.corners.find(c =>
-        Math.abs(c.lapFrac - frac) < 0.06
-      );
-      setTooltip({
-        x:      e.clientX - rect.left,
-        y:      e.clientY - rect.top,
-        label:  corner?.label ?? `${Math.round(seg.dist)}m`,
-        deltaS: seg.deltaS,
-        dist:   seg.dist,
-      });
-    } else {
-      setTooltip(null);
+  // Cursor trail effect
+  useEffect(() => {
+    if (cursorProgress === null || cursorProgress === undefined) {
+      setTrailHistory([]);
+      return;
     }
-  }, [smoothed, heatSegments, circuit]);
+    setTrailHistory(prev => {
+      const idx = Math.round(cursorProgress * (smoothed.length - 1));
+      const next = [...prev, idx].slice(-8);
+      return next;
+    });
+  }, [cursorProgress, smoothed.length]);
 
-  if (!smoothed || !circuit) {
-    return (
-      <div className={cn("rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center", className)}
-        style={{ height }}>
-        <p className="text-xs text-zinc-600 font-mono">No layout: {trackId}</p>
-      </div>
-    );
-  }
+  const getCursorPoint = useCallback((progress: number) => {
+    if (!smoothed.length) return null;
+    const idx = Math.round(progress * (smoothed.length - 1));
+    const pt = smoothed[Math.min(idx, smoothed.length - 1)];
+    if (!pt) return null;
+    return { pt, idx };
+  }, [smoothed]);
 
-  const buildPath = (pts: typeof smoothed, closed = true) => {
-    if (!pts.length) return "";
-    let d = `M ${(pts[0].x * W).toFixed(1)} ${((1 - pts[0].y) * H).toFixed(1)}`;
-    for (let i = 1; i < pts.length; i++) {
-      d += ` L ${(pts[i].x * W).toFixed(1)} ${((1 - pts[i].y) * H).toFixed(1)}`;
-    }
-    if (closed) d += " Z";
-    return d;
-  };
+  if (!smoothed.length) return null;
+
+  // Build coloured segments path data
+  const segments = smoothed.map((pt, i) => {
+    const next = smoothed[(i + 1) % smoothed.length];
+    const [x1, y1] = toSVG(pt.x, pt.y);
+    const [x2, y2] = toSVG(next.x, next.y);
+    const intensity = intensities[i] ?? 0;
+    return { x1, y1, x2, y2, color: speedColor(intensity), idx: i };
+  });
+
+  // Cursor position
+  const cursorData = cursorProgress != null ? getCursorPoint(cursorProgress) : null;
+  const cursorPt   = cursorData?.pt;
+  const cursorIdx  = cursorData?.idx ?? 0;
+  const [cxSvg, cySvg] = cursorPt ? toSVG(cursorPt.x, cursorPt.y) : [0, 0];
+
+  // Next point for direction arrow
+  const nextIdx = (cursorIdx + 3) % smoothed.length;
+  const nextPt  = smoothed[nextIdx];
+  const [nxSvg, nySvg] = nextPt ? toSVG(nextPt.x, nextPt.y) : [cxSvg + 1, cySvg];
+  const angle = Math.atan2(nySvg - cySvg, nxSvg - cxSvg) * 180 / Math.PI;
+
+  // Speed at cursor
+  const cursorSpeed = cursorData && data.points.length > 0
+    ? (() => {
+        const idx = Math.min(Math.round(cursorProgress! * data.points.length), data.points.length - 1);
+        const pt = data.points[idx];
+        // Use deltaS to show time delta instead of speed
+        return pt ? (pt.deltaS >= 0 ? `+${pt.deltaS.toFixed(3)}с` : `${pt.deltaS.toFixed(3)}с`) : "";
+      })()
+    : "";
+
+  // Worst corner for callout
+  const worstCorner = segmentAnalyses
+    .filter(sa => sa.segment.type === "corner" && sa.deltaMs > 100)
+    .sort((a, b) => b.deltaMs - a.deltaMs)[0];
 
   return (
-    <div className={cn("relative rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden", className)}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height }}
-        onMouseMove={handleMouseMove} onMouseLeave={() => setTooltip(null)}
-        role="img" aria-label="Track heatmap">
+    <div className={cn("relative bg-zinc-950 rounded-2xl overflow-hidden", className)}
+      style={{ height }}>
 
+      {/* Track SVG */}
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full h-full"
+        style={{ filter: "drop-shadow(0 0 20px rgba(0,0,0,0.8))" }}
+      >
         <defs>
-          <filter id="htglow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="2" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          {/* Glow filter for cursor */}
+          <filter id="glow-lime" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
+          <filter id="glow-soft" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+          {/* Track shadow */}
+          <filter id="track-shadow">
+            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#000" floodOpacity="0.8" />
+          </filter>
+          {/* Radial gradient bg */}
+          <radialGradient id="bg-grad" cx="50%" cy="50%" r="70%">
+            <stop offset="0%" stopColor="#111113" />
+            <stop offset="100%" stopColor="#09090b" />
+          </radialGradient>
         </defs>
 
-        {/* Track shadow base */}
-        <path d={buildPath(smoothed)} fill="none" stroke="#1a1a1a"
-          strokeWidth={trackWidth * 1.6} strokeLinecap="round" strokeLinejoin="round"/>
+        {/* Background */}
+        <rect width={W} height={H} fill="url(#bg-grad)" />
 
-        {/* Track tarmac */}
-        <path d={buildPath(smoothed)} fill="none" stroke="#2a2a2a"
-          strokeWidth={trackWidth * 1.2} strokeLinecap="round" strokeLinejoin="round"/>
+        {/* Subtle grid */}
+        {Array.from({ length: 8 }, (_, i) => (
+          <line key={`h${i}`} x1={0} y1={(i / 7) * H} x2={W} y2={(i / 7) * H}
+            stroke="#1f1f22" strokeWidth="0.5" />
+        ))}
+        {Array.from({ length: 12 }, (_, i) => (
+          <line key={`v${i}`} x1={(i / 11) * W} y1={0} x2={(i / 11) * W} y2={H}
+            stroke="#1f1f22" strokeWidth="0.5" />
+        ))}
 
-        {/* Heatmap segments — smooth gradient colouring */}
-        {heatSegments.map((seg, i) => (
-          <line key={i}
-            x1={seg.x1.toFixed(1)} y1={seg.y1.toFixed(1)}
-            x2={seg.x2.toFixed(1)} y2={seg.y2.toFixed(1)}
-            stroke={seg.color}
-            strokeWidth={trackWidth}
+        {/* ── Track outline (shadow layer) ──────────────────────────────────── */}
+        <polyline
+          points={smoothed.map(pt => { const [x,y] = toSVG(pt.x, pt.y); return `${x},${y}`; }).join(" ")}
+          fill="none" stroke="rgba(0,0,0,0.9)" strokeWidth="22"
+          strokeLinejoin="round" strokeLinecap="round" filter="url(#track-shadow)"
+        />
+        {/* Track base (dark asphalt) */}
+        <polyline
+          points={smoothed.map(pt => { const [x,y] = toSVG(pt.x, pt.y); return `${x},${y}`; }).join(" ")}
+          fill="none" stroke="#1a1a1e" strokeWidth="18"
+          strokeLinejoin="round" strokeLinecap="round"
+        />
+        {/* Track border */}
+        <polyline
+          points={smoothed.map(pt => { const [x,y] = toSVG(pt.x, pt.y); return `${x},${y}`; }).join(" ")}
+          fill="none" stroke="#2f2f35" strokeWidth="18.5"
+          strokeLinejoin="round" strokeLinecap="round" opacity="0.5"
+        />
+
+        {/* ── Coloured speed heat map ──────────────────────────────────────── */}
+        {segments.map(({ x1, y1, x2, y2, color, idx }) => (
+          <line key={idx}
+            x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke={color} strokeWidth="10"
             strokeLinecap="round"
-            strokeOpacity="0.88"
+            opacity={hoveredSeg && segmentMap.get(idx) !== hoveredSeg ? "0.3" : "1"}
           />
         ))}
 
-        {/* Track border lines */}
-        <path d={buildPath(smoothed)} fill="none" stroke="rgba(255,255,255,0.07)"
-          strokeWidth={trackWidth * 1.2 + 2} strokeLinecap="round"/>
-        <path d={buildPath(smoothed)} fill="none" stroke="rgba(0,0,0,0.4)"
-          strokeWidth={trackWidth * 1.2 - 2} strokeLinecap="round"/>
+        {/* ── Segment loss overlays ────────────────────────────────────────── */}
+        {segmentAnalyses
+          .filter(sa => sa.segment.type === "corner" && sa.deltaMs > 100)
+          .map(sa => {
+            const totalDist = data.totalDistM || 4000;
+            const startFrac = sa.segment.startDist / totalDist;
+            const endFrac   = sa.segment.endDist   / totalDist;
+            const si = Math.round(startFrac * smoothed.length);
+            const ei = Math.round(endFrac   * smoothed.length);
+            const midIdx = Math.round((si + ei) / 2) % smoothed.length;
+            const [lx, ly] = toSVG(smoothed[midIdx]?.x ?? 0.5, smoothed[midIdx]?.y ?? 0.5);
+            const loss = (sa.deltaMs / 1000).toFixed(3);
+            const isWorst = sa === worstCorner;
+            return (
+              <g key={sa.segment.id}
+                onMouseEnter={() => { setHoveredSeg(sa); setTooltip({ x: lx, y: ly, label: sa.segment.label, deltaS: sa.deltaMs / 1000 }); }}
+                onMouseLeave={() => { setHoveredSeg(null); setTooltip(null); }}
+                onClick={() => onSegmentClick?.(sa)}
+                style={{ cursor: "pointer" }}>
+                {/* Loss indicator circle */}
+                <circle cx={lx} cy={ly} r={isWorst ? 14 : 10}
+                  fill="rgba(239,68,68,0.15)" stroke="rgba(239,68,68,0.6)"
+                  strokeWidth={isWorst ? "1.5" : "1"}
+                  filter={isWorst ? "url(#glow-soft)" : undefined} />
+                <text x={lx} y={ly + 4} textAnchor="middle"
+                  fill="#f87171" fontSize={isWorst ? "8" : "7"}
+                  fontFamily="'JetBrains Mono', monospace" fontWeight="700">
+                  −{loss}
+                </text>
+              </g>
+            );
+          })}
 
+<<<<<<< HEAD
         {/* Moving cursor dot — synced with telemetry chart */}
         {cursorProgress !== null && cursorProgress !== undefined && (() => {
           const pts = smoothed;
@@ -252,94 +312,118 @@ export function TrackHeatmap({
         })()}
 
         {/* Worst segment pulsing dot */}
+=======
+        {/* ── Finish line ──────────────────────────────────────────────────── */}
+>>>>>>> c5c715c (wow telemetry - live map cursor, F1 pit wall layout)
         {(() => {
-          const worst = heatSegments.reduce((best, seg, i) =>
-            seg.intensity > heatSegments[best].intensity ? i : best, 0);
-          const seg = heatSegments[worst];
-          if (!seg) return null;
+          const pt0 = smoothed[0];
+          const pt1 = smoothed[1];
+          if (!pt0 || !pt1) return null;
+          const [x0, y0] = toSVG(pt0.x, pt0.y);
+          const [x1, y1] = toSVG(pt1.x, pt1.y);
+          const dx = x1 - x0, dy = y1 - y0;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          const nx = -dy / len * 14, ny = dx / len * 14;
           return (
             <g>
-              <circle cx={seg.x1} cy={seg.y1} r="14"
-                fill="rgba(255,30,30,0.12)" stroke="rgba(255,60,60,0.4)" strokeWidth="1.5">
-                <animate attributeName="r" values="12;20;12" dur="2s" repeatCount="indefinite"/>
-                <animate attributeName="opacity" values="0.8;0.2;0.8" dur="2s" repeatCount="indefinite"/>
-              </circle>
-              <circle cx={seg.x1} cy={seg.y1} r="5" fill="#f87171"/>
+              <line x1={x0 - nx} y1={y0 - ny} x2={x0 + nx} y2={y0 + ny}
+                stroke="#ffffff" strokeWidth="3" strokeDasharray="4,4" />
+              <text x={x0 + nx + 6} y={y0 + ny + 3}
+                fill="#ffffff" fontSize="8" fontFamily="'JetBrains Mono', monospace"
+                fontWeight="700" opacity="0.7">SF</text>
             </g>
           );
         })()}
 
-        {/* S/F line */}
-        {(() => {
-          const [fx, fy] = toSVG(smoothed[0].x, smoothed[0].y);
+        {/* ── Cursor trail ─────────────────────────────────────────────────── */}
+        {cursorPt && trailHistory.slice(0, -1).map((idx, ti) => {
+          const trailPt = smoothed[idx];
+          if (!trailPt) return null;
+          const [tx, ty] = toSVG(trailPt.x, trailPt.y);
+          const opacity = (ti + 1) / trailHistory.length * 0.35;
+          const r = 2 + ti * 0.5;
           return (
-            <g>
-              <line x1={fx-8} y1={fy-2} x2={fx+8} y2={fy+2}
-                stroke="#fff" strokeWidth="3" strokeLinecap="round" opacity="0.8"/>
-              <text x={fx} y={fy-9} textAnchor="middle" fontSize="9"
-                fill="#a1a1aa" fontFamily="monospace">S/F</text>
-            </g>
-          );
-        })()}
-
-        {/* Corner labels from circuit */}
-        {circuit.corners.map(corner => {
-          const n   = smoothed.length;
-          const idx = Math.round(corner.lapFrac * n);
-          const pt  = smoothed[Math.min(idx, n - 1)];
-          const [cx, cy] = toSVG(pt.x, pt.y);
-          // Find heat at this corner
-          const frac = idx / n;
-          const hp   = data.points.reduce((best, p) =>
-            Math.abs(p.dist / data.totalDistM - frac) < Math.abs(best.dist / data.totalDistM - frac)
-              ? p : best, data.points[0]);
-          const color = hp && hp.intensity > 0.6 ? "#f87171" : hp && hp.intensity < 0.3 ? "#4ade80" : "#a1a1aa";
-          return (
-            <g key={corner.id}>
-              <circle cx={cx} cy={cy} r="5" fill="#09090b" stroke={color} strokeWidth="1.5"/>
-              <text x={cx} y={cy - 9} textAnchor="middle" fontSize="9"
-                fill={color} fontFamily="monospace" fontWeight="600">
-                {corner.label}
-              </text>
-            </g>
+            <circle key={ti} cx={tx} cy={ty} r={r}
+              fill="#a3e635" opacity={opacity} />
           );
         })}
+
+        {/* ── Cursor marker ────────────────────────────────────────────────── */}
+        {cursorPt && (
+          <g transform={`translate(${cxSvg}, ${cySvg})`}>
+            {/* Outer glow ring */}
+            <circle r="22" fill="rgba(163,230,53,0.06)"
+              stroke="rgba(163,230,53,0.2)" strokeWidth="1" />
+            {/* Mid ring */}
+            <circle r="14" fill="rgba(163,230,53,0.10)"
+              stroke="rgba(163,230,53,0.4)" strokeWidth="1.5" />
+            {/* Core dot */}
+            <circle r="6" fill="#a3e635" stroke="#09090b" strokeWidth="2.5"
+              filter="url(#glow-lime)" />
+            {/* Direction arrow */}
+            <line x1={0} y1={0}
+              x2={Math.cos(angle * Math.PI / 180) * 18}
+              y2={Math.sin(angle * Math.PI / 180) * 18}
+              stroke="#a3e635" strokeWidth="2.5" strokeLinecap="round" opacity="0.7" />
+            {/* Speed badge */}
+            {cursorSpeed && (() => {
+              const bx = cxSvg > W * 0.7 ? -52 : 20;
+              const by = cySvg > H * 0.8 ? -20 : 0;
+              return (
+                <g transform={`translate(${bx}, ${by})`}>
+                  <rect x={0} y={-10} width={46} height={16} rx="4"
+                    fill="rgba(9,9,11,0.92)" stroke="rgba(163,230,53,0.5)" strokeWidth="0.8" />
+                  <text x={23} y={1} textAnchor="middle"
+                    fill="#a3e635" fontSize="9" fontFamily="'JetBrains Mono', monospace"
+                    fontWeight="800">{cursorSpeed}</text>
+                </g>
+              );
+            })()}
+          </g>
+        )}
+
+        {/* ── Tooltip ──────────────────────────────────────────────────────── */}
+        {tooltip && (
+          <g>
+            <rect x={tooltip.x + 12} y={tooltip.y - 20} width={90} height={30} rx="5"
+              fill="rgba(9,9,11,0.95)" stroke="rgba(248,113,113,0.4)" strokeWidth="0.8" />
+            <text x={tooltip.x + 57} y={tooltip.y - 8} textAnchor="middle"
+              fill="#f87171" fontSize="9" fontFamily="'JetBrains Mono', monospace" fontWeight="700">
+              {tooltip.label}
+            </text>
+            <text x={tooltip.x + 57} y={tooltip.y + 5} textAnchor="middle"
+              fill="#fca5a5" fontSize="8" fontFamily="'JetBrains Mono', monospace">
+              −{tooltip.deltaS.toFixed(3)}с
+            </text>
+          </g>
+        )}
       </svg>
 
-      {/* Tooltip */}
-      {tooltip && (
-        <div className="absolute z-20 pointer-events-none bg-zinc-900/98 border border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono shadow-2xl"
-          style={{ left: tooltip.x + 14, top: tooltip.y - 10 }}>
-          <p className="text-zinc-100 font-semibold mb-0.5">{tooltip.label}</p>
-          <p className={cn("font-medium", tooltip.deltaS >= 0 ? "text-red-400" : "text-lime-400")}>
-            {tooltip.deltaS >= 0 ? "+" : ""}{tooltip.deltaS.toFixed(3)}s
-          </p>
-          <p className="text-zinc-600 text-[10px] mt-0.5">
-            {tooltip.deltaS >= 0 ? t.telemetry.losing : t.telemetry.gaining}
-          </p>
-        </div>
-      )}
-
-      {/* Gradient legend */}
-      <div className="absolute bottom-3 left-4 flex items-center gap-3">
-        <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full" style={{background:"rgb(30,200,80)"}}/>
-            <span className="text-lime-400">{t.telemetry.gaining}</span>
-          </div>
-          <div className="w-16 h-2 rounded-full" style={{
-            background:"linear-gradient(to right, rgb(30,200,80), rgb(200,220,20), rgb(240,160,0), rgb(255,20,20))"
-          }}/>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full" style={{background:"rgb(255,20,20)"}}/>
-            <span className="text-red-400">{t.telemetry.losing}</span>
-          </div>
+      {/* ── Speed legend ──────────────────────────────────────────────────── */}
+      <div className="absolute bottom-3 left-4 flex items-center gap-0">
+        {["#1428C8","#14A0DC","#50DC64","#DCDC14","#FF7800","#FF1E1E"].map((color, i) => (
+          <div key={i} className="w-5 h-2" style={{ background: color }} />
+        ))}
+        <div className="flex items-center gap-3 ml-2">
+          <span className="text-[9px] font-mono text-zinc-600">Медленно</span>
+          <span className="text-[9px] font-mono text-zinc-600">Торможение</span>
         </div>
       </div>
 
-      {!data.hasRealGPS && (
-        <div className="absolute bottom-3 right-4">
-          <span className="text-[10px] font-mono text-zinc-700">Approx. layout</span>
+      {/* ── Track name ────────────────────────────────────────────────────── */}
+      <div className="absolute top-3 left-4">
+        <p className="text-[9px] font-mono text-zinc-600 uppercase tracking-[0.2em]">
+          {trackId.toUpperCase()}
+        </p>
+      </div>
+
+      {/* ── Loss indicator top-right ──────────────────────────────────────── */}
+      {worstCorner && (
+        <div className="absolute top-3 right-4 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-400/10 border border-red-400/20">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+          <span className="text-[10px] font-mono text-red-400">
+            {worstCorner.segment.label} −{(worstCorner.deltaMs / 1000).toFixed(3)}с
+          </span>
         </div>
       )}
     </div>
