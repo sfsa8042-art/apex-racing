@@ -204,7 +204,7 @@ async fn main_loop(queue: Arc<UploadQueue>, app: AppHandle) {
             if recording {
                 // Save partial data if session ended abruptly
                 if samples.len() > 50 {
-                    flush_with_offset(&samples, 0.0, &car, &track, prev_lap_ms, &queue, &app).await;
+                    flush(&samples, &car, &track, prev_lap_ms, &queue, &app).await;
                 }
                 samples.clear();
                 recording = false;
@@ -223,9 +223,42 @@ async fn main_loop(queue: Arc<UploadQueue>, app: AppHandle) {
         // ── Lap completed ─────────────────────────────────────────────────────
         if laps_done > prev_laps && prev_laps >= 0 {
             info!("ACC lap {} done | {}ms | {} samples", laps_done, last_ms, samples.len());
-            if samples.len() > 50 {
-                flush_with_offset(&samples, 0.0, &car, &track, last_ms, &queue, &app).await;
+
+            // Minimum validity checks:
+            // 1) At 25Hz, a 90-second lap = 2250 samples. Require at least this
+            //    when last_ms is unknown (first lap) to avoid partial recordings.
+            // 2) When last_ms is known, require ≥70% of expected samples.
+            let min_samples_absolute = 2250usize; // 90 seconds at 25Hz
+            let expected = if last_ms > 0 {
+                (last_ms as f32 / 40.0) as usize
+            } else {
+                0
+            };
+            let is_complete = if expected > 0 {
+                samples.len() >= expected * 7 / 10
+            } else {
+                samples.len() >= min_samples_absolute
+            };
+
+            if is_complete {
+                // Apply time offset so CSV time matches real lap time
+                let acc_lap_s  = last_ms as f32 / 1000.0;
+                let rec_lap_s  = samples.last().map(|s| s.t).unwrap_or(0.0);
+                let time_offset = if acc_lap_s > 0.0 && rec_lap_s > 0.0 {
+                    acc_lap_s - rec_lap_s
+                } else {
+                    0.0
+                };
+                flush_with_offset(&samples, time_offset, &car, &track, last_ms, &queue, &app).await;
+                info!("ACC: lap saved ({} samples, expected ~{}, offset {:.2}s)", samples.len(), expected, time_offset);
+            } else {
+                info!("ACC: skipping partial lap ({} samples, need {} or {})",
+                    samples.len(),
+                    if expected > 0 { expected * 7 / 10 } else { 0 },
+                    min_samples_absolute
+                );
             }
+
             samples.clear();
             elapsed     = 0.0;
             prev_lap_ms = last_ms;
