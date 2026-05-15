@@ -15,13 +15,15 @@ import { parseFile } from "./parser";
 // ─── Synthetic reference ──────────────────────────────────────────────────────
 
 /**
- * Build a synthetic "reference" by:
- * - Moving brake points 8–15m later
- * - Advancing throttle opening 10m earlier
- * - Boosting corner speed by 5–8%
- * - Smoothing the resulting speed trace
+ * Build a synthetic "pro-level" reference representing a top-1% driver:
+ * - Brake points 12-20m later (depending on corner speed)
+ * - Peak brake pressure boosted to near-100% at onset
+ * - Trail braking held closer to apex
+ * - Throttle opened 12-18m earlier
+ * - Corner minimum speeds boosted 8-12%
+ * - Smoother speed profile throughout
  *
- * This gives immediate meaningful deltas the moment a user uploads any file.
+ * Target improvement: ~3-5s on a typical 2-minute GT3 lap.
  */
 export function buildSyntheticReference(userLap: ParsedLap): ParsedLap {
   const rows = userLap.rows;
@@ -35,50 +37,63 @@ export function buildSyntheticReference(userLap: ParsedLap): ParsedLap {
   // Build a mapping: for each row index, what's the ideal throttle/brake
   const refRows: TelemetryRow[] = rows.map((r, i) => ({ ...r }));
 
-  // 1. Shift brake starts later by ~8–12m
-  const brakeLater = 10; // metres
+  // 1. Shift brake points later (pro brakes 12-20m later depending on speed)
   brakingEvents.forEach((ev) => {
     if (!totalDist) return;
-    const startDist = rows[ev.startIdx].lapDist ?? 0;
-    // Find the row index that is brakeLater metres ahead
-    const targetDist = startDist + brakeLater;
+    const startDist   = rows[ev.startIdx].lapDist ?? 0;
+    const entrySpeed  = rows[ev.startIdx].speed;
+    // Higher speed = bigger improvement opportunity
+    const brakeLater  = entrySpeed > 200 ? 18 : entrySpeed > 150 ? 14 : 10;
+    const targetDist  = startDist + brakeLater;
     const newStartIdx = rows.findIndex((r) => (r.lapDist ?? 0) >= targetDist);
     if (newStartIdx === -1 || newStartIdx >= ev.endIdx) return;
 
-    // Zero out brake before new start
+    // Keep throttle on until new brake point
     for (let i = ev.startIdx; i < Math.min(newStartIdx, ev.peakIdx); i++) {
-      refRows[i].brake = Math.max(0, refRows[i].brake * 0.1);
-      refRows[i].throttle = Math.min(100, refRows[i].throttle + 30);
+      refRows[i].brake    = 0;
+      refRows[i].throttle = Math.max(refRows[i].throttle, 40);
     }
-    // Increase peak brake slightly
+    // Boost peak brake to near-100% at onset (threshold braking technique)
     for (let i = newStartIdx; i <= ev.peakIdx; i++) {
-      refRows[i].brake = Math.min(100, rows[i].brake * 1.1);
+      const distIntoZone = i - newStartIdx;
+      const rampUp = Math.min(1.0, distIntoZone / (sampleHz * 0.15)); // 0.15s ramp
+      refRows[i].brake = Math.min(100, Math.max(rows[i].brake, 95 * rampUp));
+    }
+    // Trail braking: smooth reduction from peak to 0 at apex (15% longer than user)
+    const peakToEnd = ev.endIdx - ev.peakIdx;
+    for (let i = ev.peakIdx; i <= Math.min(ev.endIdx + Math.round(peakToEnd * 0.15), rows.length - 1); i++) {
+      const frac = (i - ev.peakIdx) / (peakToEnd * 1.15);
+      refRows[i].brake = Math.round(rows[ev.peakIdx].brake * Math.max(0, 1 - frac));
     }
   });
 
-  // 2. Open throttle earlier by ~10m
-  const throttleEarlier = 10; // metres
+  // 2. Open throttle earlier by 12-18m (pro picks up throttle sooner)
   throttleEvents.forEach((ev) => {
     if (!totalDist) return;
-    const openDist = rows[ev.openIdx].lapDist ?? 0;
-    const targetDist = Math.max(0, openDist - throttleEarlier);
-    const newOpenIdx = rows.findIndex((r) => (r.lapDist ?? 0) >= targetDist);
+    const openDist     = rows[ev.openIdx].lapDist ?? 0;
+    const exitSpeed    = rows[ev.openIdx].speed;
+    const throttleEarlier = exitSpeed < 100 ? 16 : 12; // slow corners → even earlier
+    const targetDist   = Math.max(0, openDist - throttleEarlier);
+    const newOpenIdx   = rows.findIndex((r) => (r.lapDist ?? 0) >= targetDist);
     if (newOpenIdx === -1 || newOpenIdx >= ev.openIdx) return;
 
     for (let i = newOpenIdx; i < ev.openIdx; i++) {
-      refRows[i].throttle = Math.min(100, rows[ev.openIdx].throttle * 0.8);
-      refRows[i].brake = Math.max(0, refRows[i].brake * 0.5);
+      const frac = (i - newOpenIdx) / (ev.openIdx - newOpenIdx);
+      refRows[i].throttle = Math.min(100, rows[ev.openIdx].throttle * frac * 1.2);
+      refRows[i].brake    = Math.max(0, refRows[i].brake * 0.3); // reduce residual trail braking
     }
   });
 
-  // 3. Boost corner minimum speeds by 6%
+  // 3. Boost corner minimum speeds by 9-12% (carry more speed through corners)
   userLap.channelStats.cornerMinima.forEach((cm) => {
-    const WINDOW = Math.round(sampleHz * 0.5); // 0.5s window around minimum
+    const minSpd  = rows[cm.idx].speed;
+    const boost   = minSpd < 80 ? 0.12 : minSpd < 130 ? 0.09 : 0.06; // bigger boost at slow corners
+    const WINDOW  = Math.round(sampleHz * 0.7);
     for (let i = Math.max(0, cm.idx - WINDOW); i <= Math.min(rows.length - 1, cm.idx + WINDOW); i++) {
-      const dist = Math.abs(i - cm.idx);
-      const factor = 1 + (0.06 * (1 - dist / WINDOW)); // tapered boost
+      const dist   = Math.abs(i - cm.idx);
+      const factor = 1 + boost * (1 - dist / WINDOW);
       refRows[i].speed = Math.min(
-        rows[Math.max(0, i - 5)].speed * 1.01, // don't exceed approach speed
+        rows[Math.max(0, i - 10)].speed * 1.005,
         refRows[i].speed * factor
       );
     }
@@ -101,9 +116,10 @@ export function buildSyntheticReference(userLap: ParsedLap): ParsedLap {
   }
 
   // Typical improvement: 1.0–2.5s
+  // Pro reference is ~3-5% faster than average user (represents top 5% driver)
   const actualLapMs = Math.max(
-    userLap.lapTimeMs - 2500,
-    Math.round(userLap.lapTimeMs * 0.975)
+    userLap.lapTimeMs - 5000,
+    Math.round(userLap.lapTimeMs * 0.964)
   );
 
   // Re-time the ref rows to fit the new lap time

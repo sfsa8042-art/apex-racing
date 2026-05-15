@@ -65,7 +65,31 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
   const run = useCallback(async (parsed: ParsedLap, filename: string) => {
     setUploadState((s) => ({ ...s, status: "analyzing", parsedLap: parsed }));
 
-    const ref      = buildSyntheticReference(parsed);
+    // ── Detect track from filename and fetch community reference ──
+    const trackMap: Record<string, string> = {
+      nurburgring: "nurburgring", monza: "monza", spa: "spa",
+      silverstone: "silverstone", suzuka: "suzuka", imola: "imola", barcelona: "barcelona",
+    };
+    const nameLower  = filename.toLowerCase();
+    const detectedTrack = Object.keys(trackMap).find(k => nameLower.includes(k)) ?? "monza";
+
+    let ref: ParsedLap;
+    let refSource: "community" | "synthetic" = "synthetic";
+    try {
+      const r = await fetch(`/api/reference/laps?track=${detectedTrack}`);
+      const d = await r.json();
+      if (d.found && d.csv) {
+        const blob = new Blob([d.csv], { type: "text/csv" });
+        const file = new File([blob], `${detectedTrack}_reference.csv`);
+        const { parseFile } = await import("@/lib/telemetry/parser");
+        ref = await parseFile(file);
+        refSource = "community";
+      } else {
+        ref = buildSyntheticReference(parsed);
+      }
+    } catch {
+      ref = buildSyntheticReference(parsed);
+    }
     setRefLap(ref);
 
     const result   = analyseLap(parsed, ref);
@@ -74,6 +98,34 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
 
     const profile = detectDriverProfile(parsed, result.segmentAnalyses);
     setDriverProfile(profile);
+
+    // ── Auto-submit to community reference if it could be top lap ──
+    try {
+      const { csv: parsedCsv } = await (async () => {
+        const resp = await fetch("/api/sessions?all=1").catch(() => ({ ok: false }));
+        return { csv: null };
+      })();
+      // Build CSV from parsed lap for submission
+      const csvLines = ["time,speed,throttle,brake,gear,rpm,steerAngle,lateralG,longitudinalG"];
+      parsed.rows.forEach(r => {
+        csvLines.push(`${r.time.toFixed(3)},${r.speed.toFixed(1)},${r.throttle.toFixed(1)},${r.brake.toFixed(1)},${r.gear},${r.rpm ?? 0},${(r.steerAngle ?? 0).toFixed(2)},${(r.lateralG ?? 0).toFixed(4)},0`);
+      });
+      if (csvLines.length > 200) {
+        fetch("/api/reference/laps", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            track: detectedTrack,
+            lapTimeMs: parsed.lapTimeMs,
+            csv: csvLines.join("\n"),
+            car: filename.includes("porsche") ? "Porsche 992 GT3" :
+                 filename.includes("mercedes") ? "Mercedes AMG GT3" :
+                 filename.includes("mclaren") ? "McLaren 720S GT3" :
+                 filename.includes("ferrari") ? "Ferrari 296 GT3" : "GT3",
+          }),
+        }).catch(() => {});
+      }
+    } catch {}
 
     const entry    = buildHistoryEntry(filename, result, parsed.lapTimeMs, profile.style);
     const prog     = computeProgress(entry);
