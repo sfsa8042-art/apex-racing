@@ -91,6 +91,22 @@ const ACADEMY_MAP: Record<string, { id: string; titleRu: string }> = {
 
 // ─── Per-segment rules ────────────────────────────────────────────────────────
 
+type CornerClass = "slow" | "medium" | "fast";
+
+function classifyCorner(apexSpeed: number): CornerClass {
+  if (apexSpeed < 80)  return "slow";    // hairpins, chicanes
+  if (apexSpeed < 150) return "medium";  // standard corners
+  return "fast";                          // fast sweepers
+}
+
+// Speed factor for time cost — braking mistake at higher speed costs more
+function speedFactor(speed: number): number {
+  if (speed > 180) return 1.6;
+  if (speed > 130) return 1.2;
+  if (speed > 80)  return 1.0;
+  return 0.7;
+}
+
 interface SegmentRuleInput {
   userSeg:    TrackSegment;
   refSeg:     TrackSegment;
@@ -98,27 +114,35 @@ interface SegmentRuleInput {
   refRows:    TelemetryRow[];
   segDeltaMs: number;         // from real delta calculation
   totalDist:  number;
+  cornerClass: CornerClass;
 }
 
 function ruleEarlyBrake(inp: SegmentRuleInput): SegmentInsight | null {
-  const { userSeg, refSeg, totalDist } = inp;
+  const { userSeg, refSeg, totalDist, cornerClass } = inp;
   if (!userSeg.brakeStartDist || !refSeg.brakeStartDist) return null;
 
-  // Normalise to common scale
-  const uBrakeFrac = userSeg.brakeStartDist / (inp.userRows[inp.userRows.length - 1].lapDist ?? 1);
-  const rBrakeFrac = refSeg.brakeStartDist   / (inp.refRows[inp.refRows.length  - 1].lapDist ?? 1);
-  const diffM = (rBrakeFrac - uBrakeFrac) * totalDist;   // positive = user brakes earlier
+  const uBrakeFrac = userSeg.brakeStartDist / (inp.userRows[inp.userRows.length - 1]?.lapDist ?? 1);
+  const rBrakeFrac = refSeg.brakeStartDist   / (inp.refRows[inp.refRows.length  - 1]?.lapDist ?? 1);
+  const diffM = (rBrakeFrac - uBrakeFrac) * totalDist;
 
-  if (diffM < 12) return null;
+  // Threshold depends on corner speed — slow corners need less precision
+  const minDiff = cornerClass === "slow" ? 8 : cornerClass === "medium" ? 12 : 18;
+  if (diffM < minDiff) return null;
 
-  const costMs = Math.round(Math.min(diffM * 7, 280));   // ~7 ms per metre (calibrated)
+  // Speed-weighted cost: braking early at 200+ km/h is more expensive
+  const sf = speedFactor(userSeg.maxSpeed);
+  const baseCost = cornerClass === "fast" ? 9 : 7;
+  const costMs = Math.round(Math.min(diffM * baseCost * sf, 350));
+
+  const hint = cornerClass === "fast"
+    ? `На быстром повороте раннее торможение вызывает перегрузку и нестабильность — попробуй тормозить позже с высоким первоначальным давлением.`
+    : `Двигай точку торможения вперёд на 5-8 м за раз. В идеале тормозить поздно с коротким, мощным торможением.`;
+
   const module = ACADEMY_MAP["early_brake"];
   return {
     type: "early_brake",
     descriptionRu:
-      `Точка торможения на ${Math.round(diffM)} м раньше чем у референса. ` +
-      `Скорость въезда: ${Math.round(userSeg.maxSpeed)} км/ч vs ${Math.round(refSeg.maxSpeed)} км/ч у референса. ` +
-      `Подвигай точку торможения вперёд на 5-8 м за раз — сохраняй высокое давление в начале замедления.`,
+      `Торможение на ${Math.round(diffM)} м раньше референса (${Math.round(userSeg.maxSpeed)} → ${Math.round(refSeg.maxSpeed)} км/ч). ` + hint,
     timeCostMs: costMs,
     academyModuleId: module.id,
     academyModuleTitleRu: module.titleRu,
@@ -129,23 +153,30 @@ function ruleEarlyBrake(inp: SegmentRuleInput): SegmentInsight | null {
 }
 
 function ruleLateThrottle(inp: SegmentRuleInput): SegmentInsight | null {
-  const { userSeg, refSeg, totalDist } = inp;
+  const { userSeg, refSeg, totalDist, cornerClass } = inp;
   if (!userSeg.throttleOpenDist || !refSeg.throttleOpenDist) return null;
 
-  const uFrac = userSeg.throttleOpenDist / (inp.userRows[inp.userRows.length - 1].lapDist ?? 1);
-  const rFrac = refSeg.throttleOpenDist   / (inp.refRows[inp.refRows.length  - 1].lapDist ?? 1);
-  const diffM = (uFrac - rFrac) * totalDist;   // positive = user opens throttle later
+  const uFrac = userSeg.throttleOpenDist / (inp.userRows[inp.userRows.length - 1]?.lapDist ?? 1);
+  const rFrac = refSeg.throttleOpenDist   / (inp.refRows[inp.refRows.length  - 1]?.lapDist ?? 1);
+  const diffM = (uFrac - rFrac) * totalDist;
 
-  if (diffM < 10) return null;
+  const minDiff = cornerClass === "slow" ? 8 : 10;
+  if (diffM < minDiff) return null;
 
-  const costMs = Math.round(Math.min(diffM * 6, 220));
+  // Cost scales with length of subsequent straight
+  const nextStraightDist = (inp.userRows.at(-1)?.lapDist ?? 0) - userSeg.endDist;
+  const straightFactor = Math.min(1.5, 1 + nextStraightDist / 500);
+  const costMs = Math.round(Math.min(diffM * 6 * straightFactor, 280));
+
+  const hint = cornerClass === "slow"
+    ? `На медленном повороте это критично — потеря скорости на выходе тянется на всю следующую прямую.`
+    : `Открывай газ сразу в апексе — начни с 20-30% для стабилизации, затем плавно увеличивай.`;
+
   const module = ACADEMY_MAP["late_throttle"];
   return {
     type: "late_throttle",
     descriptionRu:
-      `Газ открывается на ${Math.round(diffM)} м позже чем у референса. ` +
-      `Мин. скорость в повороте: ${Math.round(userSeg.minSpeed)} км/ч. ` +
-      `Открывай газ сразу после апекса — даже 10% тяги уже помогают стабилизировать машину и набрать скорость на выходе.`,
+      `Газ на ${Math.round(diffM)} м позже чем у референса. Мин. скорость апекс: ${Math.round(userSeg.minSpeed)} км/ч. ` + hint,
     timeCostMs: costMs,
     academyModuleId: module.id,
     academyModuleTitleRu: module.titleRu,
@@ -273,6 +304,56 @@ function ruleNoTrailBraking(inp: SegmentRuleInput): SegmentInsight | null {
   };
 }
 
+
+// Detects "dead zone" — throttle=0 AND brake=0 — between brake release and apex
+// This is a common mistake: the car is neither braking nor accelerating → wasted time
+function ruleCoasting(inp: SegmentRuleInput): SegmentInsight | null {
+  const { userSeg, refSeg, userRows } = inp;
+  if (inp.cornerClass === "fast") return null; // fast corners often have natural lift
+
+  // Find the braking zone end (brake drops below 5%)
+  const apexDist = userSeg.apexDist ?? (userSeg.startDist + userSeg.endDist) / 2;
+  const brakeEnd = userSeg.brakeStartDist ?? userSeg.startDist;
+
+  // Count rows in the "dead zone" (between brake release and throttle open)
+  const deadRows = userRows.filter(r => {
+    const d = r.lapDist ?? 0;
+    return d > brakeEnd && d < apexDist && r.brake < 5 && r.throttle < 8;
+  });
+  const deadDist = deadRows.length > 0
+    ? (deadRows.at(-1)!.lapDist! - deadRows[0]!.lapDist!)
+    : 0;
+
+  // Check ref for comparison
+  const refApex  = refSeg.apexDist ?? (refSeg.startDist + refSeg.endDist) / 2;
+  const refBrakeEnd = refSeg.brakeStartDist ?? refSeg.startDist;
+  const refDeadRows = inp.refRows.filter(r => {
+    const d = r.lapDist ?? 0;
+    return d > refBrakeEnd && d < refApex && r.brake < 5 && r.throttle < 8;
+  });
+  const refDeadDist = refDeadRows.length > 0
+    ? (refDeadRows.at(-1)!.lapDist! - refDeadRows[0]!.lapDist!)
+    : 0;
+
+  const extraCoastM = deadDist - refDeadDist;
+  if (extraCoastM < 15) return null;
+
+  const costMs = Math.round(Math.min(extraCoastM * 5, 180));
+  return {
+    type: "late_throttle" as const,
+    descriptionRu:
+      `Выбег ${Math.round(extraCoastM)} м без тормоза и газа перед апексом (референс: ${Math.round(refDeadDist)} м). ` +
+      `Этот "мёртвый" участок замедляет машину без торможения. ` +
+      `Используй трейл-брейкинг вплоть до апекса или открывай газ раньше.`,
+    timeCostMs: costMs,
+    academyModuleId: "trail_braking",
+    academyModuleTitleRu: "Трейл-брейкинг",
+    userValue: Math.round(deadDist),
+    refValue: Math.round(refDeadDist),
+    unit: "м",
+  };
+}
+
 // ─── Segment analysis ─────────────────────────────────────────────────────────
 
 function analyseSegment(
@@ -284,23 +365,42 @@ function analyseSegment(
   totalDist:  number,
   totalLoss:  number,
 ): SegmentAnalysis {
+  const cornerClass = classifyCorner(userSeg.apexSpeed ?? userSeg.minSpeed);
   const insights: SegmentInsight[] = [];
 
   if (refSeg && userSeg.type === "corner") {
-    const inp: SegmentRuleInput = { userSeg, refSeg, userRows, refRows, segDeltaMs, totalDist };
+    const inp: SegmentRuleInput = { userSeg, refSeg, userRows, refRows, segDeltaMs, totalDist, cornerClass };
     const earlyBrake    = ruleEarlyBrake(inp);
     const noTrailBrake  = ruleNoTrailBraking(inp);
     const lateThrottle  = ruleLateThrottle(inp);
+    const coasting      = ruleCoasting(inp);
     const lowApex       = ruleLowApexSpeed(inp);
     const slowExit      = ruleSlowExit(inp);
     const good          = ruleGoodSegment(inp);
 
-    if (earlyBrake)                     insights.push(earlyBrake);
-    if (noTrailBrake && !earlyBrake)    insights.push(noTrailBrake);
-    if (lateThrottle)                   insights.push(lateThrottle);
-    if (lowApex)                        insights.push(lowApex);
-    if (slowExit && !lowApex)           insights.push(slowExit);
-    if (good && insights.length === 0)  insights.push(good);
+    // Smart deduplication: only show root cause, not downstream effects
+    // If early brake explains low apex speed → skip low apex (it's redundant)
+    const earlyBrakeCausesLowApex =
+      earlyBrake && lowApex &&
+      (earlyBrake.timeCostMs ?? 0) > (lowApex.timeCostMs ?? 0) * 0.8;
+
+    // If coasting detected → skip noTrailBrake (same root cause)
+    const skipTrailBrake = !!(coasting && noTrailBrake);
+
+    if (earlyBrake)                                    insights.push(earlyBrake);
+    if (noTrailBrake && !earlyBrake && !skipTrailBrake) insights.push(noTrailBrake);
+    if (coasting && !earlyBrake)                       insights.push(coasting);
+    if (lateThrottle)                                  insights.push(lateThrottle);
+    if (lowApex && !earlyBrakeCausesLowApex)           insights.push(lowApex);
+    if (slowExit && !lowApex)                          insights.push(slowExit);
+
+    // Cap at 2 most expensive insights per corner to avoid information overload
+    if (insights.length > 2) {
+      insights.sort((a, b) => (b.timeCostMs ?? 0) - (a.timeCostMs ?? 0));
+      insights.splice(2);
+    }
+
+    if (good && insights.length === 0)                 insights.push(good);
   }
 
   const deltaFraction = totalLoss > 0 ? Math.max(0, segDeltaMs) / totalLoss : 0;
@@ -499,52 +599,74 @@ export function analyseLap(userLap: ParsedLap, refLap: ParsedLap): LapAnalysisRe
   const optimalLap = buildOptimalLap(userSegments, segmentAnalyses, userLap.lapTimeMs);
 
   // ── 8. Score, sub-scores & dominant weakness ──────────────────────────────
+  //
+  // Scoring philosophy:
+  // - Overall: based on lap time efficiency vs reference
+  // - Sub-scores: each is 0-100 based on cost of mistakes in that category
+  // - Corners are weighted by how slow they are (slow corners matter more)
+
+  // Corner weighting: slower corners = higher weight (more lap time sensitive)
+  const cornerWeights = segmentAnalyses
+    .filter(s => s.segment.type === "corner")
+    .reduce((map, sa) => {
+      const apex = sa.segment.apexSpeed ?? sa.segment.minSpeed;
+      const w = apex < 80 ? 1.5 : apex < 130 ? 1.0 : 0.6;
+      map.set(sa.segment.id, w);
+      return map;
+    }, new Map<string, number>());
 
   // Overall score: based on delta time relative to lap time (more realistic)
   // e.g. 0.5s delta on 100s lap = 99.5% efficiency ≈ score 97
   // e.g. 3s delta on 100s lap = 97% efficiency ≈ score 82
-  const lapTimeS = userLap.lapTimeMs / 1000;
-  const deltaS   = Math.max(0, delta.totalDeltaMs / 1000);
+  const lapTimeS   = userLap.lapTimeMs / 1000;
+  const deltaS     = Math.max(0, delta.totalDeltaMs / 1000);
   const efficiency = lapTimeS > 0 ? Math.max(0, (lapTimeS - deltaS) / lapTimeS) : 1;
-  // Score: efficiency^0.3 mapped to 0-100, with 95%+ efficiency giving 90+
-  const overallScore = Math.max(0, Math.min(100, Math.round(
-    efficiency > 0.99  ? 98 + efficiency * 2 :
-    efficiency > 0.97  ? 92 + (efficiency - 0.97) * 200 :
-    efficiency > 0.93  ? 78 + (efficiency - 0.93) * 350 :
-    efficiency > 0.88  ? 58 + (efficiency - 0.88) * 400 :
-    efficiency > 0.80  ? 30 + (efficiency - 0.80) * 350 :
-    efficiency * 37.5
+
+  // Realistic scoring curve for sim racers:
+  // < 0.3s delta (99.7%+ eff) → 96-100
+  // 0.3-1s delta → 85-96  
+  // 1-2s delta   → 70-85
+  // 2-4s delta   → 50-70
+  // > 4s delta   → < 50
+  const overallScore = Math.max(10, Math.min(100, Math.round(
+    efficiency > 0.997 ? 96 + (efficiency - 0.997) / 0.003 * 4 :
+    efficiency > 0.990 ? 90 + (efficiency - 0.990) / 0.007 * 6 :
+    efficiency > 0.980 ? 83 + (efficiency - 0.980) / 0.010 * 7 :
+    efficiency > 0.967 ? 75 + (efficiency - 0.967) / 0.013 * 8 :
+    efficiency > 0.950 ? 65 + (efficiency - 0.950) / 0.017 * 10 :
+    efficiency > 0.930 ? 55 + (efficiency - 0.930) / 0.020 * 10 :
+    efficiency > 0.900 ? 40 + (efficiency - 0.900) / 0.030 * 15 :
+    efficiency * 44
   )));
 
-  // Sub-scores: computed from category-specific insights
+  // Sub-scores with corner weighting
   const brakingInsights    = rawInsights.filter(i => i.category === "brake");
   const throttleInsights   = rawInsights.filter(i => i.category === "throttle");
   const speedInsights      = rawInsights.filter(i => i.category === "speed");
   const corners            = segmentAnalyses.filter(s => s.segment.type === "corner");
-  const goodCorners        = corners.filter(s => s.deltaMs < 50).length;
   const totalCorners       = Math.max(corners.length, 1);
 
-  // Braking score: penalise early/late brake mistakes
-  const brakingCost  = brakingInsights.reduce((s, i) => s + i.timeCostMs, 0);
-  const brakingScore = Math.max(20, Math.min(100,
-    Math.round(100 - Math.min(brakingCost / 30, 80))
-  ));
+  // Weighted costs — slow corners penalised more
+  const weightedCost = (insights: typeof rawInsights) =>
+    insights.reduce((sum, i) => {
+      const segId = i.segmentId ?? "";
+      const w = cornerWeights.get(segId) ?? 1.0;
+      return sum + i.timeCostMs * w;
+    }, 0);
 
-  // Throttle score: penalise late throttle mistakes
-  const throttleCost  = throttleInsights.reduce((s, i) => s + i.timeCostMs, 0);
-  const throttleScore = Math.max(20, Math.min(100,
-    Math.round(100 - Math.min(throttleCost / 25, 80))
-  ));
+  // Score formula: 100 - (cost / budget) * scale, clamped 20-100
+  const costToScore = (cost: number, budget: number) =>
+    Math.max(20, Math.min(100, Math.round(100 - (cost / budget) * 80)));
 
-  // Lines score: apex speed vs reference
-  const speedCost  = speedInsights.reduce((s, i) => s + i.timeCostMs, 0);
-  const linesScore = Math.max(20, Math.min(100,
-    Math.round(100 - Math.min(speedCost / 20, 80))
-  ));
+  const brakingScore     = costToScore(weightedCost(brakingInsights),  300);
+  const throttleScore    = costToScore(weightedCost(throttleInsights), 250);
+  const linesScore       = costToScore(weightedCost(speedInsights),    200);
 
-  // Consistency: ratio of good corners
+  // Consistency: weighted ratio of clean corners (delta < 80ms)
+  const weightedGood  = corners.reduce((s, sa) => s + (sa.deltaMs < 80 ? (cornerWeights.get(sa.segment.id) ?? 1) : 0), 0);
+  const weightedTotal = corners.reduce((s, sa) => s + (cornerWeights.get(sa.segment.id) ?? 1), 0);
   const consistencyScore = Math.max(20, Math.min(100,
-    Math.round(20 + 80 * (goodCorners / totalCorners))
+    Math.round(20 + 80 * (weightedTotal > 0 ? weightedGood / weightedTotal : 1))
   ));
 
   const subScores: SubScores = {
