@@ -66,12 +66,8 @@ function gaussian(values: number[], sigma = 6): number[] {
 }
 
 export function TrackHeatmap({
-<<<<<<< HEAD
-  data, segmentAnalyses, trackId = "monza", className, height = 360, cursorProgress, onSegmentClick,
-=======
   data, segmentAnalyses, trackId = "monza", className, height = 400,
   cursorProgress, onSegmentClick,
->>>>>>> c5c715c (wow telemetry - live map cursor, F1 pit wall layout)
 }: TrackHeatmapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredSeg, setHoveredSeg] = useState<SegmentAnalysis | null>(null);
@@ -278,43 +274,7 @@ export function TrackHeatmap({
             );
           })}
 
-<<<<<<< HEAD
-        {/* Moving cursor dot — synced with telemetry chart */}
-        {cursorProgress !== null && cursorProgress !== undefined && (() => {
-          const pts = smoothed;
-          if (!pts || pts.length < 2) return null;
-          const idx = Math.round(cursorProgress * (pts.length - 1));
-          const pt  = pts[Math.min(idx, pts.length - 1)];
-          if (!pt) return null;
-          const [px, py] = toSVG(pt.x, pt.y);
-          return (
-            <g>
-              {/* Outer ring */}
-              <circle cx={px} cy={py} r="12" fill="rgba(163,230,53,0.12)"
-                stroke="rgba(163,230,53,0.4)" strokeWidth="1.5" />
-              {/* Inner dot */}
-              <circle cx={px} cy={py} r="5" fill="#a3e635"
-                stroke="#09090b" strokeWidth="2" />
-              {/* Direction indicator */}
-              {idx < pts.length - 2 && (() => {
-                const next = pts[Math.min(idx + 3, pts.length - 1)];
-                const [nx, ny] = toSVG(next.x, next.y);
-                const angle = Math.atan2(ny - py, nx - px) * 180 / Math.PI;
-                return (
-                  <line x1={px} y1={py}
-                    x2={px + Math.cos(angle * Math.PI / 180) * 10}
-                    y2={py + Math.sin(angle * Math.PI / 180) * 10}
-                    stroke="#a3e635" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-                );
-              })()}
-            </g>
-          );
-        })()}
-
-        {/* Worst segment pulsing dot */}
-=======
         {/* ── Finish line ──────────────────────────────────────────────────── */}
->>>>>>> c5c715c (wow telemetry - live map cursor, F1 pit wall layout)
         {(() => {
           const pt0 = smoothed[0];
           const pt1 = smoothed[1];
