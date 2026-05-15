@@ -377,6 +377,18 @@ export default function TelemetryPage() {
   const channels = (chartChannels as Ch[] | null) ?? [];
   const lapTimeStr = parsedLap ? fmtMs(parsedLap.lapTimeMs) : "—";
   const refTimeMs  = analysisResult ? parsedLap!.lapTimeMs - analysisResult.totalTimeDeltaMs : 0;
+
+  // Detect track from filename
+  const detectedTrackId = React.useMemo(() => {
+    const name = (filename ?? "").toLowerCase();
+    const map: Record<string, string> = {
+      nurburgring: "nurburgring", nürburgring: "nurburgring",
+      monza: "monza", spa: "spa", silverstone: "silverstone",
+      suzuka: "suzuka", imola: "imola", barcelona: "barcelona",
+      catalunya: "barcelona", hungaroring: "monza", zandvoort: "spa",
+    };
+    return Object.entries(map).find(([k]) => name.includes(k))?.[1] ?? "monza";
+  }, [filename]);
   const refTimeStr = refTimeMs ? fmtMs(refTimeMs) : "—";
   const gapMs      = analysisResult?.totalTimeDeltaMs ?? 0;
   const totalDistM = parsedLap ? (parsedLap.rows.at(-1)?.lapDist ?? 0) : 0;
@@ -631,7 +643,7 @@ export default function TelemetryPage() {
               <div className="flex-1 min-h-0 p-3">
                 <TrackHeatmap data={heatmapData}
                   segmentAnalyses={analysisResult.segmentAnalyses}
-                  trackId="monza" cursorProgress={cursorProg}
+                  trackId={detectedTrackId} cursorProgress={cursorProg}
                   className="w-full h-full rounded-xl" />
               </div>
             )}
@@ -653,7 +665,7 @@ export default function TelemetryPage() {
                 <TrackHeatmap
                   data={heatmapData}
                   segmentAnalyses={analysisResult.segmentAnalyses}
-                  trackId="monza"
+                  trackId={detectedTrackId}
                   height={320}
                   cursorProgress={cursorProg}
                   className="w-full rounded-2xl ring-1 ring-zinc-800/80"
