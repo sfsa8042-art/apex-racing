@@ -725,54 +725,76 @@ export default function TelemetryPage() {
               </div>
             </div>
 
-            {/* REVOLUTIONARY LAYOUT: Map left, Charts right */}
+            {/* MAP + CHARTS split view */}
             {leftView==="channels" && (
               <div className="flex-1 min-h-0 flex overflow-hidden">
 
-                {/* ── LEFT: LIVE TRACK MAP (hero) ───────────────────────── */}
-                <div className="flex-1 min-w-0 flex flex-col overflow-hidden border-r border-zinc-800/40">
-                  <div className="flex-1 min-h-0">
-                    <LiveTrackMap
-                      trackId={detectedTrackId}
-                      userRows={parsedLap?.rows ?? []}
-                      refRows={refLap?.rows}
-                      cursorProgress={cursorProg}
-                      className="w-full h-full rounded-none"
-                    />
-                  </div>
+                {/* LEFT: LIVE TRACK MAP — fills all available height */}
+                <div className="flex-1 min-w-0 overflow-hidden border-r border-zinc-800/50">
+                  <LiveTrackMap
+                    trackId={detectedTrackId}
+                    userRows={parsedLap?.rows ?? []}
+                    refRows={refLap?.rows}
+                    cursorProgress={cursorProg}
+                    className="w-full h-full"
+                  />
                 </div>
 
-                {/* ── RIGHT: CHANNELS CHARTS ───────────────────────────── */}
-                <div className="w-[340px] shrink-0 flex flex-col overflow-y-auto bg-zinc-950">
-                  {/* Main channels */}
-                  <TelemetryChart
-                    channels={channels as any} visibleChannels={visibleCh}
-                    className="w-full rounded-none border-0"
-                    onCursorChange={setCursorProg} />
+                {/* RIGHT: CHARTS PANEL — compact, synchronised */}
+                <div className="w-[320px] shrink-0 flex flex-col overflow-y-auto bg-zinc-950/95">
 
-                  {/* Delta */}
-                  <div className="border-t border-zinc-800/60">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-950/90">
-                      <BarChart2 size={9} className="text-blue-400"/>
-                      <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Delta</span>
-                      <span className="ml-auto text-[9px] font-mono text-red-400">
-                        <TrendingDown size={8} className="inline"/> Потеря
-                      </span>
-                    </div>
-                    <DeltaChart delta={analysisResult.delta} totalDistM={totalDistM} height={80} className="w-full"/>
+                  {/* Channel toggles */}
+                  <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-800/60 shrink-0 flex-wrap">
+                    {channels.map(ch => (
+                      <button key={ch.id} onClick={() => toggleCh(ch.id)}
+                        className={cn("flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] border transition-all font-mono",
+                          visibleCh.includes(ch.id)
+                            ? "bg-zinc-800 border-zinc-600/70 text-zinc-200"
+                            : "border-zinc-800/80 text-zinc-600 hover:border-zinc-700")}>
+                        <div className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: visibleCh.includes(ch.id) ? ch.color : "#52525b" }}/>
+                        {ch.id.toUpperCase()}
+                      </button>
+                    ))}
+                    <span className="ml-auto text-[9px] font-mono text-zinc-700">Каналы</span>
                   </div>
 
-                  {/* Per-channel mini */}
-                  {channels.filter(ch=>visibleCh.includes(ch.id)&&ch.id!=="delta").map(ch=>(
-                    <div key={ch.id} className="border-t border-zinc-800/40">
-                      <div className="flex items-center gap-1.5 px-3 py-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full" style={{background:ch.color}}/>
-                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider" style={{color:ch.color}}>{ch.label}</span>
-                        <span className="text-[9px] font-mono text-zinc-600 ml-auto">{ch.unit}</span>
+                  {/* Main stacked chart */}
+                  <TelemetryChart
+                    channels={channels as any}
+                    visibleChannels={visibleCh}
+                    className="w-full rounded-none border-0 shrink-0"
+                    onCursorChange={setCursorProg}/>
+
+                  {/* Delta */}
+                  <div className="border-t border-zinc-800/50 shrink-0">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5">
+                      <BarChart2 size={9} className="text-blue-400"/>
+                      <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Δ Время</span>
+                      <div className="ml-auto flex items-center gap-2 text-[9px] font-mono">
+                        <span className="text-red-400 flex items-center gap-0.5"><TrendingDown size={8}/>Потеря</span>
+                        <span className="text-lime-400 flex items-center gap-0.5"><TrendingUp size={8}/>Выигрыш</span>
                       </div>
-                      <TelemetryChart channels={[ch] as any} visibleChannels={[ch.id]} height={80} className="rounded-none border-0"/>
                     </div>
-                  ))}
+                    <DeltaChart delta={analysisResult.delta} totalDistM={totalDistM}
+                      height={90} className="w-full"/>
+                  </div>
+
+                  {/* Per-channel mini charts */}
+                  <div className="divide-y divide-zinc-800/50">
+                    {channels.filter(ch => visibleCh.includes(ch.id) && ch.id !== "delta").map(ch => (
+                      <div key={ch.id} className="shrink-0">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: ch.color }}/>
+                          <span className="text-[9px] font-mono font-bold uppercase tracking-wider"
+                            style={{ color: ch.color }}>{ch.label}</span>
+                          <span className="text-[9px] font-mono text-zinc-600 ml-auto">{ch.unit}</span>
+                        </div>
+                        <TelemetryChart channels={[ch] as any} visibleChannels={[ch.id]}
+                          height={90} className="rounded-none border-0"/>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
