@@ -183,6 +183,8 @@ export interface LapAnalysisResult {
   overallScore: number;
   subScores: SubScores;
   dominantWeakness: AnalysisInsight["category"] | null;
+  patterns?:         string[];
+  strengthMessages?: string[];
 }
 
 // ─── Upload state ─────────────────────────────────────────────────────────────

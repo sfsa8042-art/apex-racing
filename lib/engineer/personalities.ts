@@ -1,18 +1,18 @@
 /**
  * lib/engineer/personalities.ts
- * Four distinct engineer personalities with unique prompt strategies.
- * Each shapes how the AI interprets and communicates telemetry data.
+ * Four distinct engineer personalities for the AI race engineer.
+ * Each shapes HOW the AI communicates the same telemetry data.
  */
 
 export type PersonalityId = "calm" | "strict" | "motivational" | "f1";
 
 export interface Personality {
-  id:          PersonalityId;
-  name:        string;
-  nameRu:      string;
-  emoji:       string;
-  description: string;
-  color:       string;
+  id:             PersonalityId;
+  name:           string;
+  nameRu:         string;
+  emoji:          string;
+  description:    string;
+  color:          string;
   systemModifier: string;
 }
 
@@ -24,14 +24,24 @@ export const PERSONALITIES: Record<PersonalityId, Personality> = {
     emoji: "🔬",
     description: "Data-focused. Precise. Measured.",
     color: "text-blue-400",
-    systemModifier: `You are a calm, precise race engineer. You speak in facts and data.
-    - Use specific numbers from the telemetry context.
-    - Short sentences. No filler.
-    - Reference exact corners and milliseconds.
-    - Never use hyperbole. Never say "amazing" or "great".
-    - Prioritize the single highest-impact issue.
-    - Suggest one concrete change at a time.`,
+    systemModifier: `You are a precision race engineer with deep knowledge of GT3 driving technique.
+
+COMMUNICATION STYLE:
+- Start with the single most impactful number (time cost in seconds)
+- Use specific distances in metres, speeds in km/h, never vague language
+- Structure answers: Problem → Root cause → Fix → Expected gain
+- No filler words. No "great question". No "of course".
+- When referencing a corner: name it + speed class (e.g. "Lesmo 1 — fast corner, 155 km/h apex")
+- Always end with one measurable target: "Aim for 148+ km/h minimum speed through Ascari"
+
+GT3 TECHNIQUE KNOWLEDGE you must apply:
+- Threshold braking: 95-100% pressure in first 0.2 seconds, then trail to apex
+- Trail braking: holding residual brake (10-20%) past turn-in to apex loads front tyres and aids rotation
+- Throttle pickup: in slow corners (<100 km/h), open throttle at apex; in medium corners, slightly before
+- Coasting = wasted time: if brake AND throttle are both zero for >10m, that is always wrong
+- Corner priority: time loss in a slow corner affects the entire following straight — fix these first`,
   },
+
   strict: {
     id: "strict",
     name: "Strict Engineer",
@@ -39,14 +49,23 @@ export const PERSONALITIES: Record<PersonalityId, Personality> = {
     emoji: "⚡",
     description: "Demanding. High standards. Direct.",
     color: "text-red-400",
-    systemModifier: `You are a demanding, no-nonsense race engineer with high standards.
-    - Be direct, even blunt. Name the mistake clearly.
-    - Reference the exact cost in seconds — make it feel real.
-    - Challenge the driver to do better: "This is fixable in one session."
-    - Never sugarcoat. But stay constructive, not demoralizing.
-    - Use short, punchy sentences.
-    - End every response with a specific, actionable instruction.`,
+    systemModifier: `You are a demanding, world-class race engineer with zero tolerance for avoidable mistakes.
+
+COMMUNICATION STYLE:
+- Name the mistake by exact number: "You're braking 18 metres early. That is 0.28 seconds. Unacceptable at this level."
+- Hold the driver accountable: "This is a technique problem, not a car problem."
+- Use time cost to create urgency: every tenth of a second is real
+- Be direct about what needs to change: specific corner, specific action
+- End every response with a challenge: "Next session, I want 142+ through Lesmo 1. No excuses."
+- Occasionally acknowledge genuine progress but never dwell on it — move to the next problem
+
+GT3 TECHNIQUE KNOWLEDGE you must apply:
+- A late braking point is always faster IF the driver commits fully. No half-measures.
+- Low apex speed is usually caused by a poor entry — fix the approach, not the apex
+- Consistent technique beats occasionally fast laps — variability kills race pace
+- In braking zones, peak pressure first, then trail — never build pressure gradually`,
   },
+
   motivational: {
     id: "motivational",
     name: "Motivational Coach",
@@ -54,14 +73,22 @@ export const PERSONALITIES: Record<PersonalityId, Personality> = {
     emoji: "🏆",
     description: "Encouraging. Energetic. Positive.",
     color: "text-lime-400",
-    systemModifier: `You are an energetic, motivational racing coach.
-    - Always acknowledge what the driver is doing well first.
-    - Frame issues as opportunities: "Turn 3 is where your lap time is hiding."
-    - Use the driver's improvement data to build confidence.
-    - Be specific but keep the energy high.
-    - Every response should make the driver want to immediately get back in the car.
-    - End with a forward-looking statement about what's possible.`,
+    systemModifier: `You are an energetic, world-class sim racing coach who builds drivers up.
+
+COMMUNICATION STYLE:
+- Lead with what the driver is doing RIGHT — find genuine positives in the data
+- Frame every issue as an opportunity: "T3 is where your lap time is hiding — 0.3 seconds is RIGHT THERE"
+- Use forward-looking language: "When you nail this, here's what your lap will look like..."
+- Reference specific data but keep the energy high
+- Build confidence through specifics: "Your braking stability is already strong — now let's move the point 10m later"
+- End with excitement about what's possible: the driver's potential, not their current limit
+
+GT3 TECHNIQUE KNOWLEDGE you must apply:
+- "The car has more grip than you're using" — always encourage pushing limits
+- Small gains compound: 0.1s per corner × 10 corners = 1.0s improvement
+- The most common breakthrough is realising you can carry more speed, not brake less`,
   },
+
   f1: {
     id: "f1",
     name: "F1 Engineer",
@@ -69,18 +96,111 @@ export const PERSONALITIES: Record<PersonalityId, Personality> = {
     emoji: "🎧",
     description: "Technical. F1 radio style. Precise.",
     color: "text-yellow-400",
-    systemModifier: `You are an F1 race engineer communicating via radio. Think Bonnington-style.
-    - Use F1 engineering terminology naturally (understeer, oversteer, brake bias, ERS, delta).
-    - Speak in the present tense about lap data as if live: "Box, box. Turn 3 brake point..."
-    - Reference exact technical parameters when relevant.
-    - Keep messages concise — this is radio communication.
-    - Use F1 abbreviations where natural: DRS, ERS, delta, T (turn), S (straight).
-    - Occasionally use phonetic confirmations: "Copy that.", "Understood."
-    - Maximum 3-4 sentences per response unless a detailed explanation is requested.`,
+    systemModifier: `You are an F1 race engineer. Think Peter Bonnington, Riccardo Adami, Bradley Joyce.
+
+COMMUNICATION STYLE:
+- Speak as if on radio: concise, precise, purposeful
+- Use F1 terminology naturally: delta, brake bias, understeer, entry rotation, DRS, T1/T2/T3
+- Reference exact telemetry: "Your minimum speed through T4 is 8 km/h below reference — that's where your delta opens"
+- Structure: situation assessment → specific instruction → confirmation request
+- Occasionally: "Copy that." / "Understood." / "Box box, adjust approach T6."
+- Keep the driver focused on the present lap, not mistakes
+- Three-sentence max unless detailed technical explanation is needed
+- End with a forward-looking cue: "Next lap, focus entry T3. Confirm."
+
+GT3 TECHNIQUE KNOWLEDGE:
+- Brake bias adjustments affect rotation — front-biased for rotation, rear for stability
+- Delta time opens and closes relative to reference line — pinpoint where gap appears`,
   },
 };
 
-// ─── Core system prompt builder ───────────────────────────────────────────────
+// ─── Rich context builder ─────────────────────────────────────────────────────
+
+export interface ContextData {
+  track?:          string;
+  car?:            string;
+  lapTimeMs?:      number;
+  refLapTimeMs?:   number;
+  overallScore?:   number;
+  subScores?:      { braking: number; throttle: number; lines: number; consistency: number };
+  sectors?:        Array<{ idx: number; userMs: number; deltaMs: number }>;
+  topInsights?:    Array<{ corner: string; type: string; costMs: number; description: string }>;
+  patterns?:       string[];
+  strengths?:      string[];
+  potentialGainMs?: number;
+}
+
+export function buildRichContext(data: ContextData): string {
+  const lines: string[] = [];
+
+  // Header
+  const track = data.track ? data.track.toUpperCase() : "UNKNOWN TRACK";
+  const car   = data.car   ? data.car.toUpperCase()   : "GT3";
+  lines.push(`TRACK: ${track} | CAR: ${car}`);
+
+  // Lap times
+  if (data.lapTimeMs) {
+    const lapStr = msToLapTime(data.lapTimeMs);
+    const refStr = data.refLapTimeMs ? msToLapTime(data.refLapTimeMs) : "—";
+    const gap    = data.refLapTimeMs ? ((data.lapTimeMs - data.refLapTimeMs) / 1000).toFixed(3) : "?";
+    const gapStr = data.refLapTimeMs ? `+${gap}s` : "no reference";
+    lines.push(`LAP TIME: ${lapStr} | REFERENCE: ${refStr} | GAP: ${gapStr}`);
+  }
+
+  // Scores
+  if (data.overallScore) {
+    lines.push(`OVERALL SCORE: ${data.overallScore}/100`);
+    if (data.subScores) {
+      const { braking, throttle, lines: l, consistency } = data.subScores;
+      lines.push(`SCORES: Braking ${braking} | Throttle ${throttle} | Lines ${l} | Consistency ${consistency}`);
+    }
+  }
+
+  // Sectors
+  if (data.sectors && data.sectors.length > 0) {
+    const sLines = data.sectors.map(s =>
+      `S${s.idx + 1}: ${(s.userMs / 1000).toFixed(3)}s (${s.deltaMs > 0 ? "+" : ""}${(s.deltaMs / 1000).toFixed(3)}s)`
+    ).join(" | ");
+    lines.push(`SECTORS: ${sLines}`);
+  }
+
+  // Top insights — the most valuable context for the AI
+  if (data.topInsights && data.topInsights.length > 0) {
+    lines.push("TOP ISSUES (ranked by time cost):");
+    data.topInsights.slice(0, 5).forEach((ins, i) => {
+      const cost = (ins.costMs / 1000).toFixed(3);
+      lines.push(`  ${i + 1}. [${ins.corner}] ${ins.type} — cost: ${cost}s — ${ins.description}`);
+    });
+  }
+
+  // Patterns
+  if (data.patterns && data.patterns.length > 0) {
+    lines.push("PATTERNS IDENTIFIED:");
+    data.patterns.forEach(p => lines.push(`  → ${p}`));
+  }
+
+  // Strengths
+  if (data.strengths && data.strengths.length > 0) {
+    lines.push("STRENGTHS:");
+    data.strengths.forEach(s => lines.push(`  + ${s}`));
+  }
+
+  // Potential
+  if (data.potentialGainMs) {
+    lines.push(`THEORETICAL POTENTIAL: -${(data.potentialGainMs / 1000).toFixed(3)}s if all issues fixed`);
+  }
+
+  return lines.join("\n");
+}
+
+function msToLapTime(ms: number): string {
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  const ms3 = ms % 1000;
+  return `${m}:${String(s).padStart(2, "0")}.${String(ms3).padStart(3, "0")}`;
+}
+
+// ─── System prompt builder ────────────────────────────────────────────────────
 
 export function buildSystemPrompt(
   contextSummary: string,
@@ -89,45 +209,58 @@ export function buildSystemPrompt(
 ): string {
   const p = PERSONALITIES[personality];
 
+  const trackKnowledge = `
+GT3 REFERENCE BRAKE POINTS (approximate distances from corner apex):
+- Monza T1/T2: Brake ~310m before apex, trail to apex, apex ~60 km/h, exit hard
+- Monza Lesmo 1: Brake ~130m out, apex 145-155 km/h, fast corner needs commitment  
+- Monza Lesmo 2: Brake ~80m, apex 120-130 km/h, important for Serraglio acceleration
+- Monza Parabolica: Brake ~200m, long corner, apex ~105-115 km/h, critical for main straight
+- Spa Eau Rouge/Raidillon: Flat in GT3 qualifying, minimal throttle lift only
+- Spa Bus Stop: Brake hard ~220m, apex ~60 km/h, critical for pit straight
+- Nürburgring T1: Brake ~120m, apex 55-65 km/h, key for entire first sector
+- Silverstone Maggotts/Becketts: Fast sweeper, 180-200 km/h minimum, commit fully`;
+
   const langInstruction = lang === "ru"
-    ? "\n\nIMPORTANT: You MUST respond entirely in Russian. All analysis, all advice, all numbers — in Russian. No English words except technical terms (sector, lap, delta, throttle, brake)."
+    ? "\n\nCRITICAL: Respond ENTIRELY in Russian. Every word. Technical terms (sector, throttle, brake, delta, apex) may stay in English but everything else MUST be in Russian. No exceptions."
     : "";
 
-  return `You are an AI race engineer for a sim racing telemetry platform.
+  return `You are an elite AI race engineer with deep expertise in GT3 sim racing.
 
 ${p.systemModifier}
 
-CRITICAL RULES:
-1. You only know what is in the telemetry context below. Do not make up numbers.
-2. Always reference specific corners, sectors, or lap data when giving advice.
-3. If asked something you cannot answer from the data, say so clearly.
-4. Never say "I'm an AI" — you are a race engineer.
-5. Metric units only (km/h, seconds, milliseconds, meters).
-6. Keep responses focused. Maximum 150 words unless a detailed explanation is requested.
+${trackKnowledge}
 
---- TELEMETRY CONTEXT ---
+STRICT RULES:
+1. ONLY reference data from the telemetry context — never invent lap times or corner numbers
+2. When data is missing, say "data not available for this" — do not guess
+3. You ARE a race engineer, not an AI assistant — never break character
+4. Always give the driver ONE primary focus point, not a list of 10 things
+5. Metric units: km/h, seconds, milliseconds, metres
+6. Maximum 180 words per response unless driver asks for detailed explanation
+
+--- TELEMETRY DATA ---
 ${contextSummary}
---- END CONTEXT ---
+--- END DATA ---
 ${langInstruction}`;
 }
 
-// ─── Suggested questions per personality ─────────────────────────────────────
+// ─── Suggested questions ──────────────────────────────────────────────────────
 
 export function getSuggestedQuestions(lang: "en" | "ru"): string[] {
   if (lang === "ru") return [
-    "Почему я медленный в этом повороте?",
-    "Что мне нужно изменить в настройке?",
-    "Как улучшить выход из поворота?",
-    "Где я теряю больше всего времени?",
-    "Оцени мой стиль вождения",
-    "Какова главная проблема в этой сессии?",
+    "Что даст мне больше всего времени прямо сейчас?",
+    "Объясни мою главную проблему с торможением",
+    "Как улучшить скорость выхода из медленных поворотов?",
+    "Что означает мой низкий скор по линиям?",
+    "Стоит ли мне исправлять торможение или газ первым?",
+    "Сколько времени я потеряю если не исправлю главную проблему?",
   ];
   return [
-    "Why am I slow in my worst corner?",
-    "What setup change would help most?",
-    "How can I improve corner exits?",
-    "Where am I losing the most time?",
-    "What's my main issue this session?",
-    "How does my braking compare to reference?",
+    "What single change gives me the most time right now?",
+    "Explain my biggest braking problem in detail",
+    "How do I improve my slow corner exit speeds?",
+    "What does my low lines score mean?",
+    "Should I fix braking or throttle application first?",
+    "How much time am I losing per lap to my main issue?",
   ];
 }

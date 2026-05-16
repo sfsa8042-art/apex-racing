@@ -664,11 +664,64 @@ export function analyseLap(userLap: ParsedLap, refLap: ParsedLap): LapAnalysisRe
     Object.entries(catCosts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
   ) as AnalysisInsight["category"] | null;
 
+  // ── Pattern detection ────────────────────────────────────────────────────
+  const patterns: string[] = [];
+  const strengthMessages: string[] = [];
+
+  // Pattern: repeated early braking in slow corners
+  const earlyBrakeCorners = segmentAnalyses.filter(sa =>
+    sa.insights.some(i => i.type === "early_brake") &&
+    classifyCorner(sa.segment.apexSpeed ?? sa.segment.minSpeed) === "slow"
+  );
+  if (earlyBrakeCorners.length >= 2) {
+    patterns.push(`Раннее торможение в ${earlyBrakeCorners.length} из медленных поворотов — это паттерн, не изолированная ошибка. Фокус на общей технике торможения.`);
+  }
+
+  // Pattern: late throttle everywhere
+  const lateThrottleCorners = segmentAnalyses.filter(sa =>
+    sa.insights.some(i => i.type === "late_throttle")
+  );
+  if (lateThrottleCorners.length >= 3) {
+    patterns.push(`Поздний газ в ${lateThrottleCorners.length} поворотах — вероятно тактика вождения, а не ошибка в отдельном повороте. Пересмотри момент открытия газа системно.`);
+  }
+
+  // Pattern: consistent coasting
+  const coastingCorners = segmentAnalyses.filter(sa =>
+    sa.insights.some(i => i.descriptionRu?.includes("Выбег"))
+  );
+  if (coastingCorners.length >= 2) {
+    patterns.push(`Выбег (без тормоза и газа) в ${coastingCorners.length} поворотах — трейл-брейкинг до апекса устранит это полностью.`);
+  }
+
+  // Pattern: low apex speed across corners
+  const lowApexCorners = segmentAnalyses.filter(sa =>
+    sa.insights.some(i => i.type === "low_apex_speed")
+  );
+  if (lowApexCorners.length >= 3) {
+    const avgLoss = Math.round(lowApexCorners.reduce((s, sa) => {
+      const ins = sa.insights.find(i => i.type === "low_apex_speed");
+      return s + ((ins?.timeCostMs ?? 0));
+    }, 0) / lowApexCorners.length);
+    patterns.push(`Низкая скорость в апексе в ${lowApexCorners.length} поворотах (средняя потеря ${avgLoss} мс на поворот). Проверь технику входа в повороты.`);
+  }
+
+  // Strengths
+  const goodSegments = segmentAnalyses.filter(sa => sa.deltaMs <= 30 && sa.segment.type === "corner");
+  if (goodSegments.length >= 2) {
+    const names = goodSegments.slice(0, 3).map(sa => sa.segment.label).join(", ");
+    strengthMessages.push(`Сильные повороты: ${names} — твоя техника здесь близка к референсу`);
+  }
+  const bestSector = sectors.length > 0 ? [...sectors].sort((a, b) => a.deltaMs - b.deltaMs)[0] : null;
+  if (bestSector) {
+    strengthMessages.push(`Лучший сектор S${bestSector.sectorIdx + 1}: потеря всего ${(bestSector.deltaMs / 1000).toFixed(3)}с`);
+  }
+
   return {
     lapId: userLap.id,
     totalTimeDeltaMs: delta.totalDeltaMs,
     sectors, insights: rawInsights, segmentAnalyses,
     delta, optimalLap, overallScore, subScores, dominantWeakness,
+    patterns, strengthMessages,
   };
 }
 

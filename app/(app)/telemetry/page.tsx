@@ -352,8 +352,10 @@ function InsightCard({ ins, selected, onSelect, rank }: {
 }
 
 // ── Engineer inline chat ──────────────────────────────────────────────────────
-function EngineerChat({ analysisResult, lapTimeStr }: {
+function EngineerChat({ analysisResult, lapTimeStr, parsedLap, filename }: {
   analysisResult: LapAnalysisResult; lapTimeStr: string;
+  parsedLap?: import("@/types/telemetry").ParsedLap | null;
+  filename?: string | null;
 }) {
   const [msgs, setMsgs] = useState<{role:"user"|"assistant";content:string}[]>([]);
   const [input, setInput] = useState("");
@@ -363,11 +365,63 @@ function EngineerChat({ analysisResult, lapTimeStr }: {
   const inputRef  = useRef<HTMLInputElement>(null);
 
   const ctx = React.useMemo(() => {
-    const issues = analysisResult.segmentAnalyses
-      .flatMap(sa=>sa.insights).filter(i=>i.type!=="good_segment")
-      .slice(0,5).map(i=>i.descriptionRu).join("; ");
-    return `Время: ${lapTimeStr}, Скор: ${analysisResult.overallScore}/100, Проблемы: ${issues}`;
-  }, [analysisResult, lapTimeStr]);
+    // Build rich structured context for the AI engineer
+    const topInsights = analysisResult.segmentAnalyses
+      .flatMap(sa => sa.insights.filter(i => i.type !== "good_segment").map(i => ({
+        corner: sa.segment.label,
+        type: i.type,
+        costMs: i.timeCostMs,
+        description: i.descriptionRu,
+      })))
+      .sort((a, b) => b.costMs - a.costMs)
+      .slice(0, 5);
+
+    // Build structured context string directly
+    const lines: string[] = [];
+    const trackMap: Record<string,string> = {
+      nurburgring:"Nürburgring", monza:"Monza", spa:"Spa-Francorchamps",
+      silverstone:"Silverstone", suzuka:"Suzuka", imola:"Imola", barcelona:"Barcelona",
+    };
+    const tl = (filename ?? "").toLowerCase();
+    const trackName = Object.entries(trackMap).find(([k]) => tl.includes(k))?.[1] ?? "Unknown";
+    const carName = tl.includes("porsche") ? "Porsche 992 GT3" :
+      tl.includes("mercedes") ? "Mercedes AMG GT3" :
+      tl.includes("mclaren") ? "McLaren 720S GT3" :
+      tl.includes("ferrari") ? "Ferrari 296 GT3" : "GT3";
+
+    lines.push(`TRACK: ${trackName.toUpperCase()} | CAR: ${carName.toUpperCase()}`);
+    if (parsedLap) {
+      const ms = parsedLap.lapTimeMs;
+      const lts = `${Math.floor(ms/60000)}:${String(Math.floor((ms%60000)/1000)).padStart(2,"0")}.${String(ms%1000).padStart(3,"0")}`;
+      const refMs = analysisResult.totalTimeDeltaMs > 0 ? ms - analysisResult.totalTimeDeltaMs : 0;
+      const refs = refMs > 0 ? `${Math.floor(refMs/60000)}:${String(Math.floor((refMs%60000)/1000)).padStart(2,"0")}.${String(refMs%1000).padStart(3,"0")}` : "—";
+      lines.push(`LAP: ${lts} | REF: ${refs} | GAP: +${(analysisResult.totalTimeDeltaMs/1000).toFixed(3)}s`);
+    }
+    lines.push(`SCORE: ${analysisResult.overallScore}/100`);
+    if (analysisResult.subScores) {
+      const {braking,throttle,lines:l,consistency} = analysisResult.subScores;
+      lines.push(`SCORES: Braking ${braking} | Throttle ${throttle} | Lines ${l} | Consistency ${consistency}`);
+    }
+    if (analysisResult.sectors.length > 0) {
+      lines.push("SECTORS: " + analysisResult.sectors.map(s =>
+        `S${s.sectorIdx+1}: ${(s.deltaMs>0?"+":"")}${(s.deltaMs/1000).toFixed(3)}s`).join(" | "));
+    }
+    lines.push("TOP ISSUES:");
+    topInsights.slice(0,5).forEach((ins,i) => {
+      lines.push(`  ${i+1}. [${ins.corner}] ${ins.type} — ${(ins.costMs/1000).toFixed(3)}s — ${ins.description.slice(0,80)}`);
+    });
+    if (analysisResult.patterns?.length) {
+      lines.push("PATTERNS: " + analysisResult.patterns.join(" | "));
+    }
+    if (analysisResult.strengthMessages?.length) {
+      lines.push("STRENGTHS: " + analysisResult.strengthMessages.join(" | "));
+    }
+    if (analysisResult.optimalLap.potentialGainMs > 0) {
+      lines.push(`POTENTIAL: -${(analysisResult.optimalLap.potentialGainMs/1000).toFixed(3)}s available`);
+    }
+    return lines.join("\n");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysisResult, lapTimeStr, parsedLap, filename]);
 
   useEffect(() => {
     if (briefingDone) return;
@@ -801,7 +855,7 @@ export default function TelemetryPage() {
               )}
 
               {rightTab==="engineer" && (
-                <EngineerChat analysisResult={analysisResult} lapTimeStr={lapTimeStr}/>
+                <EngineerChat analysisResult={analysisResult} lapTimeStr={lapTimeStr} parsedLap={parsedLap} filename={filename}/>
               )}
 
               {rightTab==="coach" && (
