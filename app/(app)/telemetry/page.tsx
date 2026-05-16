@@ -6,6 +6,7 @@ import {
   Clock, Target, Cpu, MessageCircle, ArrowRight, CheckCircle2,
 } from "lucide-react";
 import { TelemetryChart }  from "@/components/charts/TelemetryChart";
+import { LiveTrackMap }    from "@/components/charts/LiveTrackMap";
 import { DeltaChart }      from "@/components/charts/DeltaChart";
 import { SegmentPanel }    from "@/components/charts/SegmentPanel";
 import { TrackHeatmap }    from "@/components/charts/TrackHeatmap";
@@ -514,7 +515,7 @@ export default function TelemetryPage() {
   const {
     uploadState, chartChannels, handleFile, reset, loadSampleData,
     driverProfile, wowSummary, heatmapData, showWow, dismissWow,
-    coachMessage, nextActions,
+    coachMessage, nextActions, refLap,
   } = useTelemetry();
   const { status, error, filename, parsedLap, analysisResult } = uploadState;
 
@@ -724,44 +725,55 @@ export default function TelemetryPage() {
               </div>
             </div>
 
-            {/* Chart area */}
+            {/* REVOLUTIONARY LAYOUT: Map left, Charts right */}
             {leftView==="channels" && (
-              <div className="flex-1 overflow-y-auto min-h-0">
-                <TelemetryChart
-                  channels={channels as any} visibleChannels={visibleCh}
-                  className="w-full rounded-none border-0"
-                  onCursorChange={setCursorProg} />
+              <div className="flex-1 min-h-0 flex overflow-hidden">
 
-                {/* Delta */}
-                <div className="border-t border-zinc-800/60">
-                  <div className="flex items-center gap-2 px-4 py-2 bg-zinc-950/80">
-                    <BarChart2 size={10} className="text-blue-400"/>
-                    <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Delta Time</span>
-                    <span className="ml-auto text-[9px] font-mono text-red-400 flex items-center gap-1">
-                      <TrendingDown size={8}/> Потеря
-                    </span>
-                    <span className="text-[9px] font-mono text-lime-400 flex items-center gap-1">
-                      <TrendingUp size={8}/> Выигрыш
-                    </span>
+                {/* ── LEFT: LIVE TRACK MAP (hero) ───────────────────────── */}
+                <div className="flex-1 min-w-0 flex flex-col overflow-hidden border-r border-zinc-800/40">
+                  <div className="flex-1 min-h-0">
+                    <LiveTrackMap
+                      trackId={detectedTrackId}
+                      userRows={parsedLap?.rows ?? []}
+                      refRows={refLap?.rows}
+                      cursorProgress={cursorProg}
+                      className="w-full h-full rounded-none"
+                    />
                   </div>
-                  <DeltaChart delta={analysisResult.delta} totalDistM={totalDistM} height={100} className="w-full"/>
                 </div>
 
-                {/* Per-channel mini grids */}
-                {channels.filter(ch=>visibleCh.includes(ch.id)&&ch.id!=="delta").length>0 && (
-                  <div className="grid grid-cols-2 gap-px bg-zinc-800/30 border-t border-zinc-800/60">
-                    {channels.filter(ch=>visibleCh.includes(ch.id)&&ch.id!=="delta").map(ch=>(
-                      <div key={ch.id} className="bg-zinc-950">
-                        <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-800/40">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{background:ch.color}}/>
-                          <span className="text-[9px] font-mono font-bold uppercase tracking-wider" style={{color:ch.color}}>{ch.label}</span>
-                          <span className="text-[9px] font-mono text-zinc-600 ml-auto">{ch.unit}</span>
-                        </div>
-                        <TelemetryChart channels={[ch] as any} visibleChannels={[ch.id]} height={100} className="rounded-none border-0"/>
-                      </div>
-                    ))}
+                {/* ── RIGHT: CHANNELS CHARTS ───────────────────────────── */}
+                <div className="w-[340px] shrink-0 flex flex-col overflow-y-auto bg-zinc-950">
+                  {/* Main channels */}
+                  <TelemetryChart
+                    channels={channels as any} visibleChannels={visibleCh}
+                    className="w-full rounded-none border-0"
+                    onCursorChange={setCursorProg} />
+
+                  {/* Delta */}
+                  <div className="border-t border-zinc-800/60">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-950/90">
+                      <BarChart2 size={9} className="text-blue-400"/>
+                      <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Delta</span>
+                      <span className="ml-auto text-[9px] font-mono text-red-400">
+                        <TrendingDown size={8} className="inline"/> Потеря
+                      </span>
+                    </div>
+                    <DeltaChart delta={analysisResult.delta} totalDistM={totalDistM} height={80} className="w-full"/>
                   </div>
-                )}
+
+                  {/* Per-channel mini */}
+                  {channels.filter(ch=>visibleCh.includes(ch.id)&&ch.id!=="delta").map(ch=>(
+                    <div key={ch.id} className="border-t border-zinc-800/40">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full" style={{background:ch.color}}/>
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider" style={{color:ch.color}}>{ch.label}</span>
+                        <span className="text-[9px] font-mono text-zinc-600 ml-auto">{ch.unit}</span>
+                      </div>
+                      <TelemetryChart channels={[ch] as any} visibleChannels={[ch.id]} height={80} className="rounded-none border-0"/>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
