@@ -736,6 +736,8 @@ export default function TelemetryPage() {
                     userRows={parsedLap?.rows ?? []}
                     refRows={refLap?.rows}
                     cursorProgress={cursorProg}
+                    segmentAnalyses={analysisResult?.segmentAnalyses}
+                    delta={analysisResult?.delta}
                     className="w-full h-full"
                   />
                 </div>
