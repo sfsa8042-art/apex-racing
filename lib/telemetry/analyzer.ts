@@ -12,6 +12,7 @@
 import type {
   ParsedLap, TelemetryRow, LapAnalysisResult, AnalysisInsight,
   SectorAnalysis, SegmentAnalysis, SegmentInsight, TrackSegment, OptimalLap, SubScores,
+  CornerDetail, PhaseAnalysis, CoachingPlan, CoachingPriority,
 } from "@/types/telemetry";
 import { computeDelta, deltaPerSegment } from "./delta";
 import { detectSegments, matchSegments } from "./segments";
@@ -561,6 +562,182 @@ function formatMs(ms: number): string {
   return `${m}:${String(s).padStart(2,"0")}.${String(ms % 1000).padStart(3,"0")}`;
 }
 
+
+// ─── 4-phase corner analysis (Delta-style) ────────────────────────────────────
+
+function statusOf(deltaMs: number): "loss" | "gain" | "neutral" {
+  if (deltaMs > 30) return "loss";
+  if (deltaMs < -30) return "gain";
+  return "neutral";
+}
+
+function buildCornerDetail(sa: SegmentAnalysis, totalDist: number): CornerDetail {
+  const seg = sa.segment;
+  const refSeg = sa.refSegment;
+
+  // Find user and ref rows in this segment (approximate using segment bounds)
+  // We don't have direct access to rows here — extract from insights instead
+
+  // BRAKING PHASE: brake point distance
+  const earlyBrake = sa.insights.find(i => i.type === "early_brake");
+  const peakBrakeIns = sa.insights.find(i => i.descriptionRu?.includes("Пиковое давление"));
+  const brakingDeltaMs = (earlyBrake?.timeCostMs ?? 0) + (peakBrakeIns?.timeCostMs ?? 0);
+
+  const brakingHint = earlyBrake
+    ? `Тормози на ${earlyBrake.userValue} м позже. Пиковое давление 95%+ сразу, затем плавно к апексу.`
+    : peakBrakeIns
+    ? `Усиль пиковое давление с ${peakBrakeIns.userValue}% до ${peakBrakeIns.refValue}% в первые метры зоны.`
+    : "Точка торможения и давление в норме.";
+
+  const brakingUserVal = refSeg
+    ? `Скорость въезда ${Math.round(seg.maxSpeed)} км/ч${earlyBrake ? `, тормоз на ${Math.round(earlyBrake.userValue ?? 0)} м раньше` : ""}`
+    : `Скорость въезда ${Math.round(seg.maxSpeed)} км/ч`;
+  const brakingRefVal = refSeg ? `${Math.round(refSeg.maxSpeed)} км/ч у референса` : "нет референса";
+
+  // ENTRY PHASE: turn-in / trail braking
+  const trailBrakeIns = sa.insights.find(i => i.descriptionRu?.includes("Трейл-брейкинг") || i.type === "late_brake");
+  const entryDeltaMs = trailBrakeIns?.timeCostMs ?? 0;
+  const entryHint = trailBrakeIns
+    ? `Удерживай тормоз дольше до апекса — снижай давление плавно (трейл-брейкинг).`
+    : "Вход в порядке.";
+
+  // APEX PHASE: minimum speed
+  const lowApex = sa.insights.find(i => i.type === "low_apex_speed");
+  const apexDeltaMs = lowApex?.timeCostMs ?? 0;
+  const apexHint = lowApex
+    ? `Поднимай скорость апекса с ${lowApex.userValue} до ${lowApex.refValue} км/ч — проверь линию и трейл-брейкинг.`
+    : "Скорость апекса оптимальна.";
+
+  const apexUserVal = lowApex ? `${lowApex.userValue} км/ч` : `${Math.round(seg.minSpeed)} км/ч`;
+  const apexRefVal = lowApex ? `${lowApex.refValue} км/ч у референса` : (refSeg ? `${Math.round(refSeg.minSpeed)} км/ч` : "нет референса");
+
+  // EXIT PHASE: throttle application
+  const lateThrottle = sa.insights.find(i => i.type === "late_throttle");
+  const slowExit = sa.insights.find(i => i.type === "speed_deficit");
+  const exitDeltaMs = (lateThrottle?.timeCostMs ?? 0) + (slowExit?.timeCostMs ?? 0);
+  const exitHint = lateThrottle
+    ? `Открывай газ на ${lateThrottle.userValue} м раньше — начни с 20-30% сразу в апексе.`
+    : slowExit
+    ? `Скорость выхода ниже на ${(slowExit.userValue ?? 0) - (slowExit.refValue ?? 0)} км/ч — проверь плавность разворачивания руля.`
+    : "Выход оптимален.";
+
+  // Distribute residual delta across phases proportional to deltas
+  const known = brakingDeltaMs + entryDeltaMs + apexDeltaMs + exitDeltaMs;
+  const residual = Math.max(0, sa.deltaMs - known);
+  const residualPerPhase = residual > 0 ? residual / 4 : 0;
+
+  return {
+    segmentId: seg.id,
+    cornerLabel: seg.label,
+    totalDeltaMs: sa.deltaMs,
+    phases: {
+      braking: {
+        deltaMs: brakingDeltaMs + residualPerPhase,
+        status: statusOf(brakingDeltaMs + residualPerPhase),
+        userValueRu: brakingUserVal,
+        refValueRu: brakingRefVal,
+        hintRu: brakingHint,
+      },
+      entry: {
+        deltaMs: entryDeltaMs + residualPerPhase,
+        status: statusOf(entryDeltaMs + residualPerPhase),
+        userValueRu: trailBrakeIns ? "Короткий трейл-брейкинг" : "Стандартный вход",
+        refValueRu: "Оптимальный трейл-брейкинг",
+        hintRu: entryHint,
+      },
+      apex: {
+        deltaMs: apexDeltaMs + residualPerPhase,
+        status: statusOf(apexDeltaMs + residualPerPhase),
+        userValueRu: apexUserVal,
+        refValueRu: apexRefVal,
+        hintRu: apexHint,
+      },
+      exit: {
+        deltaMs: exitDeltaMs + residualPerPhase,
+        status: statusOf(exitDeltaMs + residualPerPhase),
+        userValueRu: lateThrottle ? `Газ на ${lateThrottle.userValue} м позже` : "Открытие газа в норме",
+        refValueRu: "Ранний прогрессивный газ",
+        hintRu: exitHint,
+      },
+    },
+  };
+}
+
+function buildCoachingPlan(
+  segmentAnalyses: SegmentAnalysis[],
+  cornerDetails: CornerDetail[],
+): CoachingPlan {
+  // Group corners by primary issue type
+  type IssueGroup = { category: CoachingPriority["category"]; corners: CornerDetail[]; totalLossMs: number; };
+  const groups: Record<string, IssueGroup> = {};
+
+  cornerDetails.forEach(cd => {
+    const phases = cd.phases;
+    // Find the phase with the largest loss in this corner
+    const phaseLosses: Array<[string, number]> = [
+      ["braking", phases.braking.deltaMs],
+      ["entry",   phases.entry.deltaMs],
+      ["apex",    phases.apex.deltaMs],
+      ["exit",    phases.exit.deltaMs],
+    ];
+    phaseLosses.sort((a, b) => b[1] - a[1]);
+    const [worstPhase, worstLoss] = phaseLosses[0];
+    if (worstLoss < 30) return;
+
+    const category: CoachingPriority["category"] =
+      worstPhase === "braking" || worstPhase === "entry" ? "brake" :
+      worstPhase === "exit" ? "throttle" : "line";
+
+    const key = `${category}_${worstPhase}`;
+    if (!groups[key]) groups[key] = { category, corners: [], totalLossMs: 0 };
+    groups[key].corners.push(cd);
+    groups[key].totalLossMs += worstLoss;
+  });
+
+  // Sort by total loss, take top 3
+  const sortedGroups = Object.values(groups).sort((a, b) => b.totalLossMs - a.totalLossMs).slice(0, 3);
+
+  const priorities: CoachingPriority[] = sortedGroups.map((g, i) => {
+    const rank = (i + 1) as 1 | 2 | 3;
+    const cornerLabels = g.corners.slice(0, 4).map(c => c.cornerLabel);
+
+    let title: string;
+    let steps: string[];
+    if (g.category === "brake") {
+      title = `Улучши торможение в ${g.corners.length} поворотах`;
+      steps = [
+        `Сдвинь точку торможения на 5-10 м позже за 2-3 круга`,
+        `Применяй 95%+ давления в первые 0.2 секунды торможения`,
+        `Плавно снижай давление к апексу (трейл-брейкинг)`,
+      ];
+    } else if (g.category === "throttle") {
+      title = `Раньше открывай газ на выходе`;
+      steps = [
+        `Открывай газ сразу после апекса — начни с 25%`,
+        `Плавно увеличивай до 100% по мере разворачивания руля`,
+        `Если машина теряет сцепление — корректируй прогрессивность, не точку`,
+      ];
+    } else {
+      title = `Улучши апексные скорости`;
+      steps = [
+        `Целься в более позднюю точку поворота (later apex)`,
+        `Минимизируй время с заблокированным рулём`,
+        `Используй трейл-брейкинг для лучшего поворота машины`,
+      ];
+    }
+
+    return { rank, title, cornerLabels, targetDeltaMs: Math.round(g.totalLossMs), category: g.category, steps };
+  });
+
+  const estimatedGainMs = priorities.reduce((s, p) => s + p.targetDeltaMs, 0);
+  const focusMessage = priorities.length === 0
+    ? "Стабильный круг — продолжай работать над постоянством."
+    : `Фокусируйся на топ-${priorities.length} приоритетах — потенциал ${(estimatedGainMs / 1000).toFixed(2)}с на круг.`;
+
+  return { priorities, estimatedGainMs, focusMessage };
+}
+
+
 // ─── Main entry point ─────────────────────────────────────────────────────────
 
 export function analyseLap(userLap: ParsedLap, refLap: ParsedLap): LapAnalysisResult {
@@ -716,12 +893,19 @@ export function analyseLap(userLap: ParsedLap, refLap: ParsedLap): LapAnalysisRe
     strengthMessages.push(`Лучший сектор S${bestSector.sectorIdx + 1}: потеря всего ${(bestSector.deltaMs / 1000).toFixed(3)}с`);
   }
 
+  // ── Build corner details + coaching plan ──
+  const cornerDetails = segmentAnalyses
+    .filter(sa => sa.segment.type === "corner" && sa.refSegment)
+    .map(sa => buildCornerDetail(sa, totalDist));
+
+  const coachingPlan = buildCoachingPlan(segmentAnalyses, cornerDetails);
+
   return {
     lapId: userLap.id,
     totalTimeDeltaMs: delta.totalDeltaMs,
     sectors, insights: rawInsights, segmentAnalyses,
     delta, optimalLap, overallScore, subScores, dominantWeakness,
-    patterns, strengthMessages,
+    patterns, strengthMessages, cornerDetails, coachingPlan,
   };
 }
 

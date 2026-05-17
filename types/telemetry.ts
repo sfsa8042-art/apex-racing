@@ -165,6 +165,44 @@ export interface SectorAnalysis {
   endFraction: number;
 }
 
+
+// ─── Per-corner phase analysis (Delta-style 4-phase breakdown) ────────────────
+export interface PhaseAnalysis {
+  deltaMs:        number;
+  status:         "loss" | "gain" | "neutral";
+  userValueRu:    string;
+  refValueRu:     string;
+  hintRu:         string;
+}
+
+export interface CornerDetail {
+  segmentId:      string;
+  cornerLabel:    string;
+  totalDeltaMs:   number;
+  phases: {
+    braking:  PhaseAnalysis;
+    entry:    PhaseAnalysis;
+    apex:     PhaseAnalysis;
+    exit:     PhaseAnalysis;
+  };
+}
+
+// ─── Coaching plan: top-3 priorities for next session ─────────────────────────
+export interface CoachingPriority {
+  rank:          1 | 2 | 3;
+  title:         string;
+  cornerLabels:  string[];
+  targetDeltaMs: number;
+  category:      "brake" | "throttle" | "line" | "consistency";
+  steps:         string[];
+}
+
+export interface CoachingPlan {
+  priorities:      CoachingPriority[];
+  estimatedGainMs: number;
+  focusMessage:    string;
+}
+
 export interface SubScores {
   braking:     number;  // 0-100
   throttle:    number;  // 0-100
@@ -185,6 +223,8 @@ export interface LapAnalysisResult {
   dominantWeakness: AnalysisInsight["category"] | null;
   patterns?:         string[];
   strengthMessages?: string[];
+  cornerDetails?:    CornerDetail[];
+  coachingPlan?:     CoachingPlan;
 }
 
 // ─── Upload state ─────────────────────────────────────────────────────────────

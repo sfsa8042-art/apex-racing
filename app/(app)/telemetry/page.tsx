@@ -9,6 +9,8 @@ import { TelemetryChart }  from "@/components/charts/TelemetryChart";
 import { LiveTrackMap }    from "@/components/charts/LiveTrackMap";
 import { DeltaChart }      from "@/components/charts/DeltaChart";
 import { SegmentPanel }    from "@/components/charts/SegmentPanel";
+import { CornerDetailPanel } from "@/components/charts/CornerDetailPanel";
+import { CoachingPlanPanel } from "@/components/charts/CoachingPlanPanel";
 import { TrackHeatmap }    from "@/components/charts/TrackHeatmap";
 import { GhostComparison } from "@/components/charts/GhostComparison";
 import { WowScreen }       from "./components/WowScreen";
@@ -25,7 +27,7 @@ const fmtMs = (ms: number) =>
 
 type Ch = { id: string; label: string; color: string; unit: string;
   data: number[]; refData: number[]; min: number; max: number; };
-type RightTab = "segments"|"insights"|"engineer"|"coach";
+type RightTab = "plan"|"corner"|"segments"|"insights"|"engineer";
 type LeftView  = "channels"|"heatmap"|"ghost";
 
 // ── Score Ring (animated on mount) ───────────────────────────────────────────
@@ -520,10 +522,19 @@ export default function TelemetryPage() {
   const { status, error, filename, parsedLap, analysisResult } = uploadState;
 
   const [visibleCh, setVisibleCh] = useState(["speed","throttle","brake","delta"]);
-  const [rightTab,  setRightTab]  = useState<RightTab>("insights");
+  const [rightTab,  setRightTab]  = useState<RightTab>("plan");
   const [leftView,  setLeftView]  = useState<LeftView>("channels");
   const [selIns,    setSelIns]    = useState<(AnalysisInsight&{_segLabel?:string})|null>(null);
   const [cursorProg, setCursorProg] = useState<number|null>(null);
+  const [selectedCorner, setSelectedCorner] = useState<string|null>(null);
+
+  // Auto-select worst corner when analysis loads
+  React.useEffect(() => {
+    if (analysisResult?.cornerDetails && analysisResult.cornerDetails.length > 0 && !selectedCorner) {
+      const worst = [...analysisResult.cornerDetails].sort((a,b) => b.totalDeltaMs - a.totalDeltaMs)[0];
+      setSelectedCorner(worst.segmentId);
+    }
+  }, [analysisResult, selectedCorner]);
 
   const toggleCh = (id: string) =>
     setVisibleCh(p => p.includes(id) ? p.length>1?p.filter(c=>c!==id):p : [...p,id]);
@@ -725,31 +736,31 @@ export default function TelemetryPage() {
               </div>
             </div>
 
-            {/* MAP + CHARTS split view */}
+            {/* VERTICAL LAYOUT: map on top, charts below */}
             {leftView==="channels" && (
               <div className="flex-1 min-h-0 flex overflow-hidden">
 
-                {/* LEFT: LIVE TRACK MAP — fills all available height */}
-                <div className="flex-1 min-w-0 overflow-hidden border-r border-zinc-800/50">
-                  <LiveTrackMap
-                    trackId={detectedTrackId}
-                    userRows={parsedLap?.rows ?? []}
-                    refRows={refLap?.rows}
-                    cursorProgress={cursorProg}
-                    segmentAnalyses={analysisResult?.segmentAnalyses}
-                    delta={analysisResult?.delta}
-                    className="w-full h-full"
-                  />
-                </div>
+                {/* LEFT: MAP + CHARTS stacked vertically */}
+                <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
 
-                {/* RIGHT: CHARTS PANEL — compact, synchronised */}
-                <div className="w-[320px] shrink-0 flex flex-col overflow-y-auto bg-zinc-950/95">
+                  {/* Track map — fixed height, always full width */}
+                  <div className="shrink-0 border-b border-zinc-800/50" style={{ height: 280 }}>
+                    <LiveTrackMap
+                      trackId={detectedTrackId}
+                      userRows={parsedLap?.rows ?? []}
+                      refRows={refLap?.rows}
+                      cursorProgress={cursorProg}
+                      segmentAnalyses={analysisResult?.segmentAnalyses}
+                      delta={analysisResult?.delta}
+                      className="w-full h-full"
+                    />
+                  </div>
 
-                  {/* Channel toggles */}
-                  <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-800/60 shrink-0 flex-wrap">
+                  {/* Channel toggles strip */}
+                  <div className="flex items-center gap-1 px-4 py-2 border-b border-zinc-800/50 shrink-0 bg-zinc-950 flex-wrap">
                     {channels.map(ch => (
                       <button key={ch.id} onClick={() => toggleCh(ch.id)}
-                        className={cn("flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] border transition-all font-mono",
+                        className={cn("flex items-center gap-1 px-2 py-1 rounded-md text-[10px] border transition-all font-mono",
                           visibleCh.includes(ch.id)
                             ? "bg-zinc-800 border-zinc-600/70 text-zinc-200"
                             : "border-zinc-800/80 text-zinc-600 hover:border-zinc-700")}>
@@ -758,44 +769,173 @@ export default function TelemetryPage() {
                         {ch.id.toUpperCase()}
                       </button>
                     ))}
-                    <span className="ml-auto text-[9px] font-mono text-zinc-700">Каналы</span>
                   </div>
 
-                  {/* Main stacked chart */}
+                  {/* Main multi-channel chart */}
                   <TelemetryChart
                     channels={channels as any}
                     visibleChannels={visibleCh}
                     className="w-full rounded-none border-0 shrink-0"
                     onCursorChange={setCursorProg}/>
 
-                  {/* Delta */}
+                  {/* Delta chart */}
                   <div className="border-t border-zinc-800/50 shrink-0">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-zinc-950/80">
                       <BarChart2 size={9} className="text-blue-400"/>
                       <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Δ Время</span>
-                      <div className="ml-auto flex items-center gap-2 text-[9px] font-mono">
-                        <span className="text-red-400 flex items-center gap-0.5"><TrendingDown size={8}/>Потеря</span>
-                        <span className="text-lime-400 flex items-center gap-0.5"><TrendingUp size={8}/>Выигрыш</span>
+                      <div className="ml-auto flex items-center gap-3 text-[9px] font-mono">
+                        <span className="text-red-400 flex items-center gap-1"><TrendingDown size={8}/>Потеря</span>
+                        <span className="text-lime-400 flex items-center gap-1"><TrendingUp size={8}/>Выигрыш</span>
                       </div>
                     </div>
                     <DeltaChart delta={analysisResult.delta} totalDistM={totalDistM}
-                      height={90} className="w-full"/>
+                      height={100} className="w-full"/>
                   </div>
 
-                  {/* Per-channel mini charts */}
-                  <div className="divide-y divide-zinc-800/50">
-                    {channels.filter(ch => visibleCh.includes(ch.id) && ch.id !== "delta").map(ch => (
-                      <div key={ch.id} className="shrink-0">
-                        <div className="flex items-center gap-1.5 px-3 py-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: ch.color }}/>
-                          <span className="text-[9px] font-mono font-bold uppercase tracking-wider"
-                            style={{ color: ch.color }}>{ch.label}</span>
-                          <span className="text-[9px] font-mono text-zinc-600 ml-auto">{ch.unit}</span>
+                  {/* Per-channel mini grids — 2 columns */}
+                  {channels.filter(ch => visibleCh.includes(ch.id) && ch.id !== "delta").length > 0 && (
+                    <div className="grid grid-cols-2 gap-px bg-zinc-800/30 border-t border-zinc-800/50">
+                      {channels.filter(ch => visibleCh.includes(ch.id) && ch.id !== "delta").map(ch => (
+                        <div key={ch.id} className="bg-zinc-950">
+                          <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-800/40">
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ background: ch.color }}/>
+                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider"
+                              style={{ color: ch.color }}>{ch.label}</span>
+                            <span className="text-[9px] font-mono text-zinc-600 ml-auto">{ch.unit}</span>
+                          </div>
+                          <TelemetryChart channels={[ch] as any} visibleChannels={[ch.id]}
+                            height={110} className="rounded-none border-0"/>
                         </div>
-                        <TelemetryChart channels={[ch] as any} visibleChannels={[ch.id]}
-                          height={90} className="rounded-none border-0"/>
-                      </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* RIGHT: Analysis panel */}
+                <div className="w-[380px] shrink-0 border-l border-zinc-800/60 flex flex-col bg-zinc-950">
+
+                  {/* Stats strip */}
+                  {parsedLap && (
+                    <div className="flex items-center justify-around px-3 py-2 border-b border-zinc-800/60 shrink-0 bg-zinc-900/30">
+                      {[
+                        { label:"MAX SPD", val:`${Math.round(parsedLap.channelStats.maxSpeed)}`, unit:"km/h", color:"text-lime-400" },
+                        { label:"AVG GAS", val:`${Math.round(parsedLap.channelStats.avgThrottle)}`, unit:"%", color:"text-green-400" },
+                        { label:"BRAKES",  val:`${parsedLap.channelStats.brakingEvents.length}`, unit:"зон", color:"text-red-400" },
+                      ].map(({ label, val, unit, color }) => (
+                        <div key={label} className="text-center">
+                          <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest">{label}</p>
+                          <p className={cn("text-sm font-mono font-bold tabular-nums leading-none", color)}>
+                            {val}<span className="text-[9px] text-zinc-600 ml-0.5">{unit}</span>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Tabs */}
+                  <div className="flex shrink-0 border-b border-zinc-800/60">
+                    {([
+                      ["plan","План ✦"],["corner","Поворот"],["segments","Участки"],["insights","Инсайты"],["engineer","AI"],
+                    ] as const).map(([k,lbl]) => (
+                      <button key={k} onClick={() => setRightTab(k)}
+                        className={cn("flex-1 py-2.5 text-[11px] font-medium transition-colors relative",
+                          rightTab===k?"text-zinc-100":"text-zinc-500 hover:text-zinc-300")}>
+                        {lbl}
+                        {rightTab===k && (
+                          <div className={cn("absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-t",
+                            k==="plan"?"bg-lime-400":"bg-zinc-400")}/>
+                        )}
+                      </button>
                     ))}
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto min-h-0">
+                    {rightTab==="plan" && analysisResult.coachingPlan && (
+                      <CoachingPlanPanel plan={analysisResult.coachingPlan}/>
+                    )}
+
+                    {rightTab==="corner" && (
+                      <div>
+                        {/* Corner selector chips */}
+                        <div className="px-3 py-2.5 border-b border-zinc-800/60 flex flex-wrap gap-1">
+                          {analysisResult.cornerDetails?.map(cd => (
+                            <button key={cd.segmentId} onClick={() => setSelectedCorner(cd.segmentId)}
+                              className={cn("px-2 py-1 rounded-lg text-[10px] font-mono border transition-all",
+                                selectedCorner === cd.segmentId
+                                  ? "bg-zinc-700 border-zinc-500 text-zinc-100"
+                                  : "border-zinc-800/80 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300")}>
+                              {cd.cornerLabel}
+                              <span className={cn("ml-1 font-bold",
+                                cd.totalDeltaMs > 100 ? "text-red-400" :
+                                cd.totalDeltaMs > 30 ? "text-yellow-400" :
+                                cd.totalDeltaMs < -30 ? "text-lime-400" : "text-zinc-600")}>
+                                {cd.totalDeltaMs > 0 ? "+" : ""}{(cd.totalDeltaMs/1000).toFixed(2)}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                        {selectedCorner && analysisResult.cornerDetails ? (
+                          (() => {
+                            const detail = analysisResult.cornerDetails.find(c => c.segmentId === selectedCorner);
+                            return detail ? <CornerDetailPanel detail={detail}/> :
+                              <div className="p-6 text-center text-xs text-zinc-500">Поворот не найден</div>;
+                          })()
+                        ) : (
+                          <div className="px-4 py-12 text-center space-y-2">
+                            <p className="text-xs text-zinc-500">Выбери поворот выше</p>
+                            <p className="text-[10px] text-zinc-600">Детальный 4-фазный разбор: торможение, вход, апекс, выход</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {rightTab==="segments" && (
+                      <SegmentPanel segmentAnalyses={analysisResult.segmentAnalyses}
+                        totalTimeDeltaMs={analysisResult.totalTimeDeltaMs}/>
+                    )}
+                    {rightTab==="insights" && (
+                      <div>
+                        <div className="px-4 py-3 border-b border-zinc-800/60 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-semibold text-zinc-300">
+                              {allInsights.length} проблем найдено
+                            </p>
+                            <span className={cn("text-xs font-mono font-bold",gapMs>0?"text-red-400":"text-lime-400")}>
+                              {gapMs>0?"−":"+"}{Math.abs(gapMs/1000).toFixed(3)}с
+                            </span>
+                          </div>
+                          {analysisResult.patterns?.map((p,i) => (
+                            <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-xl bg-yellow-400/5 border border-yellow-400/15">
+                              <Activity size={10} className="text-yellow-400 shrink-0 mt-0.5"/>
+                              <p className="text-[10px] text-yellow-200 leading-relaxed">{p}</p>
+                            </div>
+                          ))}
+                          {analysisResult.strengthMessages?.map((s,i) => (
+                            <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-lime-400/5 border border-lime-400/15">
+                              <CheckCircle2 size={9} className="text-lime-400 shrink-0"/>
+                              <p className="text-[10px] text-lime-300">{s}</p>
+                            </div>
+                          ))}
+                        </div>
+                        {allInsights.length===0 ? (
+                          <div className="flex flex-col items-center py-12 text-center px-4 space-y-3">
+                            <div className="w-12 h-12 rounded-2xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                              <CheckCircle2 size={22} className="text-lime-400"/>
+                            </div>
+                            <p className="text-sm font-semibold text-zinc-200">Отличный круг!</p>
+                          </div>
+                        ) : allInsights.map((ins: any, i: number) => (
+                          <InsightCard key={i} ins={ins} rank={i+1}
+                            selected={selIns===ins}
+                            onSelect={() => setSelIns(selIns===ins?null:ins)}/>
+                        ))}
+                      </div>
+                    )}
+                    {rightTab==="engineer" && (
+                      <EngineerChat analysisResult={analysisResult} lapTimeStr={lapTimeStr}
+                        parsedLap={parsedLap} filename={filename}/>
+                    )}
+
                   </div>
                 </div>
               </div>
@@ -830,15 +970,15 @@ export default function TelemetryPage() {
             {/* Tabs */}
             <div className="flex shrink-0 border-b border-zinc-800/60 bg-zinc-950">
               {([
-                ["segments","Участки"],["insights","Инсайты"],["engineer","AI ✦"],["coach","Тренер"],
+                ["plan","План ✦"],["corner","Поворот"],["segments","Участки"],["insights","Инсайты"],["engineer","AI"],
               ] as const).map(([k,lbl])=>(
                 <button key={k} onClick={()=>setRightTab(k)}
-                  className={cn("flex-1 py-2.5 text-[11px] font-medium transition-colors relative",
+                  className={cn("flex-1 py-2.5 text-[10.5px] font-medium transition-colors relative",
                     rightTab===k?"text-zinc-100":"text-zinc-500 hover:text-zinc-300")}>
                   {lbl}
                   {rightTab===k && (
                     <div className={cn("absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-t",
-                      k==="engineer"?"bg-lime-400":"bg-zinc-400")}/>
+                      k==="plan"?"bg-lime-400":"bg-zinc-400")}/>
                   )}
                 </button>
               ))}
@@ -894,11 +1034,7 @@ export default function TelemetryPage() {
                 <EngineerChat analysisResult={analysisResult} lapTimeStr={lapTimeStr} parsedLap={parsedLap} filename={filename}/>
               )}
 
-              {rightTab==="coach" && (
-                <CoachPanel
-                  message={coachMessage ?? {tone:"analytical",headline:"Анализ завершён",body:"",actionLine:""}}
-                  positives={[]} patterns={null}/>
-              )}
+
             </div>
           </div>
         </div>
