@@ -11,6 +11,7 @@ import { DeltaChart }      from "@/components/charts/DeltaChart";
 import { SegmentPanel }    from "@/components/charts/SegmentPanel";
 import { CornerDetailPanel } from "@/components/charts/CornerDetailPanel";
 import { CoachingPlanPanel } from "@/components/charts/CoachingPlanPanel";
+import { CursorHud }         from "@/components/charts/CursorHud";
 import { WowScreen }       from "./components/WowScreen";
 import { useTelemetry }    from "@/context/TelemetryContext";
 import { cn }              from "@/lib/utils";
@@ -702,6 +703,11 @@ export default function TelemetryPage() {
             </div>
           </div>
 
+          {/* ── CURSOR HUD: live values when scrubbing ──────────────────────── */}
+          {cursorProg !== null && (
+            <CursorHud userLap={parsedLap} refLap={refLap} cursorProgress={cursorProg}/>
+          )}
+
           {/* ── MAIN AREA: charts left, analysis right ──────────────────────── */}
           <div className="flex-1 min-h-0 flex overflow-hidden">
 
@@ -717,6 +723,11 @@ export default function TelemetryPage() {
                   cursorProgress={cursorProg}
                   segmentAnalyses={analysisResult?.segmentAnalyses}
                   delta={analysisResult?.delta}
+                  onCornerClick={(segmentId) => {
+                    setSelectedCorner(segmentId);
+                    setRightTab("corner");
+                  }}
+                  selectedSegmentId={selectedCorner}
                   className="w-full h-full"
                 />
               </div>

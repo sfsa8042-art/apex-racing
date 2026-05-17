@@ -14,7 +14,7 @@
  * • Corner type colour coding
  */
 
-import { useMemo, useEffect, useRef, useState, useCallback } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { getSmoothedLine, getCircuit } from "@/lib/tracks/geometry";
 import { cn } from "@/lib/utils";
 import type { Vec2 } from "@/lib/tracks/geometry";
@@ -26,7 +26,6 @@ const W = 1000, H = 580, PAD = 55;
 
 function sv(v: Vec2): [number, number]   { return [v.x * W, (1 - v.y) * H]; }
 function sxy(x: number, y: number): [number, number] { return [x * W, (1 - y) * H]; }
-function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
 // ─── Colours ──────────────────────────────────────────────────────────────────
 function spdClr(t: number): string {
@@ -130,9 +129,6 @@ function gapPolygon(
 
 // ─── ViewBox type ─────────────────────────────────────────────────────────────
 type VB = { x:number; y:number; w:number; h:number };
-function vbClose(a:VB,b:VB,e=0.5) {
-  return Math.abs(a.x-b.x)<e&&Math.abs(a.y-b.y)<e&&Math.abs(a.w-b.w)<e&&Math.abs(a.h-b.h)<e;
-}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface LiveTrackMapProps {
@@ -142,13 +138,15 @@ interface LiveTrackMapProps {
   cursorProgress?:  number | null;
   segmentAnalyses?: SegmentAnalysis[];
   delta?:           DeltaResult;
+  onCornerClick?:   (segmentId: string) => void;
+  selectedSegmentId?: string | null;
   className?:       string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function LiveTrackMap({
   trackId, userRows, refRows, cursorProgress,
-  segmentAnalyses, delta, className,
+  segmentAnalyses, delta, onCornerClick, selectedSegmentId, className,
 }: LiveTrackMapProps) {
   const track   = useMemo(() => getSmoothedLine(trackId, 24) ?? [], [trackId]);
   const circuit = useMemo(() => getCircuit(trackId), [trackId]);
@@ -191,18 +189,12 @@ export function LiveTrackMap({
     const len = Math.sqrt(dx*dx+dy*dy)||1;
     const headAngle = Math.atan2(-(dy/len),dx/len)*180/Math.PI;
 
-    // Look ahead for predictive zoom: what's the track doing 0.8s ahead?
-    const lookAheadFrac = Math.min(1,(cursorProgress)+(row?.speed??100)/(totalDist||4000)*0.8);
-    const laIdx = Math.min(Math.round(lookAheadFrac*n),n-1);
-    const lookAheadPt = track[laIdx];
-
     return {
       pt: carPt, idx, headAngle,
       speed: row?.speed??0, throttle: row?.throttle??0,
       brake: row?.brake??0, gear: row?.gear??1,
       latG: row?.lateralG??0,
       spdFrac: (row?.speed??0)/maxSpd,
-      lookAheadPt,
     };
   }, [cursorProgress,track,userRows,n,maxSpd,totalDist]);
 
@@ -217,53 +209,8 @@ export function LiveTrackMap({
     };
   }, [track]);
 
-  const [vb,setVb]   = useState<VB>(fullVb);
-  const targetVb     = useRef<VB>(fullVb);
-  const rafId        = useRef<number>(0);
-  const animating    = useRef(false);
-
-  const startAnim = useCallback(() => {
-    if (animating.current) return;
-    animating.current = true;
-    const step = () => {
-      setVb(prev => {
-        const T = 0.055;
-        const next:VB = {
-          x:lerp(prev.x,targetVb.current.x,T), y:lerp(prev.y,targetVb.current.y,T),
-          w:lerp(prev.w,targetVb.current.w,T), h:lerp(prev.h,targetVb.current.h,T),
-        };
-        if (vbClose(next,targetVb.current)) { animating.current=false; return targetVb.current; }
-        rafId.current = requestAnimationFrame(step);
-        return next;
-      });
-    };
-    rafId.current = requestAnimationFrame(step);
-  }, []);
-
-  useEffect(() => {
-    if (!cursorData||!n) { targetVb.current=fullVb; startAnim(); return; }
-    const ri   = Math.min(Math.round((cursorProgress??0)*userRows.length),userRows.length-1);
-    const spd  = userRows[ri]?.speed??200;
-    const brk  = userRows[ri]?.brake??0;
-    const cf   = Math.max(0,Math.min(1,(1-spd/maxSpd)*0.6+(brk/100)*0.4));
-    const zoom = 1.0+cf*3.0;     // 1× (straight) → 4× (hard braking)
-    const tw2  = fullVb.w/zoom, th2 = fullVb.h/zoom;
-
-    // Predictive: center slightly ahead of car
-    const [cx,cy] = sv(cursorData.pt);
-    const [lx,ly] = sv(cursorData.lookAheadPt);
-    const pcx = cx*0.4+lx*0.6;    // 60% towards lookahead
-    const pcy = cy*0.4+ly*0.6;
-
-    targetVb.current = {
-      x:Math.max(fullVb.x,Math.min(fullVb.x+fullVb.w-tw2,pcx-tw2/2)),
-      y:Math.max(fullVb.y,Math.min(fullVb.y+fullVb.h-th2,pcy-th2/2)),
-      w:tw2, h:th2,
-    };
-    startAnim();
-  }, [cursorData,fullVb,cursorProgress,userRows,maxSpd,n,startAnim]);
-
-  useEffect(() => () => cancelAnimationFrame(rafId.current), []);
+  // No zoom — always show full track
+  const vb = fullVb;
 
   // Trail
   const [trail,setTrail] = useState<{p:Vec2,c:string}[]>([]);
@@ -273,13 +220,13 @@ export function LiveTrackMap({
   }, [cursorData]);
 
   // ── Scale helpers (adapt to zoom level) ──────────────────────────────────────
-  const zF   = fullVb.w/Math.max(vb.w,1);
+  const zF   = 1;  // no zoom — full track always visible
   const ss   = (v:number) => Math.max(0.4,v/zF);
   const fs   = (v:number) => Math.max(5,v/zF);
   const stw  = tw*zF;   // scaled track width
 
   const ID   = `ltm-${trackId}`;
-  const vbStr = `${vb.x.toFixed(1)} ${vb.y.toFixed(1)} ${vb.w.toFixed(1)} ${vb.h.toFixed(1)}`;
+  const vbStr = `${fullVb.x.toFixed(1)} ${fullVb.y.toFixed(1)} ${fullVb.w.toFixed(1)} ${fullVb.h.toFixed(1)}`;
   const miniVbStr = `${fullVb.x} ${fullVb.y} ${fullVb.w} ${fullVb.h}`;
 
   if (!track.length) return null;
@@ -506,12 +453,14 @@ export function LiveTrackMap({
           const [lx,ly]=sv(pt);
           if (lx<vb.x-40||lx>vb.x+vb.w+40||ly<vb.y-40||ly>vb.y+vb.h+40) return null;
           const isActive = cursorData&&Math.abs((cursorProgress??0)-corner.lapFrac)<0.058;
-          const col   = CORNER_CLR[corner.type]??"#a3e635";
-          const r     = ss(isActive?16:11);
-          const fSize = fs(isActive?10:8.5);
+          // Find matching segment for click handling
+          const seg = segmentAnalyses?.find(sa => Math.abs((sa.segment.startDist + sa.segment.endDist) / 2 / totalDist - corner.lapFrac) < 0.08);
+          const isSelected = seg && selectedSegmentId === seg.segment.id;
+          const col   = isSelected ? "#a3e635" : (CORNER_CLR[corner.type]??"#a3e635");
+          const r     = ss(isActive || isSelected ? 16 : 11);
+          const fSize = fs(isActive || isSelected ? 10 : 8.5);
 
           // Time loss annotation from segmentAnalyses
-          const seg = segmentAnalyses?.find(sa => Math.abs((sa.segment.startDist + sa.segment.endDist) / 2 / totalDist - corner.lapFrac) < 0.08);
           const deltaS = seg ? (seg.deltaMs / 1000) : null;
 
           // Label offset: push away from track centre
@@ -522,11 +471,16 @@ export function LiveTrackMap({
           const [ox,oy]=[ddx/ddl*offM, ddy/ddl*offM];
 
           return (
-            <g key={corner.id} filter={isActive?`url(#${ID}-sm)`:undefined}>
+            <g key={corner.id}
+              filter={isActive || isSelected ? `url(#${ID}-sm)` : undefined}
+              style={{ cursor: onCornerClick && seg ? "pointer" : "default" }}
+              onClick={() => { if (onCornerClick && seg) onCornerClick(seg.segment.id); }}>
+              {/* Hit area for click */}
+              <circle cx={lx} cy={ly} r={ss(22)} fill="transparent" pointerEvents="all"/>
               <circle cx={lx} cy={ly} r={r}
-                fill={`${col}${isActive?"22":"12"}`}
-                stroke={col} strokeWidth={ss(isActive?1.6:0.9)}
-                opacity={isActive?0.95:0.6}/>
+                fill={`${col}${isActive || isSelected ? "26" : "12"}`}
+                stroke={col} strokeWidth={ss(isActive || isSelected ? 1.8 : 0.9)}
+                opacity={isActive || isSelected ? 0.95 : 0.6}/>
               <text x={lx+ox} y={ly+oy+fSize*0.4}
                 textAnchor="middle"
                 fill={isActive?"#fff":col} fontSize={fSize}
