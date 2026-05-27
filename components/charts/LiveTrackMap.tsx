@@ -1,703 +1,371 @@
 "use client";
 /**
- * LiveTrackMap v4 — Top-tier premium track visualization.
- *
- * Features:
- * • Photorealistic-style track surface (grass → gravel → kerb → asphalt)
- * • Gap ribbon: filled area between trajectories coloured by time (red=loss, green=gain)
- * • Distance boards (100m / 50m markers) at each brake zone
- * • Δ-time callouts at corners
- * • Top-down GT3 car silhouette with brake lights & glow
- * • Predictive zoom: viewport leads the car
- * • Mini-map thumbnail in corner
- * • Traction circle overlay
- * • Corner type colour coding
+ * LiveTrackMap v5 — smooth racing-line trajectories.
+ * Key fix vs v4: trajectory synthesis now smooths the steering signal,
+ * clamps lateral offset within track width, and applies Catmull-Rom
+ * smoothing so the line hugs the track instead of zig-zagging across it.
  */
 
 import { useMemo, useEffect, useRef, useState } from "react";
 import { getSmoothedLine, getCircuit } from "@/lib/tracks/geometry";
 import { cn } from "@/lib/utils";
 import type { Vec2 } from "@/lib/tracks/geometry";
-import type { TelemetryRow } from "@/types/telemetry";
-import type { SegmentAnalysis, DeltaResult } from "@/types/telemetry";
+import type { TelemetryRow, SegmentAnalysis, DeltaResult } from "@/types/telemetry";
 
-// ─── Canvas ───────────────────────────────────────────────────────────────────
 const W = 1000, H = 580, PAD = 55;
-
 function sv(v: Vec2): [number, number]   { return [v.x * W, (1 - v.y) * H]; }
 function sxy(x: number, y: number): [number, number] { return [x * W, (1 - y) * H]; }
 
-// ─── Colours ──────────────────────────────────────────────────────────────────
 function spdClr(t: number): string {
   t = Math.max(0, Math.min(1, t));
   const ST: [number, [number,number,number]][] = [
-    [0.00, [20,50,200]], [0.24, [10,145,240]], [0.50, [40,210,65]],
-    [0.67, [225,220,15]], [0.83, [255,105,0]], [1.00, [255,22,22]],
+    [0.00,[20,50,200]],[0.24,[10,145,240]],[0.50,[40,210,65]],
+    [0.67,[225,220,15]],[0.83,[255,105,0]],[1.00,[255,22,22]],
   ];
-  for (let i = 0; i < ST.length - 1; i++) {
-    const [t0,c0] = ST[i], [t1,c1] = ST[i+1];
-    if (t >= t0 && t <= t1) {
-      const f = (t-t0)/(t1-t0);
-      return `rgb(${c0.map((v,j)=>Math.round(v+(c1[j]-v)*f)).join(",")})`;
-    }
-  }
+  for (let i=0;i<ST.length-1;i++){const [t0,c0]=ST[i],[t1,c1]=ST[i+1];
+    if(t>=t0&&t<=t1){const f=(t-t0)/(t1-t0);
+      return `rgb(${c0.map((v,j)=>Math.round(v+(c1[j]-v)*f)).join(",")})`;}}
   return "rgb(255,22,22)";
 }
+function deltaClr(ds:number):string{
+  if(ds>0.15)return "rgba(248,113,113,0.5)";
+  if(ds>0.05)return "rgba(251,146,60,0.38)";
+  if(ds<-0.05)return "rgba(163,230,53,0.42)";
+  return "rgba(255,255,255,0.08)";
+}
+const CORNER_CLR:Record<string,string>={hairpin:"#f87171",chicane:"#fb923c",slow:"#fbbf24",medium:"#a3e635",fast:"#34d399"};
 
-function deltaClr(ds: number): string {
-  // ds = cumulative delta seconds at this point (positive = losing time)
-  if (ds > 0.15)  return "rgba(248,113,113,0.55)";  // significant loss
-  if (ds > 0.05)  return "rgba(251,146,60,0.40)";   // minor loss
-  if (ds < -0.05) return "rgba(163,230,53,0.45)";   // gaining
-  return "rgba(255,255,255,0.10)";                   // neutral
+function mkPath(pts:Vec2[],skip=1,close=false):string{
+  if(pts.length<2)return "";
+  const s=pts.filter((_,i)=>i%skip===0);
+  const [x0,y0]=sv(s[0]);let d=`M ${x0.toFixed(1)} ${y0.toFixed(1)}`;
+  for(let i=1;i<s.length;i++){const [px,py]=sv(s[i-1]),[cx,cy]=sv(s[i]);
+    d+=` Q ${px.toFixed(1)} ${py.toFixed(1)}, ${((px+cx)/2).toFixed(1)} ${((py+cy)/2).toFixed(1)}`;}
+  if(close)d+=" Z";return d;
+}
+function trackNormal(track:Vec2[],idx:number):[number,number]{
+  const n=track.length,pt=track[idx],nxt=track[(idx+2)%n];
+  const dx=nxt.x-pt.x,dy=nxt.y-pt.y,len=Math.sqrt(dx*dx+dy*dy)||1e-6;
+  return [-dy/len,dx/len];
 }
 
-const CORNER_CLR: Record<string, string> = {
-  hairpin:"#f87171", chicane:"#fb923c",
-  slow:"#fbbf24",    medium:"#a3e635", fast:"#34d399",
-};
-
-// ─── Path ─────────────────────────────────────────────────────────────────────
-function mkPath(pts: Vec2[], skip = 1, close = false): string {
-  if (pts.length < 2) return "";
-  const s = pts.filter((_,i) => i%skip===0);
-  const [x0,y0] = sv(s[0]);
-  let d = `M ${x0.toFixed(1)} ${y0.toFixed(1)}`;
-  for (let i = 1; i < s.length; i++) {
-    const [px,py] = sv(s[i-1]), [cx,cy] = sv(s[i]);
-    d += ` Q ${px.toFixed(1)} ${py.toFixed(1)}, ${((px+cx)/2).toFixed(1)} ${((py+cy)/2).toFixed(1)}`;
-  }
-  if (close) d += " Z";
-  return d;
-}
-
-// ─── Normal helper ────────────────────────────────────────────────────────────
-function trackNormal(track: Vec2[], idx: number): [number,number] {
-  const n   = track.length;
-  const pt  = track[idx];
-  const nxt = track[(idx+2)%n];
-  const dx  = nxt.x-pt.x, dy = nxt.y-pt.y;
-  const len = Math.sqrt(dx*dx+dy*dy)||1e-6;
-  return [-dy/len, dx/len];   // left-of-travel normal
-}
-
-// ─── Synthesise trajectory ────────────────────────────────────────────────────
-function synthTraj(rows: TelemetryRow[], track: Vec2[], totalDist: number): Vec2[] {
-  if (!track.length||!rows.length) return [];
-  const n = track.length;
-  return rows.filter((_,i)=>i%4===0).map(r => {
-    const frac = Math.max(0,Math.min(1,(r.lapDist??0)/Math.max(totalDist,1)));
-    const idx  = Math.min(Math.round(frac*n),n-1);
-    const [nx,ny] = trackNormal(track,idx);
-    const steer = Math.max(-1,Math.min(1,(r.steerAngle??0)/200));
-    const off   = -steer*0.027;
-    return { x: track[idx].x+nx*off, y: track[idx].y+ny*off };
+/** Moving-average smooth of a numeric signal. */
+function smoothSignal(vals:number[],window=7):number[]{
+  if(vals.length<3)return vals;
+  const half=Math.floor(window/2);
+  return vals.map((_,i)=>{
+    let sum=0,cnt=0;
+    for(let k=-half;k<=half;k++){const j=i+k;if(j>=0&&j<vals.length){sum+=vals[j];cnt++;}}
+    return sum/cnt;
   });
 }
 
-// ─── Gap ribbon polygon ───────────────────────────────────────────────────────
-/** Build a polygon that fills the space between two trajectory arrays */
-function gapPolygon(
-  user: Vec2[], ref: Vec2[],
-  delta: DeltaResult | undefined,
-  totalPoints: number,
-): { path: string; color: string }[] {
-  if (!user.length||!ref.length) return [];
-  const minLen = Math.min(user.length, ref.length);
-  const CHUNK = 8;
-  const result: { path: string; color: string }[] = [];
-
-  for (let start = 0; start < minLen - CHUNK; start += CHUNK) {
-    const end = Math.min(start + CHUNK + 1, minLen);
-    // Forward pass (user)
-    const fwd  = user.slice(start, end).map(p => sv(p));
-    // Reverse pass (ref)
-    const rev  = ref.slice(start, end).reverse().map(p => sv(p));
-    const pts  = [...fwd, ...rev];
-    if (pts.length < 3) continue;
-
-    const d = `M ${pts.map(([x,y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" L ")} Z`;
-
-    // Get delta at midpoint
-    const midIdx = Math.round(((start + end) / 2 / minLen) * (delta?.cumulativeDeltaS.length ?? 1));
-    const ds = delta?.cumulativeDeltaS[Math.min(midIdx, (delta?.cumulativeDeltaS.length??1)-1)] ?? 0;
-
-    result.push({ path: d, color: deltaClr(ds) });
-  }
-  return result;
+/** Catmull-Rom smoothing of a Vec2 path. */
+function smoothPath(pts:Vec2[],samples=6):Vec2[]{
+  if(pts.length<3)return pts;
+  const out:Vec2[]=[];const n=pts.length;
+  for(let i=0;i<n-1;i++){
+    const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(n-1,i+2)];
+    for(let s=0;s<samples;s++){const t=s/samples,t2=t*t,t3=t2*t;
+      out.push({
+        x:0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+        y:0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3),
+      });}}
+  return out;
 }
 
-// ─── ViewBox type ─────────────────────────────────────────────────────────────
-type VB = { x:number; y:number; w:number; h:number };
-
-// ─── Props ────────────────────────────────────────────────────────────────────
-interface LiveTrackMapProps {
-  trackId:          string;
-  userRows:         TelemetryRow[];
-  refRows?:         TelemetryRow[];
-  cursorProgress?:  number | null;
-  segmentAnalyses?: SegmentAnalysis[];
-  delta?:           DeltaResult;
-  onCornerClick?:   (segmentId: string) => void;
-  selectedSegmentId?: string | null;
-  className?:       string;
+/**
+ * Synthesise a SMOOTH racing-line trajectory.
+ * - Maps each sample to track position via lapDist
+ * - Lateral offset from SMOOTHED steering, clamped to track width
+ * - Output is Catmull-Rom smoothed so it hugs the track
+ */
+function synthTraj(rows:TelemetryRow[],track:Vec2[],totalDist:number,maxOffset:number):Vec2[]{
+  if(!track.length||!rows.length)return [];
+  const n=track.length;
+  const sampled=rows.filter((_,i)=>i%6===0);
+  // Smooth the steering signal first
+  const steers=smoothSignal(sampled.map(r=>Math.max(-1,Math.min(1,(r.steerAngle??0)/220))),9);
+  const raw=sampled.map((r,i)=>{
+    const frac=Math.max(0,Math.min(1,(r.lapDist??0)/Math.max(totalDist,1)));
+    const idx=Math.min(Math.round(frac*n),n-1);
+    const [nx,ny]=trackNormal(track,idx);
+    const off=-steers[i]*maxOffset;
+    return {x:track[idx].x+nx*off,y:track[idx].y+ny*off};
+  });
+  return smoothPath(raw,5);
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+type VB={x:number;y:number;w:number;h:number};
+
+interface LiveTrackMapProps{
+  trackId:string;userRows:TelemetryRow[];refRows?:TelemetryRow[];
+  cursorProgress?:number|null;segmentAnalyses?:SegmentAnalysis[];delta?:DeltaResult;
+  onCornerClick?:(segmentId:string)=>void;selectedSegmentId?:string|null;className?:string;
+}
+
 export function LiveTrackMap({
-  trackId, userRows, refRows, cursorProgress,
-  segmentAnalyses, delta, onCornerClick, selectedSegmentId, className,
-}: LiveTrackMapProps) {
-  const track   = useMemo(() => getSmoothedLine(trackId, 24) ?? [], [trackId]);
-  const circuit = useMemo(() => getCircuit(trackId), [trackId]);
-  const n       = track.length;
-  const tw      = (circuit?.trackWidthNorm ?? 0.022) * W;
+  trackId,userRows,refRows,cursorProgress,segmentAnalyses,delta,
+  onCornerClick,selectedSegmentId,className,
+}:LiveTrackMapProps){
+  const track=useMemo(()=>getSmoothedLine(trackId,24)??[],[trackId]);
+  const circuit=useMemo(()=>getCircuit(trackId),[trackId]);
+  const n=track.length;
+  const twNorm=circuit?.trackWidthNorm??0.022;
+  const tw=twNorm*W;
+  const maxOffset=twNorm*0.9;  // keep racing line within ±90% of half-track-width
 
-  const totalDist = userRows.at(-1)?.lapDist ?? 0;
-  const maxSpd    = useMemo(() => userRows.reduce((m,r)=>Math.max(m,r.speed),100), [userRows]);
+  const totalDist=userRows.at(-1)?.lapDist??0;
+  const maxSpd=useMemo(()=>userRows.reduce((m,r)=>Math.max(m,r.speed),100),[userRows]);
 
-  const userTraj = useMemo(() => synthTraj(userRows,track,totalDist), [userRows,track,totalDist]);
-  const refTraj  = useMemo(() => refRows ? synthTraj(refRows,track,totalDist) : [], [refRows,track,totalDist]);
+  const userTraj=useMemo(()=>synthTraj(userRows,track,totalDist,maxOffset),[userRows,track,totalDist,maxOffset]);
+  const refTraj=useMemo(()=>refRows?synthTraj(refRows,track,totalDist,maxOffset*0.8):[],[refRows,track,totalDist,maxOffset]);
 
-  // Speed segments on user trajectory
-  const trajSegs = useMemo(() => {
-    if (!userTraj.length) return [];
-    return userTraj.slice(0,-1).map((pt,i) => {
-      const row = userRows[Math.min(i*4,userRows.length-1)];
-      const [x1,y1] = sv(pt), [x2,y2] = sv(userTraj[i+1]);
-      return { x1,y1,x2,y2, c: spdClr(row.speed/maxSpd) };
+  // Speed-coloured segments (map each smoothed point back to nearest speed)
+  const trajSegs=useMemo(()=>{
+    if(!userTraj.length||!userRows.length)return [];
+    return userTraj.slice(0,-1).map((pt,i)=>{
+      const frac=i/userTraj.length;
+      const row=userRows[Math.min(Math.round(frac*userRows.length),userRows.length-1)];
+      const [x1,y1]=sv(pt),[x2,y2]=sv(userTraj[i+1]);
+      return {x1,y1,x2,y2,c:spdClr(row.speed/maxSpd)};
     });
-  }, [userTraj,userRows,maxSpd]);
+  },[userTraj,userRows,maxSpd]);
 
   // Gap ribbon
-  const gapRibbon = useMemo(
-    () => gapPolygon(userTraj, refTraj, delta, n),
-    [userTraj, refTraj, delta, n]
-  );
+  const gapRibbon=useMemo(()=>{
+    if(!userTraj.length||!refTraj.length)return [];
+    const minLen=Math.min(userTraj.length,refTraj.length);
+    const CHUNK=10;const result:{path:string;color:string}[]=[];
+    for(let start=0;start<minLen-CHUNK;start+=CHUNK){
+      const end=Math.min(start+CHUNK+1,minLen);
+      const fwd=userTraj.slice(start,end).map(p=>sv(p));
+      const rev=refTraj.slice(start,end).reverse().map(p=>sv(p));
+      const pts=[...fwd,...rev];if(pts.length<3)continue;
+      const d=`M ${pts.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join(" L ")} Z`;
+      const midIdx=Math.round(((start+end)/2/minLen)*((delta?.cumulativeDeltaS.length??1)));
+      const ds=delta?.cumulativeDeltaS[Math.min(midIdx,(delta?.cumulativeDeltaS.length??1)-1)]??0;
+      result.push({path:d,color:deltaClr(ds)});
+    }
+    return result;
+  },[userTraj,refTraj,delta]);
 
-  // ── Cursor / car data ────────────────────────────────────────────────────────
-  const cursorData = useMemo(() => {
-    if (cursorProgress==null||!n) return null;
-    const idx = Math.min(Math.round(cursorProgress*n),n-1);
-    const [nx,ny] = trackNormal(track,idx);
-    const ri  = Math.min(Math.round(cursorProgress*userRows.length),userRows.length-1);
-    const row = userRows[ri];
-    const steer = Math.max(-1,Math.min(1,(row?.steerAngle??0)/200));
-    const carPt = { x: track[idx].x+nx*(-steer*0.027), y: track[idx].y+ny*(-steer*0.027) };
-    const nxt = track[(idx+3)%n];
-    const dx  = nxt.x-track[idx].x, dy = nxt.y-track[idx].y;
-    const len = Math.sqrt(dx*dx+dy*dy)||1;
-    const headAngle = Math.atan2(-(dy/len),dx/len)*180/Math.PI;
+  // Cursor/car
+  const cursorData=useMemo(()=>{
+    if(cursorProgress==null||!n)return null;
+    const idx=Math.min(Math.round(cursorProgress*n),n-1);
+    const [nx,ny]=trackNormal(track,idx);
+    const ri=Math.min(Math.round(cursorProgress*userRows.length),userRows.length-1);
+    const row=userRows[ri];
+    const steer=Math.max(-1,Math.min(1,(row?.steerAngle??0)/220));
+    const carPt={x:track[idx].x+nx*(-steer*maxOffset),y:track[idx].y+ny*(-steer*maxOffset)};
+    const nxt=track[(idx+3)%n];
+    const dx=nxt.x-track[idx].x,dy=nxt.y-track[idx].y,len=Math.sqrt(dx*dx+dy*dy)||1;
+    const headAngle=Math.atan2(-(dy/len),dx/len)*180/Math.PI;
+    return {pt:carPt,idx,headAngle,speed:row?.speed??0,throttle:row?.throttle??0,
+      brake:row?.brake??0,gear:row?.gear??1,latG:row?.lateralG??0,spdFrac:(row?.speed??0)/maxSpd};
+  },[cursorProgress,track,userRows,n,maxSpd,maxOffset]);
 
-    return {
-      pt: carPt, idx, headAngle,
-      speed: row?.speed??0, throttle: row?.throttle??0,
-      brake: row?.brake??0, gear: row?.gear??1,
-      latG: row?.lateralG??0,
-      spdFrac: (row?.speed??0)/maxSpd,
-    };
-  }, [cursorProgress,track,userRows,n,maxSpd,totalDist]);
-
-  // ── Zoom ─────────────────────────────────────────────────────────────────────
-  const fullVb = useMemo(():VB => {
-    if (!track.length) return {x:0,y:0,w:W,h:H};
-    const xs=track.map(p=>p.x*W), ys=track.map(p=>(1-p.y)*H);
-    return {
-      x:Math.min(...xs)-PAD, y:Math.min(...ys)-PAD,
-      w:Math.max(...xs)-Math.min(...xs)+PAD*2,
-      h:Math.max(...ys)-Math.min(...ys)+PAD*2,
-    };
-  }, [track]);
-
-  // No zoom — always show full track
-  const vb = fullVb;
+  // ViewBox — full track always (no zoom)
+  const vb=useMemo<VB>(()=>{
+    if(!track.length)return {x:0,y:0,w:W,h:H};
+    const xs=track.map(p=>p.x*W),ys=track.map(p=>(1-p.y)*H);
+    return {x:Math.min(...xs)-PAD,y:Math.min(...ys)-PAD,
+      w:Math.max(...xs)-Math.min(...xs)+PAD*2,h:Math.max(...ys)-Math.min(...ys)+PAD*2};
+  },[track]);
 
   // Trail
-  const [trail,setTrail] = useState<{p:Vec2,c:string}[]>([]);
-  useEffect(() => {
-    if (!cursorData) { setTrail([]); return; }
-    setTrail(prev => [...prev,{p:cursorData.pt,c:spdClr(cursorData.spdFrac)}].slice(-20));
-  }, [cursorData]);
+  const [trail,setTrail]=useState<{p:Vec2,c:string}[]>([]);
+  useEffect(()=>{if(!cursorData){setTrail([]);return;}
+    setTrail(prev=>[...prev,{p:cursorData.pt,c:spdClr(cursorData.spdFrac)}].slice(-18));},[cursorData]);
 
-  // ── Scale helpers (adapt to zoom level) ──────────────────────────────────────
-  const zF   = 1;  // no zoom — full track always visible
-  const ss   = (v:number) => Math.max(0.4,v/zF);
-  const fs   = (v:number) => Math.max(5,v/zF);
-  const stw  = tw*zF;   // scaled track width
+  const ss=(v:number)=>v;  // no zoom, 1:1
+  const fs=(v:number)=>v;
+  const ID=`ltm-${trackId}`;
+  const vbStr=`${vb.x.toFixed(1)} ${vb.y.toFixed(1)} ${vb.w.toFixed(1)} ${vb.h.toFixed(1)}`;
+  const miniVbStr=`${vb.x} ${vb.y} ${vb.w} ${vb.h}`;
 
-  const ID   = `ltm-${trackId}`;
-  const vbStr = `${fullVb.x.toFixed(1)} ${fullVb.y.toFixed(1)} ${fullVb.w.toFixed(1)} ${fullVb.h.toFixed(1)}`;
-  const miniVbStr = `${fullVb.x} ${fullVb.y} ${fullVb.w} ${fullVb.h}`;
-
-  if (!track.length) return null;
+  if(!track.length)return null;
 
   return (
-    <div className={cn("relative overflow-hidden bg-[#05050d] select-none", className)}>
-
-      {/* ── MAIN SVG ──────────────────────────────────────────────────────────── */}
+    <div className={cn("relative overflow-hidden bg-[#05050d] select-none",className)}>
       <svg viewBox={vbStr} className="w-full h-full" style={{display:"block"}}>
         <defs>
           <filter id={`${ID}-car`} x="-200%" y="-200%" width="500%" height="500%">
             <feGaussianBlur stdDeviation="11" result="b"/>
-            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           <filter id={`${ID}-glow`} x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="5" result="b"/>
-            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           <filter id={`${ID}-sm`} x="-60%" y="-60%" width="220%" height="220%">
             <feGaussianBlur stdDeviation="3.5" result="b"/>
-            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           <radialGradient id={`${ID}-bg`} cx="50%" cy="45%" r="75%">
-            <stop offset="0%"   stopColor="#0e0e1c"/>
-            <stop offset="100%" stopColor="#05050d"/>
-          </radialGradient>
+            <stop offset="0%" stopColor="#0e0e1c"/><stop offset="100%" stopColor="#05050d"/></radialGradient>
         </defs>
 
-        {/* 1 · Background */}
         <rect width={W} height={H} fill={`url(#${ID}-bg)`}/>
         {[...Array(14)].map((_,i)=>[...Array(9)].map((_,j)=>(
-          <circle key={`d${i}${j}`}
-            cx={(i/13)*W} cy={(j/8)*H} r={ss(0.65)}
-            fill="#141428" opacity="0.5"/>
-        )))}
+          <circle key={`d${i}${j}`} cx={(i/13)*W} cy={(j/8)*H} r={0.65} fill="#141428" opacity="0.5"/>)))}
 
-        {/* 2 · Grass / gravel */}
-        <path d={mkPath(track,1,true)} fill="none"
-          stroke="#09140a" strokeWidth={stw*3.5}
-          strokeLinejoin="round" strokeLinecap="round"/>
-
-        {/* 3 · Track shadow */}
-        <path d={mkPath(track,1,true)} fill="none"
-          stroke="rgba(0,0,0,0.8)" strokeWidth={stw+ss(18)}
-          strokeLinejoin="round" strokeLinecap="round"/>
-
-        {/* 4 · Kerb (painted edge at brake zones) */}
-        {circuit?.corners?.filter(c=>c.brakeZone).map((corner,ci) => {
-          const cIdx   = Math.round(corner.lapFrac*n);
-          const span   = Math.round(0.042*n);
-          const kw     = circuit.trackWidthNorm*0.72*W;
-          const kStripe = ss(6);
-          const kDash   = ss(9);
-
-          // Build kerb on both sides
-          const sides = [1,-1] as const;
-          return sides.map((side,si) => {
-            const pts: string[] = [];
-            for (let k = cIdx-span; k <= cIdx+span; k++) {
-              const idx = ((k%n)+n)%n;
-              const pt  = track[idx];
-              const [nx,ny] = trackNormal(track,idx);
-              const [sx,sy] = sxy(pt.x+nx*kw/W*side, pt.y+ny*kw/H*side);
-              pts.push(`${k===cIdx-span?"M":"L"} ${sx.toFixed(1)} ${sy.toFixed(1)}`);
-            }
-            return (
-              <g key={`k${ci}${si}`}>
-                <path d={pts.join(" ")} fill="none"
-                  stroke="#dd1111" strokeWidth={kStripe}
-                  strokeLinecap="round"
-                  strokeDasharray={`${kDash},${kDash}`} opacity="0.65"/>
-                <path d={pts.join(" ")} fill="none"
-                  stroke="#ffffff" strokeWidth={kStripe*0.55}
-                  strokeLinecap="round"
-                  strokeDasharray={`${kDash},${kDash}`}
-                  strokeDashoffset={kDash} opacity="0.3"/>
-              </g>
-            );
-          });
+        {/* Grass */}
+        <path d={mkPath(track,1,true)} fill="none" stroke="#09140a" strokeWidth={tw*3.5} strokeLinejoin="round" strokeLinecap="round"/>
+        {/* Shadow */}
+        <path d={mkPath(track,1,true)} fill="none" stroke="rgba(0,0,0,0.8)" strokeWidth={tw+18} strokeLinejoin="round" strokeLinecap="round"/>
+        {/* Kerbs at brake zones */}
+        {circuit?.corners?.filter(c=>c.brakeZone).map((corner,ci)=>{
+          const cIdx=Math.round(corner.lapFrac*n),span=Math.round(0.04*n),kw=twNorm*0.72;
+          return ([1,-1] as const).map((side,si)=>{
+            const pts:string[]=[];
+            for(let k=cIdx-span;k<=cIdx+span;k++){const idx=((k%n)+n)%n;const pt=track[idx];
+              const [nx,ny]=trackNormal(track,idx);const [sx,sy]=sxy(pt.x+nx*kw*side,pt.y+ny*kw*side);
+              pts.push(`${k===cIdx-span?"M":"L"} ${sx.toFixed(1)} ${sy.toFixed(1)}`);}
+            return (<g key={`k${ci}${si}`}>
+              <path d={pts.join(" ")} fill="none" stroke="#dd1111" strokeWidth={6} strokeLinecap="round" strokeDasharray="9,9" opacity="0.6"/>
+              <path d={pts.join(" ")} fill="none" stroke="#ffffff" strokeWidth={3.3} strokeLinecap="round" strokeDasharray="9,9" strokeDashoffset="9" opacity="0.3"/>
+            </g>);});
         })}
+        {/* Edge */}
+        <path d={mkPath(track,1,true)} fill="none" stroke="#252535" strokeWidth={tw+5} strokeLinejoin="round" strokeLinecap="round"/>
+        {/* Asphalt */}
+        <path d={mkPath(track,1,true)} fill="none" stroke="#17171f" strokeWidth={tw} strokeLinejoin="round" strokeLinecap="round"/>
+        {/* Rubber */}
+        <path d={mkPath(track,1,true)} fill="none" stroke="#0f0f16" strokeWidth={tw*0.28} strokeLinejoin="round" strokeLinecap="round" opacity="0.7"/>
 
-        {/* 5 · White track edge lines */}
-        <path d={mkPath(track,1,true)} fill="none"
-          stroke="#252535" strokeWidth={stw+ss(5)}
-          strokeLinejoin="round" strokeLinecap="round"/>
+        {/* Gap ribbon */}
+        {gapRibbon.map((seg,i)=>(<path key={`gr${i}`} d={seg.path} fill={seg.color} stroke="none"/>))}
 
-        {/* 6 · Asphalt surface */}
-        <path d={mkPath(track,1,true)} fill="none"
-          stroke="#17171f" strokeWidth={stw}
-          strokeLinejoin="round" strokeLinecap="round"/>
+        {/* Ref line */}
+        {refTraj.length>0&&(<>
+          <path d={mkPath(refTraj,1)} fill="none" stroke="#1d4ed8" strokeWidth={8} opacity="0.12" strokeLinejoin="round" strokeLinecap="round" filter={`url(#${ID}-glow)`}/>
+          <path d={mkPath(refTraj,1)} fill="none" stroke="#93c5fd" strokeWidth={2.2} opacity="0.6" strokeLinejoin="round" strokeLinecap="round" strokeDasharray="7,4.5"/>
+        </>)}
 
-        {/* 7 · Rubber on racing line */}
-        <path d={mkPath(track,1,true)} fill="none"
-          stroke="#0f0f16" strokeWidth={stw*0.28}
-          strokeLinejoin="round" strokeLinecap="round" opacity="0.7"/>
+        {/* User line */}
+        {trajSegs.length>0&&(<>
+          {trajSegs.map((s,i)=>(<line key={`ug${i}`} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={s.c} strokeWidth={9} strokeLinecap="round" opacity="0.1"/>))}
+          {trajSegs.map((s,i)=>(<line key={`ul${i}`} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={s.c} strokeWidth={3.4} strokeLinecap="round" opacity="0.95"/>))}
+        </>)}
 
-        {/* 8 · Centre dashes */}
-        <path d={mkPath(track,1,true)} fill="none"
-          stroke="#ffffff" strokeWidth={ss(0.9)}
-          strokeLinejoin="round" strokeLinecap="round"
-          strokeDasharray={`${ss(9)},${ss(16)}`} opacity="0.035"/>
+        {/* Start/finish */}
+        {track.length>2&&(()=>{
+          const [x0,y0]=sv(track[0]),[x1,y1]=sv(track[1]);
+          const dx=x1-x0,dy=y1-y0,len=Math.sqrt(dx*dx+dy*dy)||1,ext=tw*0.58;
+          const px=-dy/len*ext,py=dx/len*ext;
+          return (<g>
+            <line x1={x0-px} y1={y0-py} x2={x0+px} y2={y0+py} stroke="#fff" strokeWidth={2.2} opacity="0.45" strokeDasharray="3.5,3"/>
+            <text x={x0-px-9} y={y0-py+4} textAnchor="end" fill="#fff" fontSize={8} fontFamily="monospace" fontWeight="900" opacity="0.4">SF</text>
+          </g>);})()}
 
-        {/* 9 · Distance boards at brake zones */}
-        {circuit?.corners?.filter(c=>c.brakeZone).map(corner => {
-          const BOARDS: [number,string,string][] = [
-            [-0.018,"100","rgba(255,255,255,0.7)"],
-            [-0.010,"50", "rgba(255,255,255,0.55)"],
-          ];
-          return BOARDS.map(([offset,label,stroke]) => {
-            const bIdx = Math.round((corner.lapFrac+offset)*n);
-            const sIdx = ((bIdx%n)+n)%n;
-            const pt   = track[sIdx];
-            if (!pt) return null;
-            const [nx,ny] = trackNormal(track,sIdx);
-            const bw  = ss(5), bh = ss(12);
-            const boardOffX = nx * circuit!.trackWidthNorm * 0.75;
-            const boardOffY = ny * circuit!.trackWidthNorm * 0.75;
-            const [sx,sy] = sxy(pt.x + boardOffX, pt.y + boardOffY);
-            const fSize = fs(7.5);
-            return (
-              <g key={`bd${corner.id}${label}`}>
-                <rect x={sx-bw/2} y={sy-bh/2} width={bw} height={bh}
-                  rx={ss(1)} fill="rgba(255,255,255,0.07)"
-                  stroke={stroke} strokeWidth={ss(0.7)}/>
-                <text x={sx} y={sy+fSize*0.38} textAnchor="middle"
-                  fill={stroke} fontSize={fSize}
-                  fontFamily="'JetBrains Mono',monospace"
-                  fontWeight="900">{label}</text>
-              </g>
-            );
-          });
-        })}
+        {/* Sector markers */}
+        {circuit?.sectorMarkers?.slice(1).map(sm=>{
+          const idx=Math.round(sm.lapFrac*n)%n,pt=track[idx];if(!pt)return null;
+          const [sx,sy]=sv(pt),[nx2,ny2]=sv(track[(idx+1)%n]);
+          const ang=Math.atan2(ny2-sy,nx2-sx)+Math.PI/2,ext=tw*0.62;
+          return (<g key={`sm${sm.sectorIdx}`}>
+            <line x1={sx+Math.cos(ang)*ext} y1={sy+Math.sin(ang)*ext} x2={sx-Math.cos(ang)*ext} y2={sy-Math.sin(ang)*ext} stroke="#facc15" strokeWidth={2.2} opacity="0.6" strokeDasharray="3,2"/>
+            <circle cx={sx+Math.cos(ang)*(ext+14)} cy={sy+Math.sin(ang)*(ext+14)} r={10} fill="rgba(250,204,21,0.12)" stroke="rgba(250,204,21,0.45)" strokeWidth={0.9}/>
+            <text x={sx+Math.cos(ang)*(ext+14)} y={sy+Math.sin(ang)*(ext+14)+3.5} textAnchor="middle" fill="#facc15" fontSize={8} fontFamily="monospace" fontWeight="900">S{sm.sectorIdx+1}</text>
+          </g>);})}
 
-        {/* 10 · Gap ribbon */}
-        {gapRibbon.map((seg,i) => (
-          <path key={`gr${i}`} d={seg.path}
-            fill={seg.color} stroke="none"/>
-        ))}
-
-        {/* 11 · Ref trajectory */}
-        {refTraj.length > 0 && (
-          <>
-            <path d={mkPath(refTraj,1)} fill="none"
-              stroke="#1d4ed8" strokeWidth={ss(8)} opacity="0.12"
-              strokeLinejoin="round" strokeLinecap="round"
-              filter={`url(#${ID}-glow)`}/>
-            <path d={mkPath(refTraj,1)} fill="none"
-              stroke="#93c5fd" strokeWidth={ss(2.0)} opacity="0.55"
-              strokeLinejoin="round" strokeLinecap="round"
-              strokeDasharray={`${ss(6.5)},${ss(4)}`}/>
-          </>
-        )}
-
-        {/* 12 · User trajectory glow + line */}
-        {trajSegs.length > 0 && (
-          <>
-            {trajSegs.map((s,i) => (
-              <line key={`ug${i}`} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-                stroke={s.c} strokeWidth={ss(10)} strokeLinecap="round" opacity="0.10"/>
-            ))}
-            {trajSegs.map((s,i) => (
-              <line key={`ul${i}`} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-                stroke={s.c} strokeWidth={ss(3.6)} strokeLinecap="round" opacity="0.96"/>
-            ))}
-          </>
-        )}
-
-        {/* 13 · Start/finish */}
-        {track.length > 2 && (() => {
-          const [x0,y0]=sv(track[0]), [x1,y1]=sv(track[1]);
-          const dx=x1-x0,dy=y1-y0,len=Math.sqrt(dx*dx+dy*dy)||1;
-          const ext=stw*0.58, px=-dy/len*ext, py=dx/len*ext;
-          return (
-            <g>
-              {/* Checker squares */}
-              {[-1,0,1].map(k => (
-                <rect key={k}
-                  x={x0+px*k*0.5-ss(2)} y={y0+py*k*0.5-ss(2)}
-                  width={ss(4)} height={ss(4)}
-                  fill={k%2===0?"#fff":"#000"} opacity="0.45"/>
-              ))}
-              <line x1={x0-px} y1={y0-py} x2={x0+px} y2={y0+py}
-                stroke="#fff" strokeWidth={ss(2.2)} opacity="0.45"
-                strokeDasharray={`${ss(3.5)},${ss(3)}`}/>
-              <text x={x0-px-ss(9)} y={y0-py+fs(4)}
-                textAnchor="end" fill="#fff" fontSize={fs(7.5)}
-                fontFamily="'JetBrains Mono',monospace" fontWeight="900" opacity="0.4">SF</text>
-            </g>
-          );
-        })()}
-
-        {/* 14 · Sector markers */}
-        {circuit?.sectorMarkers?.slice(1).map(sm => {
-          const idx = Math.round(sm.lapFrac*n)%n;
-          const pt  = track[idx];
-          if (!pt) return null;
-          const [sx,sy]=sv(pt), [nx2,ny2]=sv(track[(idx+1)%n]);
-          const ang=Math.atan2(ny2-sy,nx2-sx)+Math.PI/2;
-          const ext=stw*0.62;
-          return (
-            <g key={`sm${sm.sectorIdx}`}>
-              <line
-                x1={sx+Math.cos(ang)*ext} y1={sy+Math.sin(ang)*ext}
-                x2={sx-Math.cos(ang)*ext} y2={sy-Math.sin(ang)*ext}
-                stroke="#facc15" strokeWidth={ss(2.2)} opacity="0.6"
-                strokeDasharray={`${ss(3)},${ss(2)}`}/>
-              <circle cx={sx+Math.cos(ang)*(ext+ss(14))} cy={sy+Math.sin(ang)*(ext+ss(14))}
-                r={ss(10)} fill="rgba(250,204,21,0.12)"
-                stroke="rgba(250,204,21,0.45)" strokeWidth={ss(0.9)}/>
-              <text x={sx+Math.cos(ang)*(ext+ss(14))} y={sy+Math.sin(ang)*(ext+ss(14))+fs(3.5)}
-                textAnchor="middle" fill="#facc15" fontSize={fs(8)}
-                fontFamily="'JetBrains Mono',monospace" fontWeight="900">
-                S{sm.sectorIdx+1}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* 15 · Corner labels + delta callouts */}
-        {circuit?.corners?.map(corner => {
-          const idx = Math.round(corner.lapFrac*n)%n;
-          const pt  = track[idx];
-          if (!pt) return null;
+        {/* Corner labels (clickable) */}
+        {circuit?.corners?.map(corner=>{
+          const idx=Math.round(corner.lapFrac*n)%n,pt=track[idx];if(!pt)return null;
           const [lx,ly]=sv(pt);
-          if (lx<vb.x-40||lx>vb.x+vb.w+40||ly<vb.y-40||ly>vb.y+vb.h+40) return null;
-          const isActive = cursorData&&Math.abs((cursorProgress??0)-corner.lapFrac)<0.058;
-          // Find matching segment for click handling
-          const seg = segmentAnalyses?.find(sa => Math.abs((sa.segment.startDist + sa.segment.endDist) / 2 / totalDist - corner.lapFrac) < 0.08);
-          const isSelected = seg && selectedSegmentId === seg.segment.id;
-          const col   = isSelected ? "#a3e635" : (CORNER_CLR[corner.type]??"#a3e635");
-          const r     = ss(isActive || isSelected ? 16 : 11);
-          const fSize = fs(isActive || isSelected ? 10 : 8.5);
-
-          // Time loss annotation from segmentAnalyses
-          const deltaS = seg ? (seg.deltaMs / 1000) : null;
-
-          // Label offset: push away from track centre
+          const isActive=cursorData&&Math.abs((cursorProgress??0)-corner.lapFrac)<0.058;
+          const seg=segmentAnalyses?.find(sa=>Math.abs((sa.segment.startDist+sa.segment.endDist)/2/totalDist-corner.lapFrac)<0.08);
+          const isSelected=seg&&selectedSegmentId===seg.segment.id;
+          const col=isSelected?"#a3e635":(CORNER_CLR[corner.type]??"#a3e635");
+          const r=isActive||isSelected?15:11,fSize=isActive||isSelected?10:8.5;
+          const deltaS=seg?(seg.deltaMs/1000):null;
           const [cx2,cy2]=[vb.x+vb.w/2,vb.y+vb.h/2];
-          const ddx=lx-cx2, ddy=ly-cy2;
-          const ddl=Math.sqrt(ddx*ddx+ddy*ddy)||1;
-          const offM=ss(28);
-          const [ox,oy]=[ddx/ddl*offM, ddy/ddl*offM];
+          const ddx=lx-cx2,ddy=ly-cy2,ddl=Math.sqrt(ddx*ddx+ddy*ddy)||1;
+          const [ox,oy]=[ddx/ddl*26,ddy/ddl*26];
+          return (<g key={corner.id}
+            filter={isActive||isSelected?`url(#${ID}-sm)`:undefined}
+            style={{cursor:onCornerClick&&seg?"pointer":"default"}}
+            onClick={()=>{if(onCornerClick&&seg)onCornerClick(seg.segment.id);}}>
+            <circle cx={lx} cy={ly} r={22} fill="transparent" pointerEvents="all"/>
+            <circle cx={lx} cy={ly} r={r} fill={`${col}${isActive||isSelected?"26":"12"}`} stroke={col} strokeWidth={isActive||isSelected?1.8:0.9} opacity={isActive||isSelected?0.95:0.6}/>
+            <text x={lx+ox} y={ly+oy+fSize*0.4} textAnchor="middle" fill={isActive||isSelected?"#fff":col} fontSize={fSize} fontFamily="monospace" fontWeight="800" opacity={isActive||isSelected?1:0.75}>{corner.label.split(" ")[0]}</text>
+            {deltaS!==null&&(isActive||isSelected)&&(<>
+              <rect x={lx+ox-22} y={ly+oy+fSize*1.1} width={44} height={13} rx={3} fill="rgba(5,5,14,0.9)" stroke={deltaS>0?"rgba(248,113,113,0.5)":"rgba(163,230,53,0.5)"} strokeWidth={0.7}/>
+              <text x={lx+ox} y={ly+oy+fSize*1.1+9.5} textAnchor="middle" fill={deltaS>0?"#f87171":"#a3e635"} fontSize={9} fontFamily="monospace" fontWeight="800">{deltaS>0?"+":""}{deltaS.toFixed(3)}s</text>
+            </>)}
+          </g>);})}
 
-          return (
-            <g key={corner.id}
-              filter={isActive || isSelected ? `url(#${ID}-sm)` : undefined}
-              style={{ cursor: onCornerClick && seg ? "pointer" : "default" }}
-              onClick={() => { if (onCornerClick && seg) onCornerClick(seg.segment.id); }}>
-              {/* Hit area for click */}
-              <circle cx={lx} cy={ly} r={ss(22)} fill="transparent" pointerEvents="all"/>
-              <circle cx={lx} cy={ly} r={r}
-                fill={`${col}${isActive || isSelected ? "26" : "12"}`}
-                stroke={col} strokeWidth={ss(isActive || isSelected ? 1.8 : 0.9)}
-                opacity={isActive || isSelected ? 0.95 : 0.6}/>
-              <text x={lx+ox} y={ly+oy+fSize*0.4}
-                textAnchor="middle"
-                fill={isActive?"#fff":col} fontSize={fSize}
-                fontFamily="'JetBrains Mono',monospace"
-                fontWeight="800" opacity={isActive?1:0.75}>
-                {corner.label.split(" ")[0]}
-              </text>
-              {/* Delta callout */}
-              {deltaS !== null && isActive && (
-                <>
-                  <rect x={lx+ox-ss(22)} y={ly+oy+fSize*1.1}
-                    width={ss(44)} height={fs(13)} rx={ss(3)}
-                    fill="rgba(5,5,14,0.9)"
-                    stroke={deltaS>0?"rgba(248,113,113,0.5)":"rgba(163,230,53,0.5)"}
-                    strokeWidth={ss(0.7)}/>
-                  <text x={lx+ox} y={ly+oy+fSize*1.1+fs(9.5)}
-                    textAnchor="middle"
-                    fill={deltaS>0?"#f87171":"#a3e635"}
-                    fontSize={fs(9)} fontFamily="'JetBrains Mono',monospace"
-                    fontWeight="800">
-                    {deltaS>0?"+":""}{deltaS.toFixed(3)}s
-                  </text>
-                </>
-              )}
-            </g>
-          );
-        })}
+        {/* Trail */}
+        {cursorData&&trail.slice(0,-1).map(({p,c},i)=>{const [tx,ty]=sv(p);
+          return <circle key={`tr${i}`} cx={tx} cy={ty} r={1.5+i*0.6} fill={c} opacity={((i+1)/trail.length)*0.5}/>;})}
 
-        {/* 16 · Car trail */}
-        {cursorData&&trail.slice(0,-1).map(({p,c},i) => {
-          const [tx,ty]=sv(p);
-          return <circle key={`tr${i}`} cx={tx} cy={ty}
-            r={ss(1.5+i*0.6)} fill={c} opacity={((i+1)/trail.length)*0.5}/>;
-        })}
-
-        {/* 17 · Car silhouette + HUD badge */}
+        {/* Car */}
         {cursorData&&(()=>{
           const [cx,cy]=sv(cursorData.pt);
-          const {headAngle,speed,throttle,brake,gear,latG,spdFrac}=cursorData;
-          const col = brake>40?"#f87171":throttle>55?"#a3e635":"#facc15";
-          const isBraking = brake>15;
-
-          // Traction circle
-          const gNorm = Math.min(1,Math.abs(latG)/3.5);
-          const circ  = 2*Math.PI*ss(34);
-
-          // Badge position
-          const midX=vb.x+vb.w/2, midY=vb.y+vb.h/2;
-          const bx = cx<midX ? cx+ss(30) : cx-ss(95);
-          const by = cy<midY ? cy-ss(10) : cy-ss(56);
-          const bw=ss(65), bh=ss(52), br=ss(5);
-          const f1=fs(14), f2=fs(8.5), f3=fs(7.5), f4=fs(7);
-
-          return (
-            <g>
-              {/* Traction circle */}
-              <circle cx={cx} cy={cy} r={ss(34)}
-                fill="transparent" stroke={col} strokeWidth={ss(0.7)} opacity="0.1"/>
-              <circle cx={cx} cy={cy} r={ss(34)}
-                fill="transparent" stroke={col} strokeWidth={ss(1.4)}
-                strokeDasharray={`${circ*gNorm} ${circ}`}
-                strokeDashoffset={circ*0.25} opacity="0.45" strokeLinecap="round"
-                style={{transform:`rotate(${headAngle-90}deg)`,transformOrigin:`${cx}px ${cy}px`}}/>
-
-              {/* Outer glow */}
-              <circle cx={cx} cy={cy} r={ss(22)}
-                fill={`${col}0e`} stroke={`${col}28`} strokeWidth={ss(1.5)}
-                filter={`url(#${ID}-glow)`}/>
-              <circle cx={cx} cy={cy} r={ss(14)}
-                fill={`${col}1a`} stroke={`${col}55`} strokeWidth={ss(1.5)}/>
-
-              {/* Car body rotated to heading */}
-              <g transform={`rotate(${headAngle},${cx},${cy})`}>
-                {/* Main body */}
-                <rect x={cx-ss(5.5)} y={cy-ss(15)}
-                  width={ss(11)} height={ss(24)} rx={ss(3.5)}
-                  fill={col} opacity="0.88"/>
-                {/* Front wing */}
-                <rect x={cx-ss(8)} y={cy-ss(17.5)}
-                  width={ss(16)} height={ss(3)} rx={ss(1.2)}
-                  fill={col} opacity="0.7"/>
-                {/* Rear diffuser */}
-                <rect x={cx-ss(7)} y={cy+ss(9)}
-                  width={ss(14)} height={ss(3.5)} rx={ss(1.2)}
-                  fill={col} opacity="0.55"/>
-                {/* Cockpit */}
-                <ellipse cx={cx} cy={cy-ss(2)}
-                  rx={ss(3.5)} ry={ss(5.5)}
-                  fill="rgba(0,0,0,0.55)"/>
-                {/* Wheels */}
-                {[[-ss(7.5),-ss(10)],[ss(4.5),-ss(10)],[-ss(7.5),ss(6)],[ss(4.5),ss(6)]].map(([tx,ty2],i) => (
-                  <rect key={i} x={cx+tx} y={cy+ty2}
-                    width={ss(4.5)} height={ss(6.5)} rx={ss(1.2)}
-                    fill="#222230" stroke="#3a3a50" strokeWidth={ss(0.4)}/>
-                ))}
-                {/* Brake lights when braking */}
-                {isBraking && (
-                  <>
-                    <rect x={cx-ss(6)} y={cy+ss(7)}
-                      width={ss(4)} height={ss(2.5)} rx={ss(0.8)}
-                      fill="#ff2222" opacity="0.9"
-                      filter={`url(#${ID}-sm)`}/>
-                    <rect x={cx+ss(2)} y={cy+ss(7)}
-                      width={ss(4)} height={ss(2.5)} rx={ss(0.8)}
-                      fill="#ff2222" opacity="0.9"
-                      filter={`url(#${ID}-sm)`}/>
-                  </>
-                )}
-              </g>
-
-              {/* Core glow dot */}
-              <circle cx={cx} cy={cy} r={ss(5.5)}
-                fill={col} stroke="#04040c" strokeWidth={ss(2.5)}
-                filter={`url(#${ID}-car)`}/>
-
-              {/* ── HUD Badge ──────────────────────────────────────────────── */}
-              <rect x={bx} y={by} width={bw} height={bh} rx={br}
-                fill="rgba(3,3,11,0.96)" stroke={`${col}55`} strokeWidth={ss(0.8)}/>
-
-              {/* Speed large */}
-              <text x={bx+bw*0.45} y={by+bh*0.42} textAnchor="middle"
-                fill={col} fontSize={f1}
-                fontFamily="'JetBrains Mono',monospace" fontWeight="900">
-                {Math.round(speed)}
-              </text>
-              <text x={bx+bw*0.45} y={by+bh*0.60} textAnchor="middle"
-                fill="#2a2a42" fontSize={f3}
-                fontFamily="'JetBrains Mono',monospace">km/h</text>
-
-              {/* Gear */}
-              <rect x={bx+bw*0.70} y={by+bh*0.08}
-                width={bw*0.26} height={bh*0.30} rx={ss(3.5)}
-                fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)"
-                strokeWidth={ss(0.4)}/>
-              <text x={bx+bw*0.83} y={by+bh*0.27} textAnchor="middle"
-                fill="#9898b8" fontSize={f2}
-                fontFamily="'JetBrains Mono',monospace" fontWeight="900">
-                {gear<0?"R":gear===0?"N":gear}
-              </text>
-
-              {/* Throttle */}
-              <rect x={bx+ss(4)} y={by+bh*0.70} width={bw-ss(8)} height={ss(4)} rx={ss(1.5)}
-                fill="rgba(74,222,128,0.12)"/>
-              <rect x={bx+ss(4)} y={by+bh*0.70} width={(bw-ss(8))*throttle/100} height={ss(4)} rx={ss(1.5)}
-                fill="#4ade80"/>
-              {/* Brake */}
-              <rect x={bx+ss(4)} y={by+bh*0.86} width={bw-ss(8)} height={ss(4)} rx={ss(1.5)}
-                fill="rgba(248,113,113,0.12)"/>
-              <rect x={bx+ss(4)} y={by+bh*0.86} width={(bw-ss(8))*brake/100} height={ss(4)} rx={ss(1.5)}
-                fill="#f87171"/>
+          const {headAngle,speed,throttle,brake,gear,latG}=cursorData;
+          const col=brake>40?"#f87171":throttle>55?"#a3e635":"#facc15";
+          const isBraking=brake>15;
+          const gNorm=Math.min(1,Math.abs(latG)/3.5),circ=2*Math.PI*34;
+          const midX=vb.x+vb.w/2,midY=vb.y+vb.h/2;
+          const bx=cx<midX?cx+30:cx-95,by=cy<midY?cy-10:cy-56;
+          const bw=65,bh=52,br=5,f1=14,f2=8.5,f3=7.5;
+          return (<g>
+            <circle cx={cx} cy={cy} r={34} fill="transparent" stroke={col} strokeWidth={0.7} opacity="0.1"/>
+            <circle cx={cx} cy={cy} r={34} fill="transparent" stroke={col} strokeWidth={1.4} strokeDasharray={`${circ*gNorm} ${circ}`} strokeDashoffset={circ*0.25} opacity="0.45" strokeLinecap="round" style={{transform:`rotate(${headAngle-90}deg)`,transformOrigin:`${cx}px ${cy}px`}}/>
+            <circle cx={cx} cy={cy} r={22} fill={`${col}0e`} stroke={`${col}28`} strokeWidth={1.5} filter={`url(#${ID}-glow)`}/>
+            <circle cx={cx} cy={cy} r={14} fill={`${col}1a`} stroke={`${col}55`} strokeWidth={1.5}/>
+            <g transform={`rotate(${headAngle},${cx},${cy})`}>
+              <rect x={cx-5.5} y={cy-15} width={11} height={24} rx={3.5} fill={col} opacity="0.88"/>
+              <rect x={cx-8} y={cy-17.5} width={16} height={3} rx={1.2} fill={col} opacity="0.7"/>
+              <rect x={cx-7} y={cy+9} width={14} height={3.5} rx={1.2} fill={col} opacity="0.55"/>
+              <ellipse cx={cx} cy={cy-2} rx={3.5} ry={5.5} fill="rgba(0,0,0,0.55)"/>
+              {[[-7.5,-10],[4.5,-10],[-7.5,6],[4.5,6]].map(([tx,ty2],i)=>(
+                <rect key={i} x={cx+tx} y={cy+ty2} width={4.5} height={6.5} rx={1.2} fill="#222230" stroke="#3a3a50" strokeWidth={0.4}/>))}
+              {isBraking&&(<>
+                <rect x={cx-6} y={cy+7} width={4} height={2.5} rx={0.8} fill="#ff2222" opacity="0.9" filter={`url(#${ID}-sm)`}/>
+                <rect x={cx+2} y={cy+7} width={4} height={2.5} rx={0.8} fill="#ff2222" opacity="0.9" filter={`url(#${ID}-sm)`}/>
+              </>)}
             </g>
-          );
-        })()}
+            <circle cx={cx} cy={cy} r={5.5} fill={col} stroke="#04040c" strokeWidth={2.5} filter={`url(#${ID}-car)`}/>
+            <rect x={bx} y={by} width={bw} height={bh} rx={br} fill="rgba(3,3,11,0.96)" stroke={`${col}55`} strokeWidth={0.8}/>
+            <text x={bx+bw*0.45} y={by+bh*0.42} textAnchor="middle" fill={col} fontSize={f1} fontFamily="monospace" fontWeight="900">{Math.round(speed)}</text>
+            <text x={bx+bw*0.45} y={by+bh*0.60} textAnchor="middle" fill="#2a2a42" fontSize={f3} fontFamily="monospace">km/h</text>
+            <rect x={bx+bw*0.70} y={by+bh*0.08} width={bw*0.26} height={bh*0.30} rx={3.5} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" strokeWidth={0.4}/>
+            <text x={bx+bw*0.83} y={by+bh*0.27} textAnchor="middle" fill="#9898b8" fontSize={f2} fontFamily="monospace" fontWeight="900">{gear<0?"R":gear===0?"N":gear}</text>
+            <rect x={bx+4} y={by+bh*0.70} width={bw-8} height={4} rx={1.5} fill="rgba(74,222,128,0.12)"/>
+            <rect x={bx+4} y={by+bh*0.70} width={(bw-8)*throttle/100} height={4} rx={1.5} fill="#4ade80"/>
+            <rect x={bx+4} y={by+bh*0.86} width={bw-8} height={4} rx={1.5} fill="rgba(248,113,113,0.12)"/>
+            <rect x={bx+4} y={by+bh*0.86} width={(bw-8)*brake/100} height={4} rx={1.5} fill="#f87171"/>
+          </g>);})()}
       </svg>
 
-      {/* ── MINI-MAP ─────────────────────────────────────────────────────────── */}
+      {/* Mini-map */}
       <div className="absolute bottom-8 right-3 w-24 h-16 pointer-events-none">
         <svg viewBox={miniVbStr} className="w-full h-full opacity-60">
-          {/* Mini track */}
-          <path d={mkPath(track,2,true)}
-            fill="none" stroke="#333348" strokeWidth={tw*1.2}
-            strokeLinejoin="round" strokeLinecap="round"/>
-          <path d={mkPath(track,2,true)}
-            fill="none" stroke="#1e1e2a" strokeWidth={tw}
-            strokeLinejoin="round" strokeLinecap="round"/>
-          {/* User traj */}
-          {trajSegs.slice(0,-1).map((s,i)=>(
-            <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-              stroke={s.c} strokeWidth={tw*0.55} strokeLinecap="round" opacity="0.85"/>
-          ))}
-          {/* Car dot */}
-          {cursorData && (() => {
-            const [mx,my]=sv(cursorData.pt);
-            return <circle cx={mx} cy={my} r={tw*0.9} fill="#a3e635"/>;
-          })()}
-          {/* Viewport indicator */}
-          <rect x={vb.x} y={vb.y} width={vb.w} height={vb.h}
-            fill="rgba(163,230,53,0.05)"
-            stroke="rgba(163,230,53,0.35)" strokeWidth={tw*0.5}/>
+          <path d={mkPath(track,2,true)} fill="none" stroke="#333348" strokeWidth={tw*1.2} strokeLinejoin="round" strokeLinecap="round"/>
+          <path d={mkPath(track,2,true)} fill="none" stroke="#1e1e2a" strokeWidth={tw} strokeLinejoin="round" strokeLinecap="round"/>
+          {trajSegs.slice(0,-1).map((s,i)=>(<line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={s.c} strokeWidth={tw*0.55} strokeLinecap="round" opacity="0.85"/>))}
+          {cursorData&&(()=>{const [mx,my]=sv(cursorData.pt);return <circle cx={mx} cy={my} r={tw*0.9} fill="#a3e635"/>;})()}
         </svg>
       </div>
 
-      {/* ── DOM overlays ──────────────────────────────────────────────────────── */}
+      {/* Overlays */}
       <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none">
         <div className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-pulse"/>
         <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-[0.16em]">
-          {circuit?.countryEmoji && `${circuit.countryEmoji} `}
-          {circuit?.name ?? trackId.toUpperCase()}
-        </span>
-        {circuit?.lengthKm && (
-          <span className="text-[8px] font-mono text-zinc-700">{circuit.lengthKm} km</span>
-        )}
+          {circuit?.countryEmoji&&`${circuit.countryEmoji} `}{circuit?.name??trackId.toUpperCase()}</span>
+        {circuit?.lengthKm&&(<span className="text-[8px] font-mono text-zinc-700">{circuit.lengthKm} km</span>)}
       </div>
-
       <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 pointer-events-none">
         <div className="flex items-center gap-1.5">
           <svg width="20" height="3"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="#a3e635" strokeWidth="2.5"/></svg>
-          <span className="text-[8px] font-mono text-zinc-500">Ваша линия</span>
-        </div>
-        {refTraj.length>0&&(
-          <div className="flex items-center gap-1.5">
-            <svg width="20" height="3"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="#93c5fd" strokeWidth="1.5" strokeDasharray="5,3"/></svg>
-            <span className="text-[8px] font-mono text-zinc-500">Оптимальная</span>
-          </div>
-        )}
-        {gapRibbon.length>0&&(
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{background:"linear-gradient(135deg,rgba(248,113,113,0.6),rgba(163,230,53,0.5))"}}/>
-            <span className="text-[8px] font-mono text-zinc-500">Дельта зона</span>
-          </div>
-        )}
+          <span className="text-[8px] font-mono text-zinc-500">Ваша линия</span></div>
+        {refTraj.length>0&&(<div className="flex items-center gap-1.5">
+          <svg width="20" height="3"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="#93c5fd" strokeWidth="1.5" strokeDasharray="5,3"/></svg>
+          <span className="text-[8px] font-mono text-zinc-500">Оптимальная</span></div>)}
       </div>
-
       <div className="absolute bottom-3 left-3 flex items-center gap-0.5 pointer-events-none">
         {["#143cc8","#0a96f0","#28d248","#dcd814","#ff6e00","#ff1616"].map((c,i)=>(
-          <div key={i} style={{background:c,width:13,height:5,borderRadius:2}}/>
-        ))}
+          <div key={i} style={{background:c,width:13,height:5,borderRadius:2}}/>))}
         <span className="text-[7px] font-mono text-zinc-700 ml-1.5 opacity-60">медленно → торможение</span>
       </div>
     </div>
