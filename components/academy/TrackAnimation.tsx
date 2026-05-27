@@ -156,7 +156,7 @@ export function TrackAnimation({
     // ── Zone colouring (brake/throttle) ──
     if (zoneMap) {
       for (let i = 0; i < n - 1; i++) {
-        const [stroke, fill] = zoneColor(zoneMap[i].brake, zoneMap[i].throttle);
+        const [stroke] = zoneColor(zoneMap[i].brake, zoneMap[i].throttle);
         ctx.beginPath();
         ctx.moveTo(coords[i][0], coords[i][1]);
         ctx.lineTo(coords[i + 1][0], coords[i + 1][1]);
@@ -227,6 +227,7 @@ export function TrackAnimation({
 
     // ── Ghost car (reference) ──
     if (showGhost && refLap) {
+<<<<<<< HEAD
       // Ref car progresses slightly different from user (same frac for visual clarity)
 const refPt = getPointAtFrac(smoothed, frac);
 const refH  = getHeadingAtFrac(smoothed, frac);
@@ -234,26 +235,37 @@ if (refPt) {
   const [rx, ry] = toPx(refPt.x, refPt.y);
   drawCar(ctx, rx, ry, refH, "rgba(255,255,255,0.55)", "rgba(255,255,255,0.12)", 5);
 }
+=======
+      const refPt = getPointAtFrac(smoothed, frac);
+      const refH  = getHeadingAtFrac(smoothed, frac);
+      if (refPt) {
+        const [rx, ry] = toPx(refPt.x, refPt.y);
+        drawCar(ctx, rx, ry, refH, "rgba(255,255,255,0.55)", "rgba(255,255,255,0.12)", 5);
+      }
+    }
+>>>>>>> c96d530 (fix TrackAnimation - close ghost block + null checks)
 
     // ── User car ──
     const userPt = getPointAtFrac(smoothed, frac);
     const userH  = getHeadingAtFrac(smoothed, frac);
-    const [ux, uy] = toPx(userPt.x, userPt.y);
+    if (userPt) {
+      const [ux, uy] = toPx(userPt.x, userPt.y);
 
-    // Current state label
-    const rowIdx = userLap ? Math.round(frac * (userLap.rows.length - 1)) : -1;
-    const row    = rowIdx >= 0 ? userLap!.rows[rowIdx] : null;
-    const state  = (row?.brake ?? 0) > 10 ? "BRAKE" : (row?.throttle ?? 0) > 50 ? "FULL GAS" : "";
+      // Current state label
+      const rowIdx = userLap ? Math.round(frac * (userLap.rows.length - 1)) : -1;
+      const row    = rowIdx >= 0 ? userLap!.rows[rowIdx] : null;
+      const state  = (row?.brake ?? 0) > 10 ? "BRAKE" : (row?.throttle ?? 0) > 50 ? "FULL GAS" : "";
 
-    if (state) {
-      ctx.font = "bold 8px monospace"; ctx.textAlign = "center";
-      const stColor = state === "BRAKE" ? "#f87171" : "#4ade80";
-      ctx.fillStyle = "rgba(9,9,11,0.85)";
-      ctx.beginPath(); ctx.roundRect?.(ux - 22, uy - 28, 44, 14, 3); ctx.fill();
-      ctx.fillStyle = stColor; ctx.fillText(state, ux, uy - 17);
+      if (state) {
+        ctx.font = "bold 8px monospace"; ctx.textAlign = "center";
+        const stColor = state === "BRAKE" ? "#f87171" : "#4ade80";
+        ctx.fillStyle = "rgba(9,9,11,0.85)";
+        ctx.beginPath(); ctx.roundRect?.(ux - 22, uy - 28, 44, 14, 3); ctx.fill();
+        ctx.fillStyle = stColor; ctx.fillText(state, ux, uy - 17);
+      }
+
+      drawCar(ctx, ux, uy, userH, "#a3e635", "rgba(163,230,53,0.30)", 6);
     }
-
-    drawCar(ctx, ux, uy, userH, "#a3e635", "rgba(163,230,53,0.30)", 6);
 
     // Progress label
     ctx.fillStyle = "#3f3f46"; ctx.font = "9px monospace"; ctx.textAlign = "right";
