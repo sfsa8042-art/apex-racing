@@ -511,3 +511,41 @@ export function getCircuit(id: string): CircuitGeometry | null {
 export function listCircuits(): string[] {
   return Object.keys(CIRCUITS);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADDITIONAL HELPERS — used by TrackRenderer, TrackAnimation, etc.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Resolve a track source (id string or Vec2[] centreline) to a point array. */
+function resolveLine(src: string | Vec2[], resolution = 16): Vec2[] {
+  if (typeof src === "string") return getSmoothedLine(src, resolution) ?? [];
+  return src;
+}
+
+/**
+ * Get position on track at given lap fraction (0-1).
+ * Accepts either a track ID string or a Vec2[] centreline directly.
+ */
+export function getPointAtFrac(src: string | Vec2[], frac: number, resolution = 16): Vec2 | null {
+  const line = resolveLine(src, resolution);
+  if (!line.length) return null;
+  const f = ((frac % 1) + 1) % 1;   // wrap to [0,1)
+  const idx = Math.min(Math.round(f * line.length), line.length - 1);
+  return line[idx];
+}
+
+/**
+ * Get heading (direction of travel) in degrees at given lap fraction.
+ * Accepts either a track ID string or a Vec2[] centreline directly.
+ * 0° = east, 90° = north (matches render y-flip).
+ */
+export function getHeadingAtFrac(src: string | Vec2[], frac: number, resolution = 16): number {
+  const line = resolveLine(src, resolution);
+  if (line.length < 2) return 0;
+  const n = line.length;
+  const f = ((frac % 1) + 1) % 1;
+  const idx = Math.min(Math.round(f * n), n - 1);
+  const nxt = line[(idx + 1) % n];
+  const cur = line[idx];
+  return Math.atan2(-(nxt.y - cur.y), nxt.x - cur.x) * 180 / Math.PI;
+}
