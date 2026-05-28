@@ -517,7 +517,8 @@ export function listCircuits(): string[] {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Resolve a track source (id string or Vec2[] centreline) to a point array. */
-function resolveLine(src: string | Vec2[], resolution = 16): Vec2[] {
+function resolveLine(src: string | Vec2[] | null | undefined, resolution = 16): Vec2[] {
+  if (!src) return [];
   if (typeof src === "string") return getSmoothedLine(src, resolution) ?? [];
   return src;
 }
@@ -526,7 +527,7 @@ function resolveLine(src: string | Vec2[], resolution = 16): Vec2[] {
  * Get position on track at given lap fraction (0-1).
  * Accepts either a track ID string or a Vec2[] centreline directly.
  */
-export function getPointAtFrac(src: string | Vec2[], frac: number, resolution = 16): Vec2 | null {
+export function getPointAtFrac(src: string | Vec2[] | null | undefined, frac: number, resolution = 16): Vec2 | null {
   const line = resolveLine(src, resolution);
   if (!line.length) return null;
   const f = ((frac % 1) + 1) % 1;   // wrap to [0,1)
@@ -539,7 +540,7 @@ export function getPointAtFrac(src: string | Vec2[], frac: number, resolution = 
  * Accepts either a track ID string or a Vec2[] centreline directly.
  * 0° = east, 90° = north (matches render y-flip).
  */
-export function getHeadingAtFrac(src: string | Vec2[], frac: number, resolution = 16): number {
+export function getHeadingAtFrac(src: string | Vec2[] | null | undefined, frac: number, resolution = 16): number {
   const line = resolveLine(src, resolution);
   if (line.length < 2) return 0;
   const n = line.length;
