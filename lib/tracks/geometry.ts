@@ -495,8 +495,12 @@ const CIRCUITS: Record<string, CircuitGeometry> = {
 // PUBLIC API
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Smoothed centerline ready for SVG rendering. */
-export function getSmoothedLine(id: string, resolution = 16): Vec2[] | null {
+/**
+ * Smoothed centerline ready for SVG rendering.
+ * @param resolution  samples between control points
+ * @param compact     reserved flag (kept for API compatibility with callers)
+ */
+export function getSmoothedLine(id: string, resolution = 16, _compact = false): Vec2[] | null {
   const c = CIRCUITS[id];
   if (!c) return null;
   return smooth(c.centerline, resolution, true);
