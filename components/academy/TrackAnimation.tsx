@@ -227,15 +227,6 @@ export function TrackAnimation({
 
     // ── Ghost car (reference) ──
     if (showGhost && refLap) {
-<<<<<<< HEAD
-      // Ref car progresses slightly different from user (same frac for visual clarity)
-const refPt = getPointAtFrac(smoothed, frac);
-const refH  = getHeadingAtFrac(smoothed, frac);
-if (refPt) {
-  const [rx, ry] = toPx(refPt.x, refPt.y);
-  drawCar(ctx, rx, ry, refH, "rgba(255,255,255,0.55)", "rgba(255,255,255,0.12)", 5);
-}
-=======
       const refPt = getPointAtFrac(smoothed, frac);
       const refH  = getHeadingAtFrac(smoothed, frac);
       if (refPt) {
@@ -243,7 +234,6 @@ if (refPt) {
         drawCar(ctx, rx, ry, refH, "rgba(255,255,255,0.55)", "rgba(255,255,255,0.12)", 5);
       }
     }
->>>>>>> c96d530 (fix TrackAnimation - close ghost block + null checks)
 
     // ── User car ──
     const userPt = getPointAtFrac(smoothed, frac);
