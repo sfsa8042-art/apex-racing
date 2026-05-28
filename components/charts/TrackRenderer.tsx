@@ -155,9 +155,9 @@ export function TrackRenderer({
   }, [highlightFrac, pts]);
 
   // Car positions
-  const carPos  = useMemo(() => activeLapFrac != null && pts.length ? toPx(getPointAtFrac(pts, activeLapFrac)) : null, [pts, activeLapFrac]);
-  const carHead = useMemo(() => activeLapFrac != null && pts.length ? getHeadingAtFrac(pts, activeLapFrac) : 0, [pts, activeLapFrac]);
-  const refPos  = useMemo(() => refLapFrac  != null && pts.length ? toPx(getPointAtFrac(pts, refLapFrac))  : null, [pts, refLapFrac]);
+ const carPos  = useMemo(() => { const p = activeLapFrac != null && pts.length ? getPointAtFrac(pts, activeLapFrac) : null; return p ? toPx(p) : null; }, [pts, activeLapFrac]);
+const carHead = useMemo(() => activeLapFrac != null && pts.length ? getHeadingAtFrac(pts, activeLapFrac) : 0, [pts, activeLapFrac]);
+const refPos  = useMemo(() => { const p = refLapFrac != null && pts.length ? getPointAtFrac(pts, refLapFrac) : null; return p ? toPx(p) : null; }, [pts, refLapFrac]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!circuit || !pts.length) return;
