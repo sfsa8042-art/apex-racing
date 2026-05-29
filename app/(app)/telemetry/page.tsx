@@ -15,6 +15,7 @@ import { CursorHud }         from "@/components/charts/CursorHud";
 import { WowScreen }       from "./components/WowScreen";
 import { useTelemetry }    from "@/context/TelemetryContext";
 import { cn }              from "@/lib/utils";
+import { useRafThrottle }  from "@/lib/hooks/useRafThrottle";
 import type { AnalysisInsight, LapAnalysisResult } from "@/types/telemetry";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -518,6 +519,8 @@ export default function TelemetryPage() {
   const [rightTab,  setRightTab]  = useState<RightTab>("plan");
   const [selIns,    setSelIns]    = useState<(AnalysisInsight&{_segLabel?:string})|null>(null);
   const [cursorProg, setCursorProg] = useState<number|null>(null);
+  // rAF-throttled cursor setter — coalesces 60+/sec mousemove into 1 update/frame
+  const setCursorProgThrottled = useRafThrottle(setCursorProg);
   const [selectedCorner, setSelectedCorner] = useState<string|null>(null);
 
   // Auto-select worst corner when analysis loads
@@ -753,7 +756,7 @@ export default function TelemetryPage() {
                 channels={channels as any}
                 visibleChannels={visibleCh}
                 className="w-full rounded-none border-0 shrink-0"
-                onCursorChange={setCursorProg}/>
+                onCursorChange={setCursorProgThrottled}/>
 
               {/* Delta chart */}
               <div className="border-t border-zinc-800/50 shrink-0">
