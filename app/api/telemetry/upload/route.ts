@@ -125,18 +125,16 @@ export async function GET(req: NextRequest) {
 async function processSessionAsync(sessionId: string, text: string): Promise<void> {
   try {
     // Dynamically import to avoid bundling heavy modules into the upload handler
-    const { parseFile }              = await import("@/lib/telemetry/parser");
-    const { analyseLap }             = await import("@/lib/telemetry/analyzer");
-    const { buildSyntheticReference } = await import("@/lib/telemetry/reference");
+    const { parseFile }         = await import("@/lib/telemetry/parser");
+    const { analyseLapHonest }  = await import("@/lib/telemetry/analyzer");
 
     // Parse
     const blob   = new Blob([text], { type: "text/csv" });
     const file   = new File([blob], "session.csv");
     const parsed = await parseFile(file);
 
-    // Analyse
-    const ref    = buildSyntheticReference(parsed);
-    const result = analyseLap(parsed, ref);
+    // Analyse (reference-free diagnostic mode; no fabricated reference)
+    const result = analyseLapHonest(parsed, null);
 
     await updateSession(sessionId, {
       status:        "ready",

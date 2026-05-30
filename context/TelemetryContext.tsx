@@ -6,8 +6,7 @@ import type {
   PatternReport, CoachMessage, NextAction, LevelProgress, DriverRank,
 } from "@/types/extended";
 import { parseFile } from "@/lib/telemetry/parser";
-import { analyseLap, buildChartChannels } from "@/lib/telemetry/analyzer";
-import { buildSyntheticReference } from "@/lib/telemetry/reference";
+import { analyseLap, analyseLapHonest, buildChartChannels } from "@/lib/telemetry/analyzer";
 import { detectDriverProfile } from "@/lib/driver/profile";
 import { buildHistoryEntry, computeProgress, saveEntry, buildWowSummary } from "@/lib/progress/tracker";
 import { buildHeatmapData } from "@/lib/telemetry/heatmap";
@@ -73,8 +72,8 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
     const nameLower  = filename.toLowerCase();
     const detectedTrack = Object.keys(trackMap).find(k => nameLower.includes(k)) ?? "monza";
 
-    let ref: ParsedLap;
-    let refSource: "community" | "synthetic" = "synthetic";
+    let ref: ParsedLap | null = null;
+    let refSource: "community" | "personal" | null = null;
     try {
       const r = await fetch(`/api/reference/laps?track=${detectedTrack}`);
       const d = await r.json();
@@ -84,16 +83,15 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
         const { parseFile } = await import("@/lib/telemetry/parser");
         ref = await parseFile(file);
         refSource = "community";
-      } else {
-        ref = buildSyntheticReference(parsed);
       }
+      // No real reference → diagnostic mode (NO fabricated "pro" reference)
     } catch {
-      ref = buildSyntheticReference(parsed);
+      ref = null;
     }
     setRefLap(ref);
 
-    const result   = analyseLap(parsed, ref);
-    const channels = buildChartChannels(parsed, ref);
+    const result   = analyseLapHonest(parsed, ref, refSource);
+    const channels = buildChartChannels(parsed, ref ?? parsed);
     setChartCh(channels);
 
     const profile = detectDriverProfile(parsed, result.segmentAnalyses);

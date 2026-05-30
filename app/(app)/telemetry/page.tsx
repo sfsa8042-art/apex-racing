@@ -3,7 +3,7 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   Upload, RefreshCw, AlertCircle, Zap, BarChart2,
   Activity, ChevronRight, TrendingDown, TrendingUp,
-  Target, Cpu, ArrowRight, CheckCircle2,
+  Target, Cpu, ArrowRight, CheckCircle2, Gauge,
 } from "lucide-react";
 import { TelemetryChart }  from "@/components/charts/TelemetryChart";
 import { LiveTrackMap }    from "@/components/charts/LiveTrackMap";
@@ -12,6 +12,8 @@ import { SegmentPanel }    from "@/components/charts/SegmentPanel";
 import { CornerDetailPanel } from "@/components/charts/CornerDetailPanel";
 import { CoachingPlanPanel } from "@/components/charts/CoachingPlanPanel";
 import { CursorHud }         from "@/components/charts/CursorHud";
+import { ChassisPanel }      from "@/components/charts/ChassisPanel";
+import { DiagnosticsPanel }  from "@/components/charts/DiagnosticsPanel";
 import { WowScreen }       from "./components/WowScreen";
 import { useTelemetry }    from "@/context/TelemetryContext";
 import { cn }              from "@/lib/utils";
@@ -24,7 +26,7 @@ const fmtMs = (ms: number) =>
 
 type Ch = { id: string; label: string; color: string; unit: string;
   data: number[]; refData: number[]; min: number; max: number; };
-type RightTab = "plan"|"corner"|"segments"|"insights"|"engineer";
+type RightTab = "plan"|"corner"|"chassis"|"segments"|"insights"|"engineer";
 
 // ── Score Ring (animated on mount) ───────────────────────────────────────────
 function ScoreRing({ value, label, size = 52, animate = true }: {
@@ -364,18 +366,6 @@ function EngineerChat({ analysisResult, lapTimeStr, parsedLap, filename }: {
   const inputRef  = useRef<HTMLInputElement>(null);
 
   const ctx = React.useMemo(() => {
-    // Build rich structured context for the AI engineer
-    const topInsights = analysisResult.segmentAnalyses
-      .flatMap(sa => sa.insights.filter(i => i.type !== "good_segment").map(i => ({
-        corner: sa.segment.label,
-        type: i.type,
-        costMs: i.timeCostMs,
-        description: i.descriptionRu,
-      })))
-      .sort((a, b) => b.costMs - a.costMs)
-      .slice(0, 5);
-
-    // Build structured context string directly
     const lines: string[] = [];
     const trackMap: Record<string,string> = {
       nurburgring:"Nürburgring", monza:"Monza", spa:"Spa-Francorchamps",
@@ -389,34 +379,41 @@ function EngineerChat({ analysisResult, lapTimeStr, parsedLap, filename }: {
       tl.includes("ferrari") ? "Ferrari 296 GT3" : "GT3";
 
     lines.push(`TRACK: ${trackName.toUpperCase()} | CAR: ${carName.toUpperCase()}`);
-    if (parsedLap) {
-      const ms = parsedLap.lapTimeMs;
-      const lts = `${Math.floor(ms/60000)}:${String(Math.floor((ms%60000)/1000)).padStart(2,"0")}.${String(ms%1000).padStart(3,"0")}`;
+    const ms = parsedLap?.lapTimeMs ?? 0;
+    const lts = `${Math.floor(ms/60000)}:${String(Math.floor((ms%60000)/1000)).padStart(2,"0")}.${String(ms%1000).padStart(3,"0")}`;
+
+    if (analysisResult.hasReference) {
+      // Comparative context (REAL reference present)
       const refMs = analysisResult.totalTimeDeltaMs > 0 ? ms - analysisResult.totalTimeDeltaMs : 0;
       const refs = refMs > 0 ? `${Math.floor(refMs/60000)}:${String(Math.floor((refMs%60000)/1000)).padStart(2,"0")}.${String(refMs%1000).padStart(3,"0")}` : "—";
       lines.push(`LAP: ${lts} | REF: ${refs} | GAP: +${(analysisResult.totalTimeDeltaMs/1000).toFixed(3)}s`);
-    }
-    lines.push(`SCORE: ${analysisResult.overallScore}/100`);
-    if (analysisResult.subScores) {
-      const {braking,throttle,lines:l,consistency} = analysisResult.subScores;
-      lines.push(`SCORES: Braking ${braking} | Throttle ${throttle} | Lines ${l} | Consistency ${consistency}`);
-    }
-    if (analysisResult.sectors.length > 0) {
-      lines.push("SECTORS: " + analysisResult.sectors.map(s =>
-        `S${s.sectorIdx+1}: ${(s.deltaMs>0?"+":"")}${(s.deltaMs/1000).toFixed(3)}s`).join(" | "));
-    }
-    lines.push("TOP ISSUES:");
-    topInsights.slice(0,5).forEach((ins,i) => {
-      lines.push(`  ${i+1}. [${ins.corner}] ${ins.type} — ${(ins.costMs/1000).toFixed(3)}s — ${ins.description.slice(0,80)}`);
-    });
-    if (analysisResult.patterns?.length) {
-      lines.push("PATTERNS: " + analysisResult.patterns.join(" | "));
-    }
-    if (analysisResult.strengthMessages?.length) {
-      lines.push("STRENGTHS: " + analysisResult.strengthMessages.join(" | "));
-    }
-    if (analysisResult.optimalLap.potentialGainMs > 0) {
-      lines.push(`POTENTIAL: -${(analysisResult.optimalLap.potentialGainMs/1000).toFixed(3)}s available`);
+      lines.push(`SCORE: ${analysisResult.overallScore}/100`);
+      if (analysisResult.sectors.length > 0) {
+        lines.push("SECTORS: " + analysisResult.sectors.map(s =>
+          `S${s.sectorIdx+1}: ${(s.deltaMs>0?"+":"")}${(s.deltaMs/1000).toFixed(3)}s`).join(" | "));
+      }
+      const topInsights = analysisResult.segmentAnalyses
+        .flatMap(sa => sa.insights.filter(i => i.type !== "good_segment").map(i => ({
+          corner: sa.segment.label, type: i.type, costMs: i.timeCostMs, description: i.descriptionRu,
+        })))
+        .sort((a, b) => b.costMs - a.costMs).slice(0, 5);
+      lines.push("TOP ISSUES (vs reference):");
+      topInsights.forEach((ins,i) =>
+        lines.push(`  ${i+1}. [${ins.corner}] ${ins.type} — ${(ins.costMs/1000).toFixed(3)}s — ${ins.description.slice(0,80)}`));
+      if (analysisResult.optimalLap.potentialGainMs > 0)
+        lines.push(`POTENTIAL: -${(analysisResult.optimalLap.potentialGainMs/1000).toFixed(3)}s available`);
+    } else {
+      // Diagnostic context (NO reference — do NOT invent deltas/gap/potential)
+      lines.push(`LAP: ${lts} | NO REFERENCE LAP — diagnostic mode, do not invent time gaps or compare to a pro.`);
+      lines.push(`TECHNIQUE SCORE: ${analysisResult.overallScore}/100 (from input quality, not lap-time).`);
+      const d = analysisResult.diagnostics;
+      if (d) {
+        lines.push(`MEASURED: coasting ${d.coastingTotalS.toFixed(1)}s, throttle+brake overlap ${d.overlapTotalS.toFixed(1)}s, brake re-applications ${d.brakeStabs}, input smoothness ${d.smoothnessScore}/100.`);
+        lines.push("TECHNIQUE ISSUES (measured, no time cost — never fabricate seconds):");
+        d.diagnostics.slice(0, 6).forEach((x,i) =>
+          lines.push(`  ${i+1}. [${x.severity}] ${x.titleRu}${x.corner ? ` (${x.corner})` : ""} — ${x.metricRu} — ${x.descriptionRu.slice(0,70)}`));
+        if (!d.diagnostics.length) lines.push("  none — inputs are clean.");
+      }
     }
     return lines.join("\n");
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -632,17 +629,30 @@ export default function TelemetryPage() {
                 <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.15em] mb-0.5">Ваш круг</p>
                 <p className="font-mono font-bold tabular-nums leading-none text-lg text-lime-400">{lapTimeStr}</p>
               </div>
-              <div className="px-4 py-2.5 border-r border-zinc-800/40">
-                <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.15em] mb-0.5">Референс</p>
-                <p className="font-mono font-bold tabular-nums leading-none text-base text-zinc-400">{refTimeStr}</p>
-              </div>
-              <div className="px-4 py-2.5">
-                <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.15em] mb-0.5">Разрыв</p>
-                <p className={cn("font-mono font-bold tabular-nums leading-none text-lg",
-                  gapMs>0 ? "text-red-400" : "text-lime-400")}>
-                  {gapMs>0?"+":""}{(gapMs/1000).toFixed(3)}с
-                </p>
-              </div>
+              {analysisResult.hasReference ? (
+                <>
+                  <div className="px-4 py-2.5 border-r border-zinc-800/40">
+                    <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.15em] mb-0.5">
+                      {analysisResult.referenceSource === "personal" ? "Ваш лучший" : "Эталон"}
+                    </p>
+                    <p className="font-mono font-bold tabular-nums leading-none text-base text-zinc-400">{refTimeStr}</p>
+                  </div>
+                  <div className="px-4 py-2.5">
+                    <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.15em] mb-0.5">Разрыв</p>
+                    <p className={cn("font-mono font-bold tabular-nums leading-none text-lg",
+                      gapMs>0 ? "text-red-400" : "text-lime-400")}>
+                      {gapMs>0?"+":""}{(gapMs/1000).toFixed(3)}с
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="px-4 py-2.5 flex items-center">
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/50 border border-zinc-700/50">
+                    <Gauge size={10} className="text-zinc-500"/>
+                    <span className="text-[9px] font-mono text-zinc-400">Режим диагностики · без эталона</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Sectors */}
@@ -655,10 +665,12 @@ export default function TelemetryPage() {
                       <span className="text-xs font-mono tabular-nums text-zinc-200">
                         {(s.userTimeMs/1000).toFixed(3)}
                       </span>
-                      <span className={cn("text-[9px] font-mono tabular-nums",
-                        s.deltaMs>0 ? "text-red-400" : "text-lime-400")}>
-                        {s.deltaMs>0?"+":""}{(s.deltaMs/1000).toFixed(3)}
-                      </span>
+                      {analysisResult.hasReference && (
+                        <span className={cn("text-[9px] font-mono tabular-nums",
+                          s.deltaMs>0 ? "text-red-400" : "text-lime-400")}>
+                          {s.deltaMs>0?"+":""}{(s.deltaMs/1000).toFixed(3)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -797,7 +809,7 @@ export default function TelemetryPage() {
               {/* Tabs */}
               <div className="flex shrink-0 border-b border-zinc-800/60">
                 {([
-                  ["plan","План ✦"],["corner","Поворот"],["insights","Инсайты"],["segments","Участки"],["engineer","AI"],
+                  ["plan","План ✦"],["corner","Поворот"],["chassis","Шасси"],["insights","Инсайты"],["segments","Участки"],["engineer","AI"],
                 ] as const).map(([k,lbl]) => (
                   <button key={k} onClick={() => setRightTab(k)}
                     className={cn("flex-1 py-2.5 text-[10.5px] font-medium transition-colors relative",
@@ -813,8 +825,10 @@ export default function TelemetryPage() {
 
               <div className="flex-1 overflow-y-auto min-h-0">
 
-                {rightTab==="plan" && analysisResult.coachingPlan && (
-                  <CoachingPlanPanel plan={analysisResult.coachingPlan}/>
+                {rightTab==="plan" && (
+                  analysisResult.coachingPlan
+                    ? <CoachingPlanPanel plan={analysisResult.coachingPlan}/>
+                    : <DiagnosticsPanel report={analysisResult.diagnostics}/>
                 )}
 
                 {rightTab==="corner" && (
@@ -854,50 +868,67 @@ export default function TelemetryPage() {
                   </div>
                 )}
 
+                {rightTab==="chassis" && (
+                  <ChassisPanel
+                    rows={parsedLap?.rows ?? []}
+                    corners={analysisResult.segmentAnalyses
+                      .filter(sa => sa.segment.type === "corner")
+                      .map(sa => ({
+                        label: sa.segment.label,
+                        startDist: sa.segment.startDist,
+                        endDist: sa.segment.endDist,
+                      }))}
+                  />
+                )}
+
                 {rightTab==="insights" && (
-                  <div>
-                    <div className="px-4 py-3 border-b border-zinc-800/60 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-zinc-300">
-                          {allInsights.length} проблем найдено
-                        </p>
-                        <span className={cn("text-xs font-mono font-bold",
-                          gapMs>0 ? "text-red-400" : "text-lime-400")}>
-                          {gapMs>0?"−":"+"}{Math.abs(gapMs/1000).toFixed(3)}с
-                        </span>
+                  analysisResult.hasReference ? (
+                    <div>
+                      <div className="px-4 py-3 border-b border-zinc-800/60 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-zinc-300">
+                            {allInsights.length} проблем найдено
+                          </p>
+                          <span className={cn("text-xs font-mono font-bold",
+                            gapMs>0 ? "text-red-400" : "text-lime-400")}>
+                            {gapMs>0?"−":"+"}{Math.abs(gapMs/1000).toFixed(3)}с
+                          </span>
+                        </div>
+
+                        {analysisResult.patterns?.map((p,i) => (
+                          <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-xl bg-yellow-400/5 border border-yellow-400/15">
+                            <Activity size={10} className="text-yellow-400 shrink-0 mt-0.5"/>
+                            <p className="text-[10px] text-yellow-200 leading-relaxed">{p}</p>
+                          </div>
+                        ))}
+
+                        {analysisResult.strengthMessages?.map((s,i) => (
+                          <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-lime-400/5 border border-lime-400/15">
+                            <CheckCircle2 size={9} className="text-lime-400 shrink-0"/>
+                            <p className="text-[10px] text-lime-300">{s}</p>
+                          </div>
+                        ))}
                       </div>
 
-                      {analysisResult.patterns?.map((p,i) => (
-                        <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-xl bg-yellow-400/5 border border-yellow-400/15">
-                          <Activity size={10} className="text-yellow-400 shrink-0 mt-0.5"/>
-                          <p className="text-[10px] text-yellow-200 leading-relaxed">{p}</p>
+                      {allInsights.length===0 ? (
+                        <div className="flex flex-col items-center py-12 text-center px-4 space-y-3">
+                          <div className="w-12 h-12 rounded-2xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                            <CheckCircle2 size={22} className="text-lime-400"/>
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-zinc-200">Отличный круг!</p>
+                            <p className="text-xs text-zinc-500 mt-1">Существенных ошибок не найдено</p>
+                          </div>
                         </div>
-                      ))}
-
-                      {analysisResult.strengthMessages?.map((s,i) => (
-                        <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-lime-400/5 border border-lime-400/15">
-                          <CheckCircle2 size={9} className="text-lime-400 shrink-0"/>
-                          <p className="text-[10px] text-lime-300">{s}</p>
-                        </div>
+                      ) : allInsights.map((ins: any, i: number) => (
+                        <InsightCard key={i} ins={ins} rank={i+1}
+                          selected={selIns===ins}
+                          onSelect={() => setSelIns(selIns===ins?null:ins)}/>
                       ))}
                     </div>
-
-                    {allInsights.length===0 ? (
-                      <div className="flex flex-col items-center py-12 text-center px-4 space-y-3">
-                        <div className="w-12 h-12 rounded-2xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
-                          <CheckCircle2 size={22} className="text-lime-400"/>
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-zinc-200">Отличный круг!</p>
-                          <p className="text-xs text-zinc-500 mt-1">Существенных ошибок не найдено</p>
-                        </div>
-                      </div>
-                    ) : allInsights.map((ins: any, i: number) => (
-                      <InsightCard key={i} ins={ins} rank={i+1}
-                        selected={selIns===ins}
-                        onSelect={() => setSelIns(selIns===ins?null:ins)}/>
-                    ))}
-                  </div>
+                  ) : (
+                    <DiagnosticsPanel report={analysisResult.diagnostics}/>
+                  )
                 )}
 
                 {rightTab==="segments" && (

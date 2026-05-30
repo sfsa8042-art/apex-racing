@@ -13,9 +13,11 @@ import type {
   ParsedLap, TelemetryRow, LapAnalysisResult, AnalysisInsight,
   SectorAnalysis, SegmentAnalysis, SegmentInsight, TrackSegment, OptimalLap, SubScores,
   CornerDetail, PhaseAnalysis, CoachingPlan, CoachingPriority,
+  DeltaResult, Diagnostic, DiagnosticsReport,
 } from "@/types/telemetry";
 import { computeDelta, deltaPerSegment } from "./delta";
 import { detectSegments, matchSegments } from "./segments";
+import { runDiagnostics } from "./diagnostics";
 
 // ─── Resampling ───────────────────────────────────────────────────────────────
 
@@ -906,6 +908,109 @@ export function analyseLap(userLap: ParsedLap, refLap: ParsedLap): LapAnalysisRe
     sectors, insights: rawInsights, segmentAnalyses,
     delta, optimalLap, overallScore, subScores, dominantWeakness,
     patterns, strengthMessages, cornerDetails, coachingPlan,
+    hasReference: true,
+  };
+}
+
+// ─── Honest entry point ───────────────────────────────────────────────────────
+// Use a REAL reference lap when available (community / personal best) → full
+// comparative analysis. Otherwise → reference-free diagnostic result with NO
+// fabricated deltas, potential, or "pro" values. Always attaches diagnostics.
+export function analyseLapHonest(
+  userLap: ParsedLap,
+  refLap: ParsedLap | null,
+  referenceSource: "community" | "personal" | null = null,
+): LapAnalysisResult {
+  const segs = detectSegments(userLap.rows);
+  const corners = segs
+    .filter(s => s.type === "corner")
+    .map(s => ({ label: s.label, startDist: s.startDist, endDist: s.endDist }));
+  const diagnostics = runDiagnostics(userLap, corners);
+
+  if (refLap) {
+    const r = analyseLap(userLap, refLap);
+    r.referenceSource = referenceSource ?? "community";
+    r.diagnostics = diagnostics;
+    return r;
+  }
+  return buildDiagnosticResult(userLap, segs, diagnostics);
+}
+
+// Build an honest no-reference result: objective facts + diagnostics, zero fakes.
+function buildDiagnosticResult(
+  userLap: ParsedLap,
+  segs: TrackSegment[],
+  diagnostics: DiagnosticsReport,
+): LapAnalysisResult {
+  const totalDist = userLap.rows.at(-1)?.lapDist ?? 0;
+  const userSectorMs = computeSectorTimes(userLap.rows);
+
+  const sectors: SectorAnalysis[] = userSectorMs.map((uMs, i) => ({
+    sectorIdx: i, userTimeMs: Math.round(uMs), refTimeMs: 0, deltaMs: 0,
+    startFraction: S_BOUNDS[i], endFraction: S_BOUNDS[i + 1],
+  }));
+
+  // Objective segment analyses (no reference, no delta)
+  const segmentAnalyses: SegmentAnalysis[] = segs.map(seg => ({
+    segment: seg, refSegment: null,
+    userTimeMs: 0, refTimeMs: 0, deltaMs: 0, deltaFraction: 0,
+    insights: [],
+  }));
+
+  // The Insights tab reads `diagnostics` directly (richer than legacy insights).
+  const insights: AnalysisInsight[] = [];
+
+  // Honest technique score from diagnostics (no reference needed)
+  const highN = diagnostics.diagnostics.filter(d => d.severity === "high").length;
+  const medN  = diagnostics.diagnostics.filter(d => d.severity === "medium").length;
+  const lowN  = diagnostics.diagnostics.filter(d => d.severity === "low").length;
+  const penalty = highN * 9 + medN * 4 + lowN * 1.5;
+  const techScore = Math.max(20, Math.min(100, Math.round(
+    diagnostics.smoothnessScore * 0.5 + (100 - Math.min(80, penalty)) * 0.5
+  )));
+
+  const catPenalty = (cat: Diagnostic["category"]) =>
+    diagnostics.diagnostics.filter(d => d.category === cat)
+      .reduce((s, d) => s + (d.severity === "high" ? 18 : d.severity === "medium" ? 9 : 4), 0);
+  const toScore = (p: number) => Math.max(25, Math.min(100, 100 - p));
+  const subScores: SubScores = {
+    braking:     toScore(catPenalty("brake")),
+    throttle:    toScore(catPenalty("throttle") + catPenalty("traction")),
+    lines:       toScore(catPenalty("steering")),
+    consistency: diagnostics.smoothnessScore,
+  };
+
+  const emptyDelta: DeltaResult = {
+    distanceM: [], cumulativeDeltaS: [], instantDeltaS: [], smoothedDeltaS: [],
+    totalDeltaMs: 0, worstIdx: 0, bestIdx: 0,
+  };
+  const optimalLap: OptimalLap = {
+    theoreticalBestMs: userLap.lapTimeMs, currentBestMs: userLap.lapTimeMs,
+    potentialGainMs: 0, segmentContributions: [],
+    summaryRu: "Нет эталонного круга для оценки потенциала. Загрузи быстрый круг или накатай несколько кругов для сравнения.",
+  };
+
+  // dominant weakness mapped to legacy category vocabulary
+  const catMap: Record<Diagnostic["category"], AnalysisInsight["category"]> = {
+    brake: "brake", throttle: "throttle", traction: "throttle", steering: "speed",
+  };
+  const catCounts: Record<string, number> = {};
+  diagnostics.diagnostics.forEach(d => {
+    const c = catMap[d.category];
+    catCounts[c] = (catCounts[c] ?? 0) + 1;
+  });
+  const dominantWeakness = (Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null) as AnalysisInsight["category"] | null;
+
+  return {
+    lapId: userLap.id,
+    totalTimeDeltaMs: 0,
+    sectors, insights, segmentAnalyses,
+    delta: emptyDelta, optimalLap, overallScore: techScore, subScores,
+    dominantWeakness,
+    patterns: [], strengthMessages: [],
+    cornerDetails: [], coachingPlan: undefined,
+    hasReference: false, referenceSource: null,
+    diagnostics,
   };
 }
 
