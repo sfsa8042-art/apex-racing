@@ -530,7 +530,8 @@ export default function TelemetryPage() {
   const toggleCh = (id: string) =>
     setVisibleCh(p => p.includes(id) ? p.length>1?p.filter(c=>c!==id):p : [...p,id]);
 
-  const channels   = (chartChannels as Ch[]|null) ?? [];
+  const channels   = ((chartChannels as Ch[]|null) ?? [])
+    .filter(c => (analysisResult?.hasReference ?? false) || c.id !== "delta");
   const lapTimeStr = parsedLap ? fmtMs(parsedLap.lapTimeMs) : "—";
   const refTimeMs  = analysisResult ? parsedLap!.lapTimeMs - analysisResult.totalTimeDeltaMs : 0;
   const refTimeStr = refTimeMs ? fmtMs(refTimeMs) : "—";
@@ -769,19 +770,21 @@ export default function TelemetryPage() {
                 className="w-full rounded-none border-0 shrink-0"
                 onCursorChange={setCursorProgThrottled}/>
 
-              {/* Delta chart */}
-              <div className="border-t border-zinc-800/50 shrink-0">
-                <div className="flex items-center gap-2 px-4 py-1.5 bg-zinc-950/80">
-                  <BarChart2 size={9} className="text-blue-400"/>
-                  <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Δ Время</span>
-                  <div className="ml-auto flex items-center gap-3 text-[9px] font-mono">
-                    <span className="text-red-400 flex items-center gap-1"><TrendingDown size={8}/>Потеря</span>
-                    <span className="text-lime-400 flex items-center gap-1"><TrendingUp size={8}/>Выигрыш</span>
+              {/* Delta chart — only meaningful against a real reference */}
+              {analysisResult.hasReference && (
+                <div className="border-t border-zinc-800/50 shrink-0">
+                  <div className="flex items-center gap-2 px-4 py-1.5 bg-zinc-950/80">
+                    <BarChart2 size={9} className="text-blue-400"/>
+                    <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Δ Время</span>
+                    <div className="ml-auto flex items-center gap-3 text-[9px] font-mono">
+                      <span className="text-red-400 flex items-center gap-1"><TrendingDown size={8}/>Потеря</span>
+                      <span className="text-lime-400 flex items-center gap-1"><TrendingUp size={8}/>Выигрыш</span>
+                    </div>
                   </div>
+                  <DeltaChart delta={analysisResult.delta} totalDistM={totalDistM}
+                    height={90} className="w-full"/>
                 </div>
-                <DeltaChart delta={analysisResult.delta} totalDistM={totalDistM}
-                  height={90} className="w-full"/>
-              </div>
+              )}
 
               {/* Per-channel mini grids — 2 columns */}
               {channels.filter(ch => visibleCh.includes(ch.id) && ch.id !== "delta").length > 0 && (

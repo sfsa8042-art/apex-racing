@@ -19,6 +19,18 @@ export function DeltaChart({ delta, totalDistM, height = 160, className, highlig
   const W = 800; const cW = W - PAD.left - PAD.right; const cH = height - PAD.top - PAD.bottom;
   const pts = delta.cumulativeDeltaS.length;
   const raw = delta.cumulativeDeltaS;
+
+  // No reference / empty delta → nothing meaningful to plot
+  if (pts === 0) {
+    return (
+      <div className={className} style={{ height }}>
+        <div className="h-full flex items-center justify-center text-[10px] font-mono text-zinc-600">
+          Нет эталона — дельта недоступна
+        </div>
+      </div>
+    );
+  }
+
   const minV = Math.min(...raw, -0.05);
   const maxV = Math.max(...raw,  0.05);
   const rangeV = maxV - minV;
@@ -26,7 +38,7 @@ export function DeltaChart({ delta, totalDistM, height = 160, className, highlig
   const toX = (i: number) => PAD.left + (i / (pts - 1)) * cW;
   const toY = (v: number) => PAD.top + cH - ((v - minV) / rangeV) * cH;
   const zeroY = toY(0);
-  const worstDelta = raw[delta.worstIdx];
+  const worstDelta = raw[delta.worstIdx] ?? 0;
 
   function buildSegments(): React.ReactNode[] {
     const els: React.ReactNode[] = [];
