@@ -12,7 +12,6 @@ import { SegmentPanel }    from "@/components/charts/SegmentPanel";
 import { CornerDetailPanel } from "@/components/charts/CornerDetailPanel";
 import { CoachingPlanPanel } from "@/components/charts/CoachingPlanPanel";
 import { CursorHud }         from "@/components/charts/CursorHud";
-import { ChassisPanel }      from "@/components/charts/ChassisPanel";
 import { DiagnosticsPanel }  from "@/components/charts/DiagnosticsPanel";
 import { WowScreen }       from "./components/WowScreen";
 import { useTelemetry }    from "@/context/TelemetryContext";
@@ -26,7 +25,7 @@ const fmtMs = (ms: number) =>
 
 type Ch = { id: string; label: string; color: string; unit: string;
   data: number[]; refData: number[]; min: number; max: number; };
-type RightTab = "plan"|"corner"|"chassis"|"segments"|"insights"|"engineer";
+type RightTab = "plan"|"corner"|"segments"|"insights"|"engineer";
 
 // ── Score Ring (animated on mount) ───────────────────────────────────────────
 function ScoreRing({ value, label, size = 52, animate = true }: {
@@ -809,7 +808,7 @@ export default function TelemetryPage() {
               {/* Tabs */}
               <div className="flex shrink-0 border-b border-zinc-800/60">
                 {([
-                  ["plan","План ✦"],["corner","Поворот"],["chassis","Шасси"],["insights","Инсайты"],["segments","Участки"],["engineer","AI"],
+                  ["plan","План ✦"],["corner","Поворот"],["insights","Инсайты"],["segments","Участки"],["engineer","AI"],
                 ] as const).map(([k,lbl]) => (
                   <button key={k} onClick={() => setRightTab(k)}
                     className={cn("flex-1 py-2.5 text-[10.5px] font-medium transition-colors relative",
@@ -866,19 +865,6 @@ export default function TelemetryPage() {
                       </div>
                     )}
                   </div>
-                )}
-
-                {rightTab==="chassis" && (
-                  <ChassisPanel
-                    rows={parsedLap?.rows ?? []}
-                    corners={analysisResult.segmentAnalyses
-                      .filter(sa => sa.segment.type === "corner")
-                      .map(sa => ({
-                        label: sa.segment.label,
-                        startDist: sa.segment.startDist,
-                        endDist: sa.segment.endDist,
-                      }))}
-                  />
                 )}
 
                 {rightTab==="insights" && (
