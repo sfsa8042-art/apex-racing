@@ -96,13 +96,13 @@ function synthTraj(rows:TelemetryRow[],track:Vec2[],totalDist:number,maxOffset:n
 type VB={x:number;y:number;w:number;h:number};
 
 interface LiveTrackMapProps{
-  trackId:string;userRows:TelemetryRow[];refRows?:TelemetryRow[];
+  trackId:string;trackName?:string;userRows:TelemetryRow[];refRows?:TelemetryRow[];
   cursorProgress?:number|null;segmentAnalyses?:SegmentAnalysis[];delta?:DeltaResult;
   onCornerClick?:(segmentId:string)=>void;selectedSegmentId?:string|null;className?:string;
 }
 
 export function LiveTrackMap({
-  trackId,userRows,refRows,cursorProgress,segmentAnalyses,delta,
+  trackId,trackName,userRows,refRows,cursorProgress,segmentAnalyses,delta,
   onCornerClick,selectedSegmentId,className,
 }:LiveTrackMapProps){
   // Track shape: derived from THIS lap's telemetry (works for any track/sim,
@@ -380,8 +380,12 @@ export function LiveTrackMap({
       <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none">
         <div className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-pulse"/>
         <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-[0.16em]">
-          {circuit?.countryEmoji&&`${circuit.countryEmoji} `}{circuit?.name??trackId.toUpperCase()}</span>
-        {circuit?.lengthKm&&(<span className="text-[8px] font-mono text-zinc-700">{circuit.lengthKm} km</span>)}
+          {usingDerived
+            ? (trackName ?? "Трасса")
+            : <>{circuit?.countryEmoji&&`${circuit.countryEmoji} `}{circuit?.name??trackName??trackId.toUpperCase()}</>}</span>
+        {usingDerived
+          ? <span className="text-[8px] font-mono text-zinc-700">{(totalDist/1000).toFixed(2)} km · из телеметрии</span>
+          : circuit?.lengthKm&&(<span className="text-[8px] font-mono text-zinc-700">{circuit.lengthKm} km</span>)}
       </div>
       <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 pointer-events-none">
         <div className="flex items-center gap-1.5">

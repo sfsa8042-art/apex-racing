@@ -13,10 +13,12 @@ import { CornerDetailPanel } from "@/components/charts/CornerDetailPanel";
 import { CoachingPlanPanel } from "@/components/charts/CoachingPlanPanel";
 import { CursorHud }         from "@/components/charts/CursorHud";
 import { DiagnosticsPanel }  from "@/components/charts/DiagnosticsPanel";
+import { CornerFactsPanel }  from "@/components/charts/CornerFactsPanel";
 import { WowScreen }       from "./components/WowScreen";
 import { useTelemetry }    from "@/context/TelemetryContext";
 import { cn }              from "@/lib/utils";
 import { useRafThrottle }  from "@/lib/hooks/useRafThrottle";
+import { detectTrack }     from "@/lib/tracks/detect";
 import type { AnalysisInsight, LapAnalysisResult } from "@/types/telemetry";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -366,16 +368,17 @@ function EngineerChat({ analysisResult, lapTimeStr, parsedLap, filename }: {
 
   const ctx = React.useMemo(() => {
     const lines: string[] = [];
-    const trackMap: Record<string,string> = {
-      nurburgring:"Nürburgring", monza:"Monza", spa:"Spa-Francorchamps",
-      silverstone:"Silverstone", suzuka:"Suzuka", imola:"Imola", barcelona:"Barcelona",
-    };
     const tl = (filename ?? "").toLowerCase();
-    const trackName = Object.entries(trackMap).find(([k]) => tl.includes(k))?.[1] ?? "Unknown";
+    const det = detectTrack(filename);
+    const trackName = det.known ? det.name : "Unknown";
     const carName = tl.includes("porsche") ? "Porsche 992 GT3" :
       tl.includes("mercedes") ? "Mercedes AMG GT3" :
       tl.includes("mclaren") ? "McLaren 720S GT3" :
-      tl.includes("ferrari") ? "Ferrari 296 GT3" : "GT3";
+      tl.includes("ferrari") ? "Ferrari 296 GT3" :
+      tl.includes("audi") ? "Audi R8 LMS GT3" :
+      tl.includes("lamborghini") || tl.includes("huracan") ? "Lamborghini Huracán GT3" :
+      tl.includes("bmw") ? "BMW M4 GT3" :
+      tl.includes("aston") ? "Aston Martin V8 GT3" : "GT3";
 
     lines.push(`TRACK: ${trackName.toUpperCase()} | CAR: ${carName.toUpperCase()}`);
     const ms = parsedLap?.lapTimeMs ?? 0;
@@ -538,14 +541,10 @@ export default function TelemetryPage() {
   const gapMs      = analysisResult?.totalTimeDeltaMs ?? 0;
   const totalDistM = parsedLap?.rows.at(-1)?.lapDist ?? 0;
 
-  const detectedTrackId = React.useMemo(() => {
-    const name = (filename ?? "").toLowerCase();
-    const map: Record<string,string> = {
-      nurburgring:"nurburgring", monza:"monza", spa:"spa",
-      silverstone:"silverstone", suzuka:"suzuka", imola:"imola", barcelona:"barcelona",
-    };
-    return Object.entries(map).find(([k])=>name.includes(k))?.[1] ?? "monza";
-  }, [filename]);
+  const detected = React.useMemo(() => detectTrack(filename), [filename]);
+  // geometry fallback id (only the few hand-built tracks); derived shape covers the rest
+  const detectedTrackId = detected.id ?? "monza";
+  const detectedTrackName = detected.name;
 
   const allInsights = (analysisResult?.segmentAnalyses
     .flatMap(sa=>sa.insights.map(i=>({...i,_segLabel:sa.segment.label})))
@@ -733,6 +732,7 @@ export default function TelemetryPage() {
               <div className="shrink-0 border-b border-zinc-800/50" style={{ height: 280 }}>
                 <LiveTrackMap
                   trackId={detectedTrackId}
+                  trackName={detectedTrackName}
                   userRows={parsedLap?.rows ?? []}
                   refRows={refLap?.rows}
                   cursorProgress={cursorProg}
@@ -834,6 +834,7 @@ export default function TelemetryPage() {
                 )}
 
                 {rightTab==="corner" && (
+                  analysisResult.hasReference ? (
                   <div>
                     {/* Corner selector chips */}
                     <div className="px-3 py-2.5 border-b border-zinc-800/60 flex flex-wrap gap-1">
@@ -868,6 +869,15 @@ export default function TelemetryPage() {
                       </div>
                     )}
                   </div>
+                  ) : (
+                    <CornerFactsPanel
+                      lap={parsedLap}
+                      segments={analysisResult.segmentAnalyses
+                        .filter(sa => sa.segment.type === "corner")
+                        .map(sa => sa.segment)}
+                      diagnostics={analysisResult.diagnostics}
+                    />
+                  )
                 )}
 
                 {rightTab==="insights" && (

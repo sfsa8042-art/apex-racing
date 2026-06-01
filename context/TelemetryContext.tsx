@@ -7,6 +7,7 @@ import type {
 } from "@/types/extended";
 import { parseFile } from "@/lib/telemetry/parser";
 import { analyseLap, analyseLapHonest, buildChartChannels } from "@/lib/telemetry/analyzer";
+import { detectTrack } from "@/lib/tracks/detect";
 import { detectDriverProfile } from "@/lib/driver/profile";
 import { buildHistoryEntry, computeProgress, saveEntry, buildWowSummary } from "@/lib/progress/tracker";
 import { buildHeatmapData } from "@/lib/telemetry/heatmap";
@@ -65,16 +66,12 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
     setUploadState((s) => ({ ...s, status: "analyzing", parsedLap: parsed }));
 
     // ── Detect track from filename and fetch community reference ──
-    const trackMap: Record<string, string> = {
-      nurburgring: "nurburgring", monza: "monza", spa: "spa",
-      silverstone: "silverstone", suzuka: "suzuka", imola: "imola", barcelona: "barcelona",
-    };
-    const nameLower  = filename.toLowerCase();
-    const detectedTrack = Object.keys(trackMap).find(k => nameLower.includes(k)) ?? "monza";
+    const detectedTrack = detectTrack(filename).id;
 
     let ref: ParsedLap | null = null;
     let refSource: "community" | "personal" | null = null;
     try {
+      if (!detectedTrack) throw new Error("track unknown");   // → diagnostic mode
       const r = await fetch(`/api/reference/laps?track=${detectedTrack}`);
       const d = await r.json();
       if (d.found && d.csv) {
@@ -108,7 +105,7 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       parsed.rows.forEach(r => {
         csvLines.push(`${r.time.toFixed(3)},${r.speed.toFixed(1)},${r.throttle.toFixed(1)},${r.brake.toFixed(1)},${r.gear},${r.rpm ?? 0},${(r.steerAngle ?? 0).toFixed(2)},${(r.lateralG ?? 0).toFixed(4)},0`);
       });
-      if (csvLines.length > 200) {
+      if (detectedTrack && csvLines.length > 200) {
         fetch("/api/reference/laps", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
