@@ -14,6 +14,7 @@
 
 import { useMemo, useEffect, useRef, useState } from "react";
 import { getSmoothedLine, getCircuit } from "@/lib/tracks/geometry";
+import { deriveTrackPath } from "@/lib/telemetry/trackpath";
 import { cn } from "@/lib/utils";
 import type { Vec2 } from "@/lib/tracks/geometry";
 import type { TelemetryRow, SegmentAnalysis, DeltaResult } from "@/types/telemetry";
@@ -104,18 +105,25 @@ export function LiveTrackMap({
   trackId,userRows,refRows,cursorProgress,segmentAnalyses,delta,
   onCornerClick,selectedSegmentId,className,
 }:LiveTrackMapProps){
-  const track=useMemo(()=>getSmoothedLine(trackId,24)??[],[trackId]);
-  const circuit=useMemo(()=>getCircuit(trackId),[trackId]);
+  // Track shape: derived from THIS lap's telemetry (works for any track/sim,
+  // no F1 silhouette). Falls back to stored geometry only if the lap lacks the
+  // channels needed to reconstruct the path.
+  const derived=useMemo(()=>deriveTrackPath(userRows),[userRows]);
+  const geomTrack=useMemo(()=>getSmoothedLine(trackId,24)??[],[trackId]);
+  const usingDerived=!!(derived&&derived.points.length>10);
+  const track=useMemo(()=> usingDerived ? derived!.points.map(p=>({x:p.x,y:p.y})) : geomTrack,[usingDerived,derived,geomTrack]);
+  const circuit=useMemo(()=>usingDerived?null:getCircuit(trackId),[usingDerived,trackId]);
   const n=track.length;
   const twNorm=circuit?.trackWidthNorm??0.022;
   const tw=twNorm*W;
-  const maxOffset=twNorm*0.9;
+  const maxOffset=usingDerived?0:twNorm*0.9;
 
   const totalDist=userRows.at(-1)?.lapDist??0;
   const maxSpd=useMemo(()=>userRows.reduce((m,r)=>Math.max(m,r.speed),100),[userRows]);
 
-  const userTraj=useMemo(()=>synthTraj(userRows,track,totalDist,maxOffset),[userRows,track,totalDist,maxOffset]);
-  const refTraj=useMemo(()=>refRows?synthTraj(refRows,track,totalDist,maxOffset*0.8):[],[refRows,track,totalDist,maxOffset]);
+  // In derived mode the centerline IS the driven line → no steering offset.
+  const userTraj=useMemo(()=> usingDerived ? track : synthTraj(userRows,track,totalDist,maxOffset),[usingDerived,track,userRows,totalDist,maxOffset]);
+  const refTraj=useMemo(()=>refRows?synthTraj(refRows,track,totalDist,twNorm*0.72):[],[refRows,track,totalDist,twNorm]);
 
   const trajSegs=useMemo(()=>{
     if(!userTraj.length||!userRows.length)return [];
@@ -151,6 +159,21 @@ export function LiveTrackMap({
     return {x:Math.min(...xs)-PAD,y:Math.min(...ys)-PAD,
       w:Math.max(...xs)-Math.min(...xs)+PAD*2,h:Math.max(...ys)-Math.min(...ys)+PAD*2};
   },[track]);
+
+  // Corner markers: from this lap's detected corners in derived mode, else from
+  // stored circuit geometry. Unified shape so the label rendering is identical.
+  const cornerMarkers=useMemo(()=>{
+    if(usingDerived){
+      return (segmentAnalyses??[]).filter(sa=>sa.segment.type==="corner").map(sa=>({
+        id:sa.segment.id, label:sa.segment.label, type:"medium",
+        lapFrac:((sa.segment.startDist+sa.segment.endDist)/2)/(totalDist||1),
+        segId:sa.segment.id as string|undefined,
+      }));
+    }
+    return (circuit?.corners??[]).map(c=>({
+      id:c.id, label:c.label, type:c.type as string, lapFrac:c.lapFrac, segId:undefined as string|undefined,
+    }));
+  },[usingDerived,segmentAnalyses,circuit,totalDist]);
 
   const ID=`ltm-${trackId}`;
 
@@ -250,24 +273,26 @@ export function LiveTrackMap({
 
         {/* Corner labels (clickable). Highlight on SELECTION only (cursor highlight
             dropped for perf — car already shows cursor position). */}
-        {circuit?.corners?.map(corner=>{
-          const idx=Math.round(corner.lapFrac*n)%n,pt=track[idx];if(!pt)return null;
+        {cornerMarkers.map(cm=>{
+          const idx=Math.round(cm.lapFrac*n)%n,pt=track[idx];if(!pt)return null;
           const [lx,ly]=sv(pt);
-          const seg=segmentAnalyses?.find(sa=>Math.abs((sa.segment.startDist+sa.segment.endDist)/2/totalDist-corner.lapFrac)<0.08);
-          const isSelected=seg&&selectedSegmentId===seg.segment.id;
-          const col=isSelected?"#a3e635":(CORNER_CLR[corner.type]??"#a3e635");
+          const seg=cm.segId
+            ? segmentAnalyses?.find(sa=>sa.segment.id===cm.segId)
+            : segmentAnalyses?.find(sa=>Math.abs((sa.segment.startDist+sa.segment.endDist)/2/totalDist-cm.lapFrac)<0.08);
+          const isSelected=!!seg&&selectedSegmentId===seg.segment.id;
+          const col=isSelected?"#a3e635":(CORNER_CLR[cm.type]??"#a3e635");
           const r=isSelected?15:11,fSize=isSelected?10:8.5;
-          const deltaS=seg?(seg.deltaMs/1000):null;
+          const deltaS=seg&&seg.refSegment?(seg.deltaMs/1000):null;
           const [cx2,cy2]=[vb.x+vb.w/2,vb.y+vb.h/2];
           const ddx=lx-cx2,ddy=ly-cy2,ddl=Math.sqrt(ddx*ddx+ddy*ddy)||1;
           const [ox,oy]=[ddx/ddl*26,ddy/ddl*26];
-          return (<g key={corner.id}
+          return (<g key={cm.id}
             filter={isSelected?`url(#${ID}-sm)`:undefined}
             style={{cursor:onCornerClick&&seg?"pointer":"default"}}
             onClick={()=>{if(onCornerClick&&seg)onCornerClick(seg.segment.id);}}>
             <circle cx={lx} cy={ly} r={22} fill="transparent" pointerEvents="all"/>
             <circle cx={lx} cy={ly} r={r} fill={`${col}${isSelected?"26":"12"}`} stroke={col} strokeWidth={isSelected?1.8:0.9} opacity={isSelected?0.95:0.6}/>
-            <text x={lx+ox} y={ly+oy+fSize*0.4} textAnchor="middle" fill={isSelected?"#fff":col} fontSize={fSize} fontFamily="monospace" fontWeight="800" opacity={isSelected?1:0.7}>{corner.label.split(" ")[0]}</text>
+            <text x={lx+ox} y={ly+oy+fSize*0.4} textAnchor="middle" fill={isSelected?"#fff":col} fontSize={fSize} fontFamily="monospace" fontWeight="800" opacity={isSelected?1:0.7}>{cm.label.split(" ")[0]}{cm.label.match(/\d+/)?" "+cm.label.match(/\d+/)![0]:""}</text>
             {deltaS!==null&&isSelected&&(<>
               <rect x={lx+ox-22} y={ly+oy+fSize*1.1} width={44} height={13} rx={3} fill="rgba(5,5,14,0.9)" stroke={deltaS>0?"rgba(248,113,113,0.5)":"rgba(163,230,53,0.5)"} strokeWidth={0.7}/>
               <text x={lx+ox} y={ly+oy+fSize*1.1+9.5} textAnchor="middle" fill={deltaS>0?"#f87171":"#a3e635"} fontSize={9} fontFamily="monospace" fontWeight="800">{deltaS>0?"+":""}{deltaS.toFixed(3)}s</text>
@@ -275,7 +300,7 @@ export function LiveTrackMap({
           </g>);})}
       </g>
     );
-  },[track,trajSegs,refTraj,gapRibbon,circuit,vb,selectedSegmentId,segmentAnalyses,totalDist,n,tw,twNorm,ID,onCornerClick]);
+  },[track,trajSegs,refTraj,gapRibbon,circuit,cornerMarkers,vb,selectedSegmentId,segmentAnalyses,totalDist,n,tw,twNorm,ID,onCornerClick]);
 
   if(!track.length)return null;
   const vbStr=`${vb.x.toFixed(1)} ${vb.y.toFixed(1)} ${vb.w.toFixed(1)} ${vb.h.toFixed(1)}`;
