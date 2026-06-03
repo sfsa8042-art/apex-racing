@@ -79,6 +79,9 @@ export interface WowSummary {
   potentialGainS:     number;
   overallScore:       number;
   profile:            DriverProfile;
+  hasReference:       boolean;     // false → diagnostic mode (no reference lap)
+  smoothnessScore?:   number;      // diagnostic mode input smoothness 0–100
+  issuesCount?:       number;      // diagnostic mode number of technique findings
 }
 
 export interface WowIssue {
@@ -86,6 +89,7 @@ export interface WowIssue {
   issueType:    string;
   descriptionShort: string;
   lossS:        number;
+  metricRu?:    string;   // diagnostic mode: measured value instead of a time loss
   academyLink:  string | null;
   academyTitle: string | null;
 }

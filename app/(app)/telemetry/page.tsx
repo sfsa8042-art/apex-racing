@@ -932,7 +932,8 @@ export default function TelemetryPage() {
 
                 {rightTab==="segments" && (
                   <SegmentPanel segmentAnalyses={analysisResult.segmentAnalyses}
-                    totalTimeDeltaMs={analysisResult.totalTimeDeltaMs}/>
+                    totalTimeDeltaMs={analysisResult.totalTimeDeltaMs}
+                    hasReference={analysisResult.hasReference}/>
                 )}
 
                 {rightTab==="engineer" && (

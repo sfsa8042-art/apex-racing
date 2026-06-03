@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface SegmentPanelProps {
   segmentAnalyses: SegmentAnalysis[];
   totalTimeDeltaMs: number;
+  hasReference?: boolean;
   onSegmentHover?: (sa: SegmentAnalysis | null) => void;
 }
 
@@ -62,7 +63,7 @@ function InsightRow({ insight }: { insight: SegmentAnalysis["insights"][number] 
   );
 }
 
-function SegmentRow({ sa, maxLoss }: { sa: SegmentAnalysis; maxLoss: number }) {
+function SegmentRow({ sa, maxLoss, hasReference }: { sa: SegmentAnalysis; maxLoss: number; hasReference: boolean }) {
   const [open, setOpen] = useState(false);
   const hasInsights = sa.insights.length > 0;
   const isCorner = sa.segment.type === "corner";
@@ -83,12 +84,14 @@ function SegmentRow({ sa, maxLoss }: { sa: SegmentAnalysis; maxLoss: number }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium text-zinc-200">{sa.segment.label}</p>
-            <div className="flex items-center gap-1.5 text-xs font-mono shrink-0">
-              {isLoss ? <TrendingDown size={11} className="text-red-400" /> : <TrendingUp size={11} className="text-lime-400" />}
-              <span className={isLoss ? "text-red-400" : "text-lime-400"}>
-                {isLoss ? "−" : "+"}{(Math.abs(sa.deltaMs) / 1000).toFixed(3)}с
-              </span>
-            </div>
+            {hasReference && (
+              <div className="flex items-center gap-1.5 text-xs font-mono shrink-0">
+                {isLoss ? <TrendingDown size={11} className="text-red-400" /> : <TrendingUp size={11} className="text-lime-400" />}
+                <span className={isLoss ? "text-red-400" : "text-lime-400"}>
+                  {isLoss ? "−" : "+"}{(Math.abs(sa.deltaMs) / 1000).toFixed(3)}с
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3 mt-0.5 text-[11px] text-zinc-500 font-mono flex-wrap">
             {isCorner && sa.segment.apexSpeed !== undefined && (
@@ -99,7 +102,7 @@ function SegmentRow({ sa, maxLoss }: { sa: SegmentAnalysis; maxLoss: number }) {
               <span className="text-red-400">{sa.insights.filter((i) => i.timeCostMs > 0).length} проблем</span>
             )}
           </div>
-          <DeltaBar deltaMs={sa.deltaMs} maxMs={maxLoss} />
+          {hasReference && <DeltaBar deltaMs={sa.deltaMs} maxMs={maxLoss} />}
         </div>
         {hasInsights && (open ? <ChevronDown size={13} className="text-zinc-500 shrink-0" /> : <ChevronRight size={13} className="text-zinc-600 shrink-0" />)}
       </button>
@@ -112,7 +115,7 @@ function SegmentRow({ sa, maxLoss }: { sa: SegmentAnalysis; maxLoss: number }) {
   );
 }
 
-export function SegmentPanel({ segmentAnalyses, totalTimeDeltaMs, onSegmentHover }: SegmentPanelProps) {
+export function SegmentPanel({ segmentAnalyses, totalTimeDeltaMs, hasReference = true, onSegmentHover }: SegmentPanelProps) {
   const [filter, setFilter] = useState<"all" | "corners" | "straights">("all");
   const corners = segmentAnalyses.filter((sa) => sa.segment.type === "corner");
   const straights = segmentAnalyses.filter((sa) => sa.segment.type === "straight");
@@ -125,12 +128,15 @@ export function SegmentPanel({ segmentAnalyses, totalTimeDeltaMs, onSegmentHover
       <div className="px-4 py-3 border-b border-zinc-800 shrink-0">
         <div className="flex items-center justify-between mb-1.5">
           <h3 className="text-xs font-medium text-zinc-300">Анализ участков</h3>
-          <span className="text-[10px] font-mono text-red-400">−{(totalTimeDeltaMs / 1000).toFixed(3)}с</span>
+          {hasReference
+            ? <span className="text-[10px] font-mono text-red-400">−{(totalTimeDeltaMs / 1000).toFixed(3)}с</span>
+            : <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-wider">без эталона</span>}
         </div>
         <div className="flex items-center gap-3 text-[11px] text-zinc-500 mb-2 flex-wrap">
           <span>{corners.length} поворотов</span><span>·</span>
-          <span>{straights.length} прямых</span><span>·</span>
-          <span className="text-red-400">−{(totalLossMs / 1000).toFixed(3)}с потеряно</span>
+          <span>{straights.length} прямых</span>
+          {hasReference && <><span>·</span><span className="text-red-400">−{(totalLossMs / 1000).toFixed(3)}с потеряно</span></>}
+          {!hasReference && <><span>·</span><span className="text-zinc-600">объективные замеры</span></>}
         </div>
         <div className="flex gap-1">
           {([["all", "Все"], ["corners", "Повороты"], ["straights", "Прямые"]] as const).map(([k, label]) => (
@@ -147,7 +153,7 @@ export function SegmentPanel({ segmentAnalyses, totalTimeDeltaMs, onSegmentHover
           <div key={sa.segment.id}
             onMouseEnter={() => onSegmentHover?.(sa)}
             onMouseLeave={() => onSegmentHover?.(null)}>
-            <SegmentRow sa={sa} maxLoss={maxLoss} />
+            <SegmentRow sa={sa} maxLoss={maxLoss} hasReference={hasReference} />
           </div>
         ))}
       </div>
