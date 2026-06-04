@@ -8,6 +8,7 @@ import type {
 import { parseFile } from "@/lib/telemetry/parser";
 import { analyseLap, analyseLapHonest, buildChartChannels } from "@/lib/telemetry/analyzer";
 import { detectTrack } from "@/lib/tracks/detect";
+import { saveLapToHistory, getBestLapCsv, serializeLap } from "@/lib/storage/lapHistory";
 import { detectDriverProfile } from "@/lib/driver/profile";
 import { buildHistoryEntry, computeProgress, saveEntry, buildWowSummary } from "@/lib/progress/tracker";
 import { buildHeatmapData } from "@/lib/telemetry/heatmap";
@@ -81,9 +82,21 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
         ref = await parseFile(file);
         refSource = "community";
       }
-      // No real reference → diagnostic mode (NO fabricated "pro" reference)
+      // No real reference → try personal best below, else diagnostic mode.
     } catch {
       ref = null;
+    }
+
+    // ── Personal best: compare against your own fastest lap on this track ──
+    if (!ref && detectedTrack) {
+      try {
+        const pb = getBestLapCsv(detectedTrack);
+        if (pb && Math.abs(pb.lapTimeMs - parsed.lapTimeMs) > 1) {   // skip identical lap
+          const pbFile = new File([new Blob([pb.csv], { type: "text/csv" })], `${detectedTrack}_personal_best.csv`);
+          ref = await parseFile(pbFile);
+          refSource = "personal";
+        }
+      } catch { ref = null; }   // → diagnostic mode
     }
     setRefLap(ref);
 
@@ -121,6 +134,30 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
         }).catch(() => {});
       }
     } catch {}
+
+    // ── Archive this lap to local history (full data → re-openable + personal reference) ──
+    try {
+      const tl = filename.toLowerCase();
+      const carName = tl.includes("porsche") ? "Porsche 992 GT3" :
+        tl.includes("mercedes") ? "Mercedes AMG GT3" :
+        tl.includes("mclaren") ? "McLaren 720S GT3" :
+        tl.includes("ferrari") ? "Ferrari 296 GT3" :
+        tl.includes("audi") ? "Audi R8 LMS GT3" :
+        tl.includes("lamborghini") || tl.includes("huracan") ? "Lamborghini Huracán GT3" :
+        tl.includes("bmw") ? "BMW M4 GT3" :
+        tl.includes("aston") ? "Aston Martin V8 GT3" : null;
+      saveLapToHistory({
+        id:           result.lapId,
+        filename,
+        trackId:      detectedTrack,
+        trackName:    detectTrack(filename).name,
+        car:          carName,
+        lapTimeMs:    parsed.lapTimeMs,
+        overallScore: result.overallScore,
+        hasReference: result.hasReference,
+        uploadedAt:   new Date().toISOString(),
+      }, serializeLap(parsed));
+    } catch { /* storage unavailable / quota → ignore */ }
 
     const entry    = buildHistoryEntry(filename, result, parsed.lapTimeMs, profile.style);
     const prog     = computeProgress(entry);

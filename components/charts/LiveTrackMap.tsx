@@ -15,6 +15,7 @@
 import { useMemo, useEffect, useRef, useState } from "react";
 import { getSmoothedLine, getCircuit } from "@/lib/tracks/geometry";
 import { deriveTrackPath } from "@/lib/telemetry/trackpath";
+import { getOfficialTrack } from "@/lib/tracks/officialPaths";
 import { cn } from "@/lib/utils";
 import type { Vec2 } from "@/lib/tracks/geometry";
 import type { TelemetryRow, SegmentAnalysis, DeltaResult } from "@/types/telemetry";
@@ -108,32 +109,70 @@ export function LiveTrackMap({
   // Track shape: derived from THIS lap's telemetry (works for any track/sim,
   // no F1 silhouette). Falls back to stored geometry only if the lap lacks the
   // channels needed to reconstruct the path.
+  // Shape priority: official traced silhouette (accurate, known ACC tracks) →
+  // this lap's derived path → stored hand-built geometry. Official paths replace
+  // the unreliable telemetry derivation for known circuits.
+  const official=useMemo(()=>getOfficialTrack(trackId),[trackId]);
+  const officialTrack=useMemo(()=> official ? official.points.map(([x,y])=>({x,y:1-y})) : null,[official]); // flip to y-up
+  const useOfficial=!!officialTrack;
+
   const derived=useMemo(()=>deriveTrackPath(userRows),[userRows]);
   const geomTrack=useMemo(()=>getSmoothedLine(trackId,24)??[],[trackId]);
-  const usingDerived=!!(derived&&derived.points.length>10);
-  const track=useMemo(()=> usingDerived ? derived!.points.map(p=>({x:p.x,y:p.y})) : geomTrack,[usingDerived,derived,geomTrack]);
-  const circuit=useMemo(()=>usingDerived?null:getCircuit(trackId),[usingDerived,trackId]);
+  const usingDerived=!useOfficial&&!!(derived&&derived.points.length>10);
+  const track=useMemo(()=> useOfficial ? officialTrack! : usingDerived ? derived!.points.map(p=>({x:p.x,y:p.y})) : geomTrack,[useOfficial,officialTrack,usingDerived,derived,geomTrack]);
+  const circuit=useMemo(()=>(useOfficial||usingDerived)?null:getCircuit(trackId),[useOfficial,usingDerived,trackId]);
   const n=track.length;
   const twNorm=circuit?.trackWidthNorm??0.022;
   const tw=twNorm*W;
-  const maxOffset=usingDerived?0:twNorm*0.9;
+  const maxOffset=(useOfficial||usingDerived)?0:twNorm*0.9;
 
   const totalDist=userRows.at(-1)?.lapDist??0;
   const maxSpd=useMemo(()=>userRows.reduce((m,r)=>Math.max(m,r.speed),100),[userRows]);
 
-  // In derived mode the centerline IS the driven line → no steering offset.
-  const userTraj=useMemo(()=> usingDerived ? track : synthTraj(userRows,track,totalDist,maxOffset),[usingDerived,track,userRows,totalDist,maxOffset]);
-  const refTraj=useMemo(()=>refRows?synthTraj(refRows,track,totalDist,twNorm*0.72):[],[refRows,track,totalDist,twNorm]);
+  // Speed at each point of the official outline: bin the lap's samples by their
+  // in-lap position ((lapDist mod trackLength)/trackLength) so multi-lap files
+  // map correctly onto the single outline; empty bins filled circularly.
+  const officialSpd=useMemo(()=>{
+    if(!useOfficial||!official)return null;
+    const L=official.lengthM,N=track.length;
+    const sum=new Array(N).fill(0),cnt=new Array(N).fill(0);
+    for(const r of userRows){
+      const f=((((r.lapDist??0)%L)+L)%L)/L;
+      const k=Math.min(N-1,Math.max(0,Math.floor(f*N)));
+      sum[k]+=r.speed;cnt[k]++;
+    }
+    const out=new Array(N).fill(maxSpd*0.6);
+    for(let k=0;k<N;k++)if(cnt[k])out[k]=sum[k]/cnt[k];
+    for(let k=0;k<N;k++)if(!cnt[k]){
+      let a=-1,b=-1;
+      for(let s=1;s<N;s++){if(cnt[(k-s+N)%N]){a=(k-s+N)%N;break;}}
+      for(let s=1;s<N;s++){if(cnt[(k+s)%N]){b=(k+s)%N;break;}}
+      if(a>=0&&b>=0)out[k]=(out[a]+out[b])/2; else if(a>=0)out[k]=out[a]; else if(b>=0)out[k]=out[b];
+    }
+    return out;
+  },[useOfficial,official,track,userRows,maxSpd]);
+
+  // In derived/official mode the outline IS the drawn line → no steering offset.
+  const userTraj=useMemo(()=> (useOfficial||usingDerived) ? track : synthTraj(userRows,track,totalDist,maxOffset),[useOfficial,usingDerived,track,userRows,totalDist,maxOffset]);
+  const refTraj=useMemo(()=> (!useOfficial&&refRows)?synthTraj(refRows,track,totalDist,twNorm*0.72):[],[useOfficial,refRows,track,totalDist,twNorm]);
 
   const trajSegs=useMemo(()=>{
     if(!userTraj.length||!userRows.length)return [];
+    if(useOfficial&&officialSpd){
+      // colour the closed outline by speed-at-position (incl. closing segment)
+      return userTraj.map((pt,i)=>{
+        const nxt=userTraj[(i+1)%userTraj.length];
+        const [x1,y1]=sv(pt),[x2,y2]=sv(nxt);
+        return {x1,y1,x2,y2,c:spdClr(officialSpd[i]/maxSpd)};
+      });
+    }
     return userTraj.slice(0,-1).map((pt,i)=>{
       const frac=i/userTraj.length;
       const row=userRows[Math.min(Math.round(frac*userRows.length),userRows.length-1)];
       const [x1,y1]=sv(pt),[x2,y2]=sv(userTraj[i+1]);
       return {x1,y1,x2,y2,c:spdClr(row.speed/maxSpd)};
     });
-  },[userTraj,userRows,maxSpd]);
+  },[userTraj,userRows,maxSpd,useOfficial,officialSpd]);
 
   const gapRibbon=useMemo(()=>{
     if(!userTraj.length||!refTraj.length)return [];
@@ -163,6 +202,14 @@ export function LiveTrackMap({
   // Corner markers: from this lap's detected corners in derived mode, else from
   // stored circuit geometry. Unified shape so the label rendering is identical.
   const cornerMarkers=useMemo(()=>{
+    if(useOfficial&&official){
+      const L=official.lengthM;
+      return (segmentAnalyses??[]).filter(sa=>sa.segment.type==="corner").map(sa=>({
+        id:sa.segment.id, label:sa.segment.label, type:"medium",
+        lapFrac:(((((sa.segment.startDist+sa.segment.endDist)/2)%L)+L)%L)/L,
+        segId:sa.segment.id as string|undefined,
+      }));
+    }
     if(usingDerived){
       return (segmentAnalyses??[]).filter(sa=>sa.segment.type==="corner").map(sa=>({
         id:sa.segment.id, label:sa.segment.label, type:"medium",
@@ -173,7 +220,7 @@ export function LiveTrackMap({
     return (circuit?.corners??[]).map(c=>({
       id:c.id, label:c.label, type:c.type as string, lapFrac:c.lapFrac, segId:undefined as string|undefined,
     }));
-  },[usingDerived,segmentAnalyses,circuit,totalDist]);
+  },[useOfficial,official,usingDerived,segmentAnalyses,circuit,totalDist]);
 
   const ID=`ltm-${trackId}`;
 
@@ -250,8 +297,8 @@ export function LiveTrackMap({
         {trajSegs.map((s,i)=>(<line key={`ug${i}`} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={s.c} strokeWidth={9} strokeLinecap="round" opacity="0.1"/>))}
         {trajSegs.map((s,i)=>(<line key={`ul${i}`} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={s.c} strokeWidth={3.4} strokeLinecap="round" opacity="0.95"/>))}
 
-        {/* Start/finish */}
-        {track.length>2&&(()=>{
+        {/* Start/finish (skip for official outlines — outline start ≠ real S/F) */}
+        {!useOfficial&&track.length>2&&(()=>{
           const [x0,y0]=sv(track[0]),[x1,y1]=sv(track[1]);
           const dx=x1-x0,dy=y1-y0,len=Math.sqrt(dx*dx+dy*dy)||1,ext=tw*0.58;
           const px=-dy/len*ext,py=dx/len*ext;
@@ -300,7 +347,7 @@ export function LiveTrackMap({
           </g>);})}
       </g>
     );
-  },[track,trajSegs,refTraj,gapRibbon,circuit,cornerMarkers,vb,selectedSegmentId,segmentAnalyses,totalDist,n,tw,twNorm,ID,onCornerClick]);
+  },[track,trajSegs,refTraj,gapRibbon,circuit,cornerMarkers,vb,selectedSegmentId,segmentAnalyses,totalDist,n,tw,twNorm,ID,onCornerClick,useOfficial]);
 
   if(!track.length)return null;
   const vbStr=`${vb.x.toFixed(1)} ${vb.y.toFixed(1)} ${vb.w.toFixed(1)} ${vb.h.toFixed(1)}`;
@@ -380,10 +427,14 @@ export function LiveTrackMap({
       <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none">
         <div className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-pulse"/>
         <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-[0.16em]">
-          {usingDerived
+          {useOfficial
+            ? (official?.name ?? trackName ?? "Трасса")
+            : usingDerived
             ? (trackName ?? "Трасса")
             : <>{circuit?.countryEmoji&&`${circuit.countryEmoji} `}{circuit?.name??trackName??trackId.toUpperCase()}</>}</span>
-        {usingDerived
+        {useOfficial
+          ? <span className="text-[8px] font-mono text-zinc-700">{((official?.lengthM??0)/1000).toFixed(2)} km</span>
+          : usingDerived
           ? <span className="text-[8px] font-mono text-zinc-700">{(totalDist/1000).toFixed(2)} km · из телеметрии</span>
           : circuit?.lengthKm&&(<span className="text-[8px] font-mono text-zinc-700">{circuit.lengthKm} km</span>)}
       </div>
