@@ -26,15 +26,15 @@ export function HeroVisual() {
           width={3840}
           height={2160}
           alt=""
-          className="absolute inset-0 h-full w-full animate-hero-visual object-cover object-[64%_46%]"
+          className="absolute inset-0 h-full w-full animate-hero-kenburns object-cover object-[72%_44%]"
           fetchPriority="high"
           decoding="sync"
         />
       </picture>
 
-      {/* Readability only on the copy column — leave the car bright and sharp */}
-      <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-zinc-950/92 via-zinc-950/55 to-transparent sm:w-[72%] sm:via-zinc-950/40" />
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-zinc-950/70 to-transparent" />
+      {/* Readability on the copy column — car stays bright on the right */}
+      <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent sm:w-[68%] sm:from-zinc-950/95 sm:via-zinc-950/50" />
+      <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-zinc-950/80 to-transparent" />
     </div>
   );
 }
