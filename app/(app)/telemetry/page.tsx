@@ -1,5 +1,5 @@
 "use client";
-import { useCopy, useLang } from "../../../shared/i18n/react";
+import { useCopy } from "../../../shared/i18n/react";
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
