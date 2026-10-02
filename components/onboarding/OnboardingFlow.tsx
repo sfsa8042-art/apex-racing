@@ -27,8 +27,9 @@ export function OnboardingFlow() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const profile = loadProfile();
-    // Only show if no profile yet — once created, never show again
-    if (!profile) {
+    const skipped = localStorage.getItem(ONBOARDING_KEY) === "1";
+    // Show only when there is no profile and the user has not dismissed/skipped
+    if (!profile && !skipped) {
       setDismissed(false);
       setVisible(true);
       setStep(0);
@@ -36,7 +37,7 @@ export function OnboardingFlow() {
   }, []);
 
   const finish = () => {
-    localStorage.setItem(ONBOARDING_KEY, "1");
+    try { localStorage.setItem(ONBOARDING_KEY, "1"); } catch {}
     setVisible(false);
     setDismissed(true);
   };
