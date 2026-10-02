@@ -31,12 +31,12 @@ export const trackPhotos: Record<string, TrackPhoto[]> = {
       alt: { ru: "Первая шикана Autodromo Nazionale di Monza с триколорными поребриками", en: "First chicane at Autodromo Nazionale di Monza with tricolor kerbs" },
     },
     {
-      file: "monza-straight", angle: "stands",
-      author: "Andrea Volpato",
-      source: "https://commons.wikimedia.org/wiki/File:Blancpain_Gt_Series_Endurance_Cup_-_Autodromo_Nazionale_di_Monza_-_22-04-2018_(39883654680).jpg",
-      license: "CC BY-SA 2.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/2.0/",
-      caption: { ru: "Главная прямая · трибуны", en: "Main straight · grandstands" },
-      alt: { ru: "Вид на главную прямую Monza с трибун", en: "View of the Monza main straight from the grandstands" },
+      file: "monza-ascari", angle: "stands",
+      author: "Luca Barni",
+      source: "https://commons.wikimedia.org/wiki/File:Ingresso_variante_ascari_Monza.jpg",
+      license: "CC BY-SA 3.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0/",
+      caption: { ru: "Variante Ascari · трибуны", en: "Variante Ascari · grandstands" },
+      alt: { ru: "Вход в Variante Ascari на Monza с трибунами и мостом DHL", en: "Approach to Variante Ascari at Monza with grandstands and DHL bridge" },
     },
   ],
   spa: [

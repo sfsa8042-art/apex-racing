@@ -6,7 +6,7 @@ These photographs are licensed separately from the application. Catalog derivati
 | --- | --- | --- |
 | monza-aerial-* | [Autodromo Nazionale Monza SkySat](https://commons.wikimedia.org/wiki/File:Autodromo_Nazionale_Monza,_April_22,_2018_SkySat_(cropped).jpg), Planet Labs, Inc. | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
 | monza-chicane-* | [Autodromo Nazionale di Monza, first chicane](https://commons.wikimedia.org/wiki/File:Autodromo_Nazionale_di_Monza,_first_chicane_-_Flickr_-_crash71100.jpg), crash71100 | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| monza-straight-* | [Blancpain GT Monza 2018](https://commons.wikimedia.org/wiki/File:Blancpain_Gt_Series_Endurance_Cup_-_Autodromo_Nazionale_di_Monza_-_22-04-2018_(39883654680).jpg), Andrea Volpato | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/) |
+| monza-ascari-* | [Ingresso variante Ascari Monza](https://commons.wikimedia.org/wiki/File:Ingresso_variante_ascari_Monza.jpg), Luca Barni | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
 | spa-aerial-* | [Spa-Francorchamps SkySat](https://commons.wikimedia.org/wiki/File:Circuit_de_Spa-Francorchamps,_April_22,_2018_SkySat_(cropped).jpg), Planet Labs, Inc. | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
 | spa-raidillon-* | [Kurve Eau Rouge-Raidillon](https://commons.wikimedia.org/wiki/File:Kurve_Eau_Rouge-Raidillon.jpg), Cutkiller2018 | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
 | spa-stands-* | [2022 6 Hours of Spa - Eau Rouge stands](https://commons.wikimedia.org/wiki/File:2022_6_Hours_of_Spa-Francorchamps_-_Eau_Rouge_Corner_stands.jpg), United Autosports | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/) |
