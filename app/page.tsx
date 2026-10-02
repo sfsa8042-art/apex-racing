@@ -1,7 +1,7 @@
 "use client";
 
 import { useCopy } from "../shared/i18n/react";
-import { LanguageSwitch, useLang } from "@/context/LanguageContext";
+import { LanguageSwitch } from "@/context/LanguageContext";
 import Link from "next/link";
 import { ArrowRight, BarChart2, BookOpen, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -61,7 +61,6 @@ const PILLARS = [
 
 export default function LandingPage() {
   const copy = useCopy();
-  const { needsLanguageChoice, setLang } = useLang();
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -84,22 +83,6 @@ export default function LandingPage() {
             <p className="mt-3 max-w-md text-sm leading-relaxed text-zinc-400 sm:text-base">
               {copy("ui.309")}
             </p>
-
-            {needsLanguageChoice && (
-              <div className="mt-7 flex max-w-sm gap-2" role="group" aria-label="Language / Язык">
-                {(["ru", "en"] as const).map((code) => (
-                  <button
-                    key={code}
-                    type="button"
-                    lang={code}
-                    onClick={() => setLang(code)}
-                    className="flex-1 rounded-lg border border-white/15 bg-black/35 px-3 py-2.5 text-sm font-medium text-zinc-100 backdrop-blur-sm transition-colors hover:border-lime-400/50 hover:bg-lime-400/10 hover:text-lime-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"
-                  >
-                    {code === "ru" ? "Русский" : "English"}
-                  </button>
-                ))}
-              </div>
-            )}
 
             <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
               <Link href="/dashboard">
