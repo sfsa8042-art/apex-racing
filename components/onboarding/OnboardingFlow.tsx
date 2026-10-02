@@ -92,11 +92,11 @@ export function OnboardingFlow() {
               <div className="mt-5 space-y-3">
                 {[
                   { icon: Activity,  color: "text-lime-400", bg: "bg-lime-400/10",
-                    title: "Загружай телеметрию", desc: "CSV или JSON из любого симулятора" },
+                    title: "ui.548", desc: "ui.549" },
                   { icon: BarChart2, color: "text-zinc-300", bg: "bg-zinc-800",
-                    title: "Получай анализ", desc: "Дельта, тепловая карта, AI инженер" },
+                    title: "ui.550", desc: "ui.551" },
                   { icon: BookOpen,  color: "text-amber-400", bg: "bg-amber-400/10",
-                    title: "Учись через Академию", desc: "29+ уроков, привязанных к твоим ошибкам" },
+                    title: "ui.552", desc: "ui.553" },
                 ].map(({ icon: Icon, color, bg, title, desc }) => (
                   <div key={title} className="flex items-start gap-3 p-3 rounded-xl bg-zinc-800/50 border border-zinc-700/50">
                     <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", bg)}>

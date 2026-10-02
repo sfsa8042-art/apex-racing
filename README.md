@@ -1,6 +1,6 @@
 # APEX — Sim Racing Telemetry Platform
 
-AI-powered telemetry coaching for sim racers.
+Telemetry coaching for sim racers.
 
 ## Design system (web)
 
@@ -91,9 +91,7 @@ npm run tauri:build
 | `/academy` | 11 learning modules, 29+ lessons |
 | `/tracks` | 7 circuits (Monza, Spa, Silverstone, Nürburgring, Suzuka, Imola, Barcelona) |
 | `/cars` | GT3 car database with setup recommendations |
-| `/engineer` | AI Race Engineer (powered by Claude) |
 | `/sessions` | Uploaded session history |
 | `/profile` | Driver XP, levels, ranking |
 | `/api/download` | Redirect to latest .exe from GitHub Releases |
-| `/api/engineer` | AI coaching endpoint |
 | `/api/telemetry/upload` | Telemetry file upload endpoint |

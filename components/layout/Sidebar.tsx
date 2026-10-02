@@ -64,7 +64,7 @@ export function Sidebar() {
                 isActive ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50")}>
               <Icon size={15} className={cn("shrink-0 transition-colors", isActive ? "text-lime-400" : "text-zinc-500 group-hover:text-zinc-300")} />
               <span className="flex-1">{copy(label)}</span>
-              {badge && <span className={cn("text-[9px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border", badge === "AI" ? "bg-lime-400/10 text-lime-400 border-lime-400/25" : "bg-zinc-800 text-zinc-500 border-zinc-700")}>{copy(badge)}</span>}
+              {badge && <span className="rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-zinc-500">{copy(badge)}</span>}
               {isActive && <ChevronRight size={12} className="text-zinc-600" />}
             </Link>
           );

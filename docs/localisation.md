@@ -16,7 +16,7 @@ The source text remains a compatibility identifier, not an alternative visible l
 
 ## Requests
 
-API message responses use `localisedJson` and set `Content-Language`; data fields remain untouched. Language selection is explicit query, then cookie, then Accept-Language. Engineer POST requests additionally honour the body locale. AI prompts specify the output language, and changing language cancels in-flight replies. This does not guarantee an external model will always follow its prompt.
+API message responses use `localisedJson` and set `Content-Language`; data fields remain untouched. Language selection is explicit query, then cookie, then Accept-Language. Coaching API requests additionally honour the body locale. Changing language cancels in-flight replies.
 
 ## Verification
 

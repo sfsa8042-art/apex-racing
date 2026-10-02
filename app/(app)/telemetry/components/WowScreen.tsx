@@ -215,7 +215,7 @@ export function WowScreen({ summary, onDismiss, lapTimeStr, levelProgress, drive
               <Zap size={14} />
               {copy("ui.175")}<ArrowRight size={14} />
             </button>
-            <a href="/engineer"
+            <a href="/academy"
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-lime-400/30 bg-lime-400/8 hover:bg-lime-400/15 text-lime-400 text-sm transition-colors font-medium">
               {copy("ui.176")}</a>
           </div>

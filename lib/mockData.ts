@@ -151,7 +151,7 @@ export const mockModules: Module[] = [
     status: "locked", lessons: [],
   },
   {
-    id: "m16", number: 16, title: "Data Engineering",
+    id: "m16", number: 16, title: "Data Analysis",
     description: "Build custom channels, create filters, and analyze multi-lap data.",
     tier: "advanced", lessonsCount: 6, completedLessons: 0, durationMin: 75,
     status: "locked", lessons: [],

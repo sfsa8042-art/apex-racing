@@ -29,7 +29,7 @@ const fmtMs = (ms: number) =>
 
 type Ch = { id: string; label: string; color: string; unit: string;
   data: number[]; refData: number[]; min: number; max: number; };
-type RightTab = "plan"|"corner"|"segments"|"insights"|"engineer";
+type RightTab = "plan"|"corner"|"segments"|"insights";
 
 // ── Score Ring (animated on mount) ───────────────────────────────────────────
 function ScoreRing({ value, label, size = 52, animate = true }: {
@@ -359,169 +359,6 @@ function InsightCard({ ins, selected, onSelect, rank }: {
   );
 }
 
-// ── Engineer inline chat ──────────────────────────────────────────────────────
-function EngineerChat({ analysisResult, lapTimeStr, parsedLap, filename }: {
-  analysisResult: LapAnalysisResult; lapTimeStr: string;
-  parsedLap?: import("@/types/telemetry").ParsedLap | null;
-  filename?: string | null;
-}) {
-  const copy = useCopy();
-  const { lang } = useLang();
-  const [msgs, setMsgs] = useState<{role:"user"|"assistant";content:string}[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [briefingDone, setBriefingDone] = useState(false);
-  const chatRequest = useRef<AbortController | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef  = useRef<HTMLInputElement>(null);
-
-  const ctx = React.useMemo(() => {
-    const lines: string[] = [];
-    const tl = (filename ?? "").toLowerCase();
-    const det = detectTrack(filename);
-    const trackName = det.known ? det.name : "Unknown";
-    const carName = tl.includes("porsche") ? "Porsche 992 GT3" :
-      tl.includes("mercedes") ? "Mercedes AMG GT3" :
-      tl.includes("mclaren") ? "McLaren 720S GT3" :
-      tl.includes("ferrari") ? "Ferrari 296 GT3" :
-      tl.includes("audi") ? "Audi R8 LMS GT3" :
-      tl.includes("lamborghini") || tl.includes("huracan") ? "Lamborghini Huracán GT3" :
-      tl.includes("bmw") ? "BMW M4 GT3" :
-      tl.includes("aston") ? "Aston Martin V8 GT3" : "GT3";
-
-    lines.push(`TRACK: ${trackName.toUpperCase()} | CAR: ${carName.toUpperCase()}`);
-    const ms = parsedLap?.lapTimeMs ?? 0;
-    const lts = `${Math.floor(ms/60000)}:${String(Math.floor((ms%60000)/1000)).padStart(2,"0")}.${String(ms%1000).padStart(3,"0")}`;
-
-    if (analysisResult.hasReference) {
-      // Comparative context (REAL reference present)
-      const refMs = analysisResult.totalTimeDeltaMs > 0 ? ms - analysisResult.totalTimeDeltaMs : 0;
-      const refs = refMs > 0 ? `${Math.floor(refMs/60000)}:${String(Math.floor((refMs%60000)/1000)).padStart(2,"0")}.${String(refMs%1000).padStart(3,"0")}` : "—";
-      lines.push(`LAP: ${lts} | REF: ${refs} | GAP: +${(analysisResult.totalTimeDeltaMs/1000).toFixed(3)}s`);
-      lines.push(`SCORE: ${analysisResult.overallScore}/100`);
-      if (analysisResult.sectors.length > 0) {
-        lines.push("SECTORS: " + analysisResult.sectors.map(s =>
-          `S${s.sectorIdx+1}: ${(s.deltaMs>0?"+":"")}${(s.deltaMs/1000).toFixed(3)}s`).join(" | "));
-      }
-      const topInsights = analysisResult.segmentAnalyses
-        .flatMap(sa => sa.insights.filter(i => i.type !== "good_segment").map(i => ({
-          corner: sa.segment.label, type: i.type, costMs: i.timeCostMs, description: i.descriptionRu,
-        })))
-        .sort((a, b) => b.costMs - a.costMs).slice(0, 5);
-      lines.push("TOP ISSUES (vs reference):");
-      topInsights.forEach((ins,i) =>
-        lines.push(`  ${i+1}. [${ins.corner}] ${ins.type} — ${(ins.costMs/1000).toFixed(3)}s — ${ins.description.slice(0,80)}`));
-      if (analysisResult.optimalLap.potentialGainMs > 0)
-        lines.push(`POTENTIAL: -${(analysisResult.optimalLap.potentialGainMs/1000).toFixed(3)}s available`);
-    } else {
-      // Diagnostic context (NO reference — do NOT invent deltas/gap/potential)
-      lines.push(`LAP: ${lts} | NO REFERENCE LAP — diagnostic mode, do not invent time gaps or compare to a pro.`);
-      lines.push(`TECHNIQUE SCORE: ${analysisResult.overallScore}/100 (from input quality, not lap-time).`);
-      const d = analysisResult.diagnostics;
-      if (d) {
-        lines.push(`MEASURED: coasting ${d.coastingTotalS.toFixed(1)}s, throttle+brake overlap ${d.overlapTotalS.toFixed(1)}s, brake re-applications ${d.brakeStabs}, input smoothness ${d.smoothnessScore}/100.`);
-        lines.push("TECHNIQUE ISSUES (measured, no time cost — never fabricate seconds):");
-        d.diagnostics.slice(0, 6).forEach((x,i) =>
-          lines.push(`  ${i+1}. [${x.severity}] ${x.titleRu}${x.corner ? ` (${x.corner})` : ""} — ${x.metricRu} — ${x.descriptionRu.slice(0,70)}`));
-        if (!d.diagnostics.length) lines.push("  none — inputs are clean.");
-      }
-    }
-    return lines.join("\n");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analysisResult, lapTimeStr, parsedLap, filename]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    chatRequest.current?.abort();
-    setMsgs([]);
-    setLoading(false);
-    fetch(`/api/engineer?ctx=${encodeURIComponent(ctx)}&lang=${lang}`, { signal: controller.signal })
-      .then(r=>r.json())
-      .then(d=>{ if(!controller.signal.aborted && d.briefing) setMsgs([{ role:"assistant", content:d.briefing }]); })
-      .catch(()=>{});
-    return () => { controller.abort(); chatRequest.current?.abort(); };
-  }, [ctx, lang]);
-
-  const send = async (text: string) => {
-    if (!text.trim()||loading) return;
-    const history = [...msgs, { role:"user" as const, content:text }];
-    setMsgs(history); setInput(""); setLoading(true);
-    const controller = new AbortController();
-    chatRequest.current = controller;
-    try {
-      const r = await fetch("/api/engineer", {
-        signal: controller.signal,
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ contextSummary:ctx, message:text, history:msgs, personality:"calm", lang }),
-      });
-      const d = await r.json();
-      if (controller.signal.aborted) return;
-      if (d.reply) setMsgs([...history, { role:"assistant", content:d.reply }]);
-    } catch {}
-    if (controller.signal.aborted) return;
-    setLoading(false);
-    setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:"smooth"}), 50);
-  };
-
-  const QUICK = ["Где теряю больше всего?", "Как улучшить апекс?", "Советы по торможению", "Лучший поворот?"];
-
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        {msgs.map((m, i) => (
-          <div key={i} className={cn("flex gap-2.5", m.role==="user" ? "justify-end" : "justify-start")}>
-            {m.role==="assistant" && (
-              <div className="w-6 h-6 rounded-full bg-lime-400/12 border border-lime-400/25 flex items-center justify-center shrink-0 mt-1">
-                <Zap size={10} className="text-lime-400" />
-              </div>
-            )}
-            <div className={cn("max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[11px] leading-relaxed",
-              m.role==="user"
-                ? "bg-zinc-700/60 text-zinc-200 rounded-tr-sm border border-zinc-600/40"
-                : "bg-zinc-900/80 border border-zinc-800 text-zinc-300 rounded-tl-sm")}>
-              {m.content}
-            </div>
-          </div>
-        ))}
-        {loading && (
-          <div className="flex gap-2.5">
-            <div className="w-6 h-6 rounded-full bg-lime-400/12 border border-lime-400/25 flex items-center justify-center shrink-0">
-              <Zap size={10} className="text-lime-400" />
-            </div>
-            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl rounded-tl-sm px-3.5 py-2.5">
-              <div className="flex gap-1">
-                {[0,1,2].map(i=><div key={i} className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce" style={{animationDelay:`${i*120}ms`}}/>)}
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {msgs.length < 2 && (
-        <div className="px-3 pb-2 flex flex-wrap gap-1.5">
-          {QUICK.map(q => (
-            <button key={q} onClick={() => send(copy(q))}
-              className="text-[10px] font-mono px-2.5 py-1.5 rounded-xl border border-zinc-700/80 text-zinc-400 hover:border-lime-400/30 hover:text-lime-400 hover:bg-lime-400/5 transition-all">
-              {copy(q)}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="p-3 border-t border-zinc-800/60 flex gap-2">
-        <input ref={inputRef} value={input} onChange={e=>setInput(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&send(input)}
-          placeholder={copy("ui.201")}
-          className="flex-1 px-3.5 py-2.5 rounded-xl bg-zinc-900/80 border border-zinc-700/80 text-[11px] text-zinc-200 placeholder-zinc-600 outline-none focus:border-lime-400/40 transition-colors font-mono" />
-        <button onClick={()=>send(input)} disabled={!input.trim()||loading}
-          className="w-9 h-9 rounded-xl bg-lime-400 hover:bg-lime-300 text-zinc-950 flex items-center justify-center disabled:opacity-40 transition-all">
-          <ChevronRight size={15} />
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function TelemetryPage() {
@@ -825,7 +662,7 @@ export default function TelemetryPage() {
               {/* Tabs */}
               <div className="flex shrink-0 border-b border-zinc-800/60">
                 {([
-                  ["plan","План ✦"],["corner","Поворот"],["insights","Инсайты"],["segments","Участки"],["engineer","AI"],
+                  ["plan","План ✦"],["corner","Поворот"],["insights","Инсайты"],["segments","Участки"],
                 ] as const).map(([k,lbl]) => (
                   <button key={k} onClick={() => setRightTab(k)}
                     className={cn("flex-1 py-2.5 text-[10.5px] font-medium transition-colors relative",
@@ -948,10 +785,6 @@ export default function TelemetryPage() {
                     hasReference={analysisResult.hasReference}/>
                 )}
 
-                {rightTab==="engineer" && (
-                  <EngineerChat analysisResult={analysisResult} lapTimeStr={lapTimeStr}
-                    parsedLap={parsedLap} filename={filename}/>
-                )}
               </div>
             </div>
           </div>

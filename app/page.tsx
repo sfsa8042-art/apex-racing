@@ -141,9 +141,8 @@ export default function LandingPage() {
             {[
               { n: "01", t: "ui.327", d: "ui.328" },
               { n: "02", t: "ui.329", d: "ui.330" },
-              { n: "03", t: "ui.331", d: "ui.332" },
-              { n: "04", t: "ui.333", d: "ui.334" },
-              { n: "05", t: "ui.335", d: "ui.336" },
+              { n: "03", t: "ui.333", d: "ui.334" },
+              { n: "04", t: "ui.335", d: "ui.336" },
             ].map(({ n, t, d }, i) => (
               <Reveal key={n} delay={i * 70} className="flex items-start gap-5">
                 <span className="w-10 shrink-0 font-mono text-sm font-bold text-lime-400">{copy(n)}</span>

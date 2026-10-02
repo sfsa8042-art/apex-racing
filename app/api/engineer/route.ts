@@ -83,10 +83,10 @@ export async function POST(req: NextRequest) {
     const msg = err instanceof Error ? err.message : "Ошибка";
     console.error("[engineer POST]", msg);
     const userMsg = msg.includes("не задан")
-      ? "AI инженер не настроен. Добавь MISTRAL_API_KEY в Vercel."
+      ? "Анализ не настроен. Добавь MISTRAL_API_KEY в Vercel."
       : msg.includes("лимит")
       ? "Слишком много запросов — подожди минуту."
-      : "AI инженер временно недоступен.";
+      : "Анализ временно недоступен.";
     return localisedJson(req, { error: userMsg }, { status: 502 }, lang);
   }
 }
