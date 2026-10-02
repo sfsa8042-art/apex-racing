@@ -129,79 +129,61 @@ export function DownloadSection() {
   const { info, loading } = useRelease();
 
   return (
-    <section className="border-t border-zinc-800 bg-gradient-to-b from-zinc-900/50 to-zinc-950 py-20">
-      <div className="max-w-5xl mx-auto px-4">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          {/* Left */}
+    <section className="border-t border-zinc-800 py-20">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="grid items-start gap-12 md:grid-cols-2 md:items-center">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-lime-400/20 bg-lime-400/8 mb-5">
-              <span className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-pulse"/>
-              <span className="text-xs font-mono text-lime-400">{copy("ui.575")}</span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-4 leading-tight">
-              {copy("ui.576")}<br/>
+            <p className="apex-eyebrow">{copy("ui.575")}</p>
+            <h2 className="apex-section-title">
+              {copy("ui.576")}{" "}
               <span className="text-lime-400">{copy("ui.577")}</span>
             </h2>
-            <p className="text-zinc-400 leading-relaxed mb-6">
-              {copy("ui.578")}</p>
+            <p className="apex-intro">{copy("ui.578")}</p>
 
-            <ul className="space-y-3 mb-8">
+            <ul className="mt-8 space-y-3">
               {[
                 ["iRacing",                   "Documents\\iRacing\\telemetry"],
                 ["Assetto Corsa Competizione", "Documents\\ACC\\MoTeC"],
                 ["rFactor 2",                  "rFactor2\\UserData\\Log\\Results"],
               ].map(([sim, path]) => (
-                <li key={sim} className="flex items-start gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-lime-400 shrink-0 mt-2"/>
-                  <div>
-                    <span className="text-sm text-zinc-200 font-medium">{copy(sim)}</span>
-                    <span className="text-[11px] text-zinc-600 font-mono block">{copy(path)}</span>
-                  </div>
+                <li key={sim} className="border-t border-zinc-800 pt-3 first:border-t-0 first:pt-0">
+                  <span className="text-sm font-medium text-zinc-200">{copy(sim)}</span>
+                  <span className="mt-0.5 block font-mono text-[11px] text-zinc-600">{path}</span>
                 </li>
               ))}
             </ul>
 
-            {/* Download button */}
             <a href={DOWNLOAD_EXE}
               className={cn(
-                "group inline-flex items-center gap-3 px-6 py-3.5 rounded-xl font-semibold transition-all duration-150",
-                "bg-lime-400 hover:bg-lime-300 text-zinc-950 shadow-lg shadow-lime-400/20 hover:shadow-lime-400/30",
-                loading && "opacity-75 cursor-wait",
+                "mt-8 inline-flex items-center gap-3 rounded-lg bg-lime-400 px-6 py-3.5 font-semibold text-zinc-950 transition-colors duration-150 hover:bg-lime-300",
+                loading && "cursor-wait opacity-75",
               )}>
-              {loading ? <Loader2 size={18} className="animate-spin"/> : <Download size={18} className="group-hover:-translate-y-0.5 transition-transform"/>}
+              {loading ? <Loader2 size={18} className="animate-spin"/> : <Download size={18} />}
               {copy(loading ? "Загрузка…" : "Скачать для Windows")}
-              {info?.version && <span className="text-xs font-mono opacity-60">{info.version}</span>}
+              {info?.version && <span className="font-mono text-xs opacity-60">{info.version}</span>}
             </a>
 
-            <div className="flex items-center gap-3 mt-3 flex-wrap text-xs text-zinc-600 font-mono">
+            <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-xs text-zinc-600">
               <span className="flex items-center gap-1"><Shield size={10} className="text-zinc-500"/>{copy("ui.273")}</span>
-              {info?.exe && <span>{copy(fmt(info.exe.size))}</span>}
-              {info?.msi && <a href={DOWNLOAD_MSI} className="flex items-center gap-1 hover:text-zinc-400 transition-colors"><Download size={10}/>{copy("ui.580")}</a>}
-              <a href="/download" className="flex items-center gap-1 hover:text-zinc-400 transition-colors"><ExternalLink size={10}/>{copy("ui.572")}</a>
+              {info?.exe && <span>{fmt(info.exe.size)}</span>}
+              {info?.msi && <a href={DOWNLOAD_MSI} className="flex items-center gap-1 transition-colors hover:text-zinc-400"><Download size={10}/>{copy("ui.580")}</a>}
+              <a href="/download" className="flex items-center gap-1 transition-colors hover:text-zinc-400"><ExternalLink size={10}/>{copy("ui.572")}</a>
             </div>
           </div>
 
-          {/* Right — mock app window */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 overflow-hidden shadow-2xl shadow-black/50">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-950">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500/70"/>
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70"/>
-              <div className="w-2.5 h-2.5 rounded-full bg-lime-500/70"/>
-              <div className="flex items-center gap-2 ml-2">
-                <div className="w-5 h-5 rounded-md bg-lime-400 flex items-center justify-center">
-                  <span className="text-zinc-950 text-[9px] font-bold">{copy("ui.268")}</span>
-                </div>
-                <span className="text-xs font-mono text-zinc-500">{copy("ui.271")}</span>
+          {/* Product preview — flat panel, no fake OS chrome */}
+          <div className="overflow-hidden border border-zinc-800 bg-zinc-900/60">
+            <div className="flex items-center gap-2 border-b border-zinc-800 px-4 py-3">
+              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-lime-400">
+                <span className="text-[9px] font-bold text-zinc-950">{copy("ui.268")}</span>
               </div>
-              <div className="ml-auto flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-pulse"/>
-                <span className="text-[10px] font-mono text-lime-400">{copy("ui.581")}</span>
-              </div>
+              <span className="font-mono text-xs text-zinc-500">{copy("ui.271")}</span>
+              <span className="ml-auto font-mono text-[10px] text-lime-400">{copy("ui.581")}</span>
             </div>
-            <div className="p-4 space-y-3">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-800/50">
-                <Monitor size={13} className="text-lime-400 shrink-0"/>
-                <span className="text-[11px] font-mono text-zinc-400 truncate">
+            <div className="space-y-3 p-4">
+              <div className="flex items-center gap-2 border border-zinc-800 bg-zinc-950/50 px-3 py-2">
+                <Monitor size={13} className="shrink-0 text-lime-400"/>
+                <span className="truncate font-mono text-[11px] text-zinc-400">
                   {copy("ui.582")}</span>
               </div>
               <div className="space-y-2">
@@ -210,17 +192,17 @@ export function DownloadSection() {
                   { name: "monza_porsche_lap02.csv", status: "uploading", size: "191 KB", time: "" },
                   { name: "monza_porsche_lap03.csv", status: "pending",   size: "177 KB", time: "" },
                 ].map(item => (
-                  <div key={item.name} className="flex items-center gap-3 px-3 py-2 rounded-lg border border-zinc-800">
-                    <div className={cn("w-2 h-2 rounded-full shrink-0",
+                  <div key={item.name} className="flex items-center gap-3 border border-zinc-800 px-3 py-2">
+                    <div className={cn("h-2 w-2 shrink-0 rounded-full",
                       item.status === "done"      && "bg-lime-400",
-                      item.status === "uploading" && "bg-blue-400 animate-pulse",
+                      item.status === "uploading" && "bg-zinc-300",
                       item.status === "pending"   && "bg-zinc-600",
                     )}/>
-                    <span className="text-[11px] font-mono text-zinc-400 flex-1 truncate">{item.name}</span>
-                    <span className="text-[10px] font-mono text-zinc-600">{copy(item.size)}</span>
-                    <span className={cn("text-[10px] font-mono",
+                    <span className="flex-1 truncate font-mono text-[11px] text-zinc-400">{item.name}</span>
+                    <span className="font-mono text-[10px] text-zinc-600">{item.size}</span>
+                    <span className={cn("font-mono text-[10px]",
                       item.status === "done"      && "text-lime-400",
-                      item.status === "uploading" && "text-blue-400",
+                      item.status === "uploading" && "text-zinc-300",
                       item.status === "pending"   && "text-zinc-600",
                     )}>
                       {copy(item.status === "done" ? item.time : item.status === "uploading" ? "загрузка…" : "ожидание")}

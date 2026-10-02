@@ -5,7 +5,7 @@ import { LanguageSwitch } from "@/context/LanguageContext";
 import Link from "next/link";
 import { ArrowRight, BarChart2, BookOpen, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { DownloadButtonNavbar, DownloadSection, DownloadLink } from "@/components/ui/DownloadButton";
+import { DownloadSection, DownloadLink } from "@/components/ui/DownloadButton";
 import { HeroVisual } from "@/components/landing/HeroVisual";
 
 function NavBar() {
@@ -29,9 +29,8 @@ function NavBar() {
         </nav>
 
         <div className="flex-1" />
-        <div className="flex items-center gap-2">
-          <LanguageSwitch />
-          <div className="hidden lg:block"><DownloadButtonNavbar /></div>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <LanguageSwitch compact />
           <Link href="/dashboard">
             <Button variant="primary" size="sm">{copy("ui.305")}</Button>
           </Link>
@@ -44,18 +43,18 @@ function NavBar() {
 const PILLARS = [
   {
     icon: BarChart2,
-    title: "Дельта-время",
-    description: "Где теряешь время на каждом метре трассы — по дистанции, не по ощущениям.",
+    title: "ui.292",
+    description: "ui.293",
   },
   {
     icon: BookOpen,
-    title: "Академия",
-    description: "Урок под конкретную ошибку: объяснение, визуализация, упражнение, проверка.",
+    title: "ui.013",
+    description: "ui.296",
   },
   {
     icon: Monitor,
-    title: "Десктоп-клиент",
-    description: "После сессии телеметрия уходит в APEX автоматически. ACC, iRacing, rFactor 2.",
+    title: "ui.301",
+    description: "ui.302",
   },
 ];
 
@@ -80,10 +79,6 @@ export default function LandingPage() {
               {copy("ui.308")}
             </p>
 
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-zinc-400 sm:text-base">
-              {copy("ui.309")}
-            </p>
-
             <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
               <Link href="/dashboard">
                 <Button variant="primary" size="lg" className="w-full sm:w-auto">
@@ -97,7 +92,7 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            <p className="mt-5 font-mono text-[11px] tracking-wide text-zinc-500">
+            <p className="mt-5 font-mono text-[11px] tracking-wide text-zinc-400/90">
               {copy("ui.311")}
             </p>
           </div>

@@ -58,14 +58,27 @@ export function useCopy() {
   return useCallback(<T,>(value:T):T=>localiseText(value,lang),[lang]);
 }
 
-export function LanguageSwitch({ prominent = false }: { prominent?: boolean }) {
+export function LanguageSwitch({ prominent = false, compact = false }: { prominent?: boolean; compact?: boolean }) {
   const {lang,setLang}=useLang();
   return <div role="group" aria-label={lang==="ru"?"Язык интерфейса":"Interface language"}
-    className={`inline-flex shrink-0 gap-1 rounded-xl border p-1 ${prominent ? "w-full border-lime-400/40 bg-zinc-950 shadow-lg shadow-lime-400/5" : "border-zinc-700 bg-zinc-900"}`}>
+    className={`inline-flex shrink-0 gap-0.5 border ${
+      prominent
+        ? "w-full gap-1 rounded-xl border-lime-400/40 bg-zinc-950 p-1 shadow-lg shadow-lime-400/5"
+        : compact
+          ? "rounded-md border-white/15 bg-black/30 p-0.5 backdrop-blur-sm"
+          : "gap-1 rounded-xl border-zinc-700 bg-zinc-900 p-1"
+    }`}>
     {(["ru","en"] as const).map(code=><button key={code} type="button" lang={code}
       aria-pressed={lang===code} onClick={()=>setLang(code)}
-      className={`rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${prominent ? "min-h-11 flex-1 px-6 py-2.5 text-sm font-semibold" : "px-2 py-1 text-xs"} ${lang===code?"bg-lime-400 text-zinc-950":"text-zinc-200 hover:bg-zinc-800"}`}>
-      {code==="ru"?"Русский":"English"}
+      title={code==="ru"?"Русский":"English"}
+      className={`transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${
+        prominent
+          ? "min-h-11 flex-1 rounded-lg px-6 py-2.5 text-sm font-semibold"
+          : compact
+            ? "rounded px-2 py-1 font-mono text-[11px] font-medium tracking-wide"
+            : "rounded-lg px-2 py-1 text-xs"
+      } ${lang===code?"bg-lime-400 text-zinc-950": compact ? "text-zinc-300 hover:bg-white/10 hover:text-white" : "text-zinc-200 hover:bg-zinc-800"}`}>
+      {compact ? (code==="ru"?"RU":"EN") : (code==="ru"?"Русский":"English")}
     </button>)}
   </div>;
 }
