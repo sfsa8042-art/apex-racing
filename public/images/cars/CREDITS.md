@@ -1,6 +1,6 @@
 # Racing photographs
 
-These photographs are licensed separately from the application. Each responsive derivative (640, 1200 and 1800 px wide) is cropped to 16:9, resized and encoded as WebP. No generative alterations were made. The photographs remain under the licenses listed below; ShareAlike applies to the corresponding photo derivatives, not to unrelated application code.
+These photographs are licensed separately from the application. Catalog derivatives (640, 1200 and 1800 px wide) are cropped to 16:9, resized and encoded as WebP. Landing-hero derivatives in `/public/images/hero/` are high-quality re-encodes from the Wikimedia original (up to 3840 px, WebP q≈92 + JPEG fallback) without generative alterations. The photographs remain under the licenses listed below; ShareAlike applies to the corresponding photo derivatives, not to unrelated application code.
 
 | Files | Original work / photographer | License |
 | --- | --- | --- |
