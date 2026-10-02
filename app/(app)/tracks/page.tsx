@@ -7,6 +7,7 @@ import { mockTracks } from "@/lib/mockData";
 import { useLang, useCopy } from "@/context/LanguageContext";
 import { catalogCopy } from "@/lib/catalog/copy";
 import { CircuitDrawing, CountryFlag, sectorColors } from "@/components/catalog/CatalogVisuals";
+import { TrackGallery, TrackThumb } from "@/components/catalog/TrackGallery";
 import styles from "@/components/catalog/Catalog.module.css";
 import type { Track } from "@/types";
 
@@ -22,6 +23,7 @@ function TrackDetail({ track }: { track: Track }) {
         <div className={styles.meta}><CountryFlag code={track.countryCode}/>{copy(track.country)}<span aria-hidden="true">/</span><span>{c.difficulty}: {difficulty[track.difficulty]}</span></div>
         <h2 className={styles.heroTitle}>{track.name}</h2>
       </div>
+      <TrackGallery trackId={track.id} />
       <div className={styles.map}>
         <CircuitDrawing id={track.id} label={`${c.layout}: ${track.name}`} sector={sector}/>
         <div className={styles.mapCaption}><span>{c.schematic}</span><span>{sector ? `S${sector}` : c.fullLap}</span></div>
@@ -63,7 +65,7 @@ export default function TracksPage() {
         <label className={styles.search}><Search size={17} className="shrink-0"/><input type="search" value={query} onChange={e => setQuery(e.target.value)} aria-label={c.searchTracks} placeholder={c.searchTracks}/></label>
         <p className={styles.resultCount} role="status">{c.results}: {visible.length} / {mockTracks.length}</p>
         <div className={styles.list}>{visible.map(track => <button key={track.id} className={styles.choice} aria-pressed={selected.id === track.id} onClick={() => setSelected(track)}>
-          <div className={styles.mini}><CircuitDrawing id={track.id} label={track.name} mini/></div>
+          <TrackThumb trackId={track.id} />
           <div className={styles.choiceBody}><div className={styles.choiceTop}><span className="flex items-center gap-2"><CountryFlag code={track.countryCode}/>{copy(track.country)}</span>{selected.id === track.id && <Check size={15} className="text-lime-400" aria-label={c.selected}/>}</div><h2 className={styles.choiceName}>{track.name}</h2><div className={styles.choiceMeta}><span>{track.lengthKm} {c.km}</span><span>{c.corners}: {track.corners}</span></div></div>
         </button>)}</div>
         {!visible.length && <div className={styles.empty}><strong>{c.empty}</strong>{c.emptyHint}<button onClick={() => setQuery("")} className={styles.clear}>{c.clear}</button></div>}

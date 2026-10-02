@@ -1,7 +1,7 @@
 export const catalogCopy = {
   ru: {
     tracks: "Атлас трасс", cars: "Гараж GT3", library: "Подготовка к заезду",
-    trackIntro: "Изучи конфигурацию, найди ключевые связки и подготовься к следующему кругу.",
+    trackIntro: "Реальные фото с разных ракурсов, схема круга и ключевые связки — подготовься к следующей сессии.",
     carIntro: "Найди свой автомобиль. Разберись в его характере и выбери направление настройки.",
     searchTracks: "Найти трассу или страну", searchCars: "Найти марку или модель",
     results: "Найдено", empty: "Ничего не найдено", emptyHint: "Попробуй другое название или сбрось поиск.", clear: "Сбросить поиск",
@@ -22,7 +22,7 @@ export const catalogCopy = {
   },
   en: {
     tracks: "Circuit atlas", cars: "GT3 garage", library: "Prepare for your next stint",
-    trackIntro: "Explore the layout, learn the key sequences and prepare for your next lap.",
+    trackIntro: "Real photographs from multiple angles, the lap schematic and key sequences — prepare for your next session.",
     carIntro: "Find your car. Understand its character and choose a setup direction.",
     searchTracks: "Search circuits or countries", searchCars: "Search makes or models",
     results: "Found", empty: "No matches found", emptyHint: "Try another name or clear your search.", clear: "Clear search",
