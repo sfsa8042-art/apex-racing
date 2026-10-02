@@ -3,29 +3,29 @@
 import { useCopy } from "../shared/i18n/react";
 import { LanguageSwitch, useLang } from "@/context/LanguageContext";
 import Link from "next/link";
-import { ArrowRight, BarChart2, BookOpen, Languages, Monitor } from "lucide-react";
+import { ArrowRight, BarChart2, BookOpen, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { DownloadButtonHero, DownloadButtonNavbar, DownloadSection, DownloadLink } from "@/components/ui/DownloadButton";
+import { DownloadButtonNavbar, DownloadSection, DownloadLink } from "@/components/ui/DownloadButton";
 import { HeroVisual } from "@/components/landing/HeroVisual";
 
 function NavBar() {
   const copy = useCopy();
   return (
-    <nav className="sticky top-0 z-40 border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-3 sm:gap-6 sm:px-4">
-        <Link href="/" className="flex shrink-0 items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-lime-400">
-            <span className="text-xs font-bold text-zinc-950">{copy("ui.268")}</span>
+    <nav className="absolute inset-x-0 top-0 z-40">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-lime-400">
+            <span className="text-xs font-bold tracking-tight text-zinc-950">{copy("ui.268")}</span>
           </div>
-          <span className="hidden font-display text-sm font-semibold tracking-tight text-zinc-100 sm:inline">
+          <span className="font-display text-sm font-semibold tracking-wide text-zinc-50">
             {copy("ui.269")}
           </span>
         </Link>
 
-        <nav className="ml-4 hidden items-center gap-5 text-sm text-zinc-400 md:flex">
-          <a href="#features" className="transition-colors hover:text-zinc-200">{copy("ui.303")}</a>
-          <a href="#how-it-works" className="transition-colors hover:text-zinc-200">{copy("ui.304")}</a>
-          <a href="#download" className="transition-colors hover:text-zinc-200">{copy("ui.143")}</a>
+        <nav className="ml-6 hidden items-center gap-6 text-sm text-zinc-300/90 md:flex">
+          <a href="#features" className="transition-colors hover:text-white">{copy("ui.303")}</a>
+          <a href="#how-it-works" className="transition-colors hover:text-white">{copy("ui.304")}</a>
+          <a href="#download" className="transition-colors hover:text-white">{copy("ui.143")}</a>
         </nav>
 
         <div className="flex-1" />
@@ -67,72 +67,60 @@ export default function LandingPage() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <NavBar />
 
-      {needsLanguageChoice && (
-        <section aria-label="Язык / Language" className="relative z-20 mx-auto max-w-3xl px-4 pt-5 sm:pt-7">
-          <div className="relative overflow-hidden rounded-2xl border border-zinc-700/70 bg-gradient-to-br from-zinc-900 to-zinc-950 p-4 sm:p-5">
-            <div aria-hidden="true" className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-lime-400/60 to-transparent" />
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-lime-400/15 bg-lime-400/5 text-lime-400">
-                  <Languages size={20} aria-hidden="true" />
-                </div>
-                <div>
-                  <p lang="ru" className="text-sm font-medium text-zinc-100">На каком языке продолжим?</p>
-                  <p lang="en" className="mt-1 text-xs text-zinc-400">Choose your language to get started</p>
-                </div>
-              </div>
-              <div className="grid shrink-0 grid-cols-2 gap-2 sm:w-64">
+      {/* Hero — one composition: photo + brand + one line + CTAs */}
+      <section className="relative min-h-[100dvh] overflow-hidden">
+        <HeroVisual />
+
+        <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-6xl flex-col justify-end px-4 pb-16 pt-28 sm:justify-center sm:px-6 sm:pb-24 sm:pt-20">
+          <div className="max-w-xl animate-hero-rise">
+            <p className="font-display text-[clamp(4.25rem,14vw,7.5rem)] font-bold leading-[0.86] tracking-[-0.055em] text-white">
+              {copy("ui.269")}
+            </p>
+
+            <p className="mt-5 max-w-md text-lg leading-snug text-zinc-200 sm:text-xl">
+              {copy("ui.308")}
+            </p>
+
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-zinc-400 sm:text-base">
+              {copy("ui.309")}
+            </p>
+
+            {needsLanguageChoice && (
+              <div className="mt-7 flex max-w-sm gap-2" role="group" aria-label="Language / Язык">
                 {(["ru", "en"] as const).map((code) => (
                   <button
                     key={code}
                     type="button"
                     lang={code}
                     onClick={() => setLang(code)}
-                    className="group flex min-h-12 items-center justify-between gap-3 rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-sm font-medium text-zinc-100 transition-colors hover:border-lime-400/50 hover:bg-lime-400/10 hover:text-lime-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"
+                    className="flex-1 rounded-lg border border-white/15 bg-black/35 px-3 py-2.5 text-sm font-medium text-zinc-100 backdrop-blur-sm transition-colors hover:border-lime-400/50 hover:bg-lime-400/10 hover:text-lime-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"
                   >
                     {code === "ru" ? "Русский" : "English"}
-                    <ArrowRight size={14} aria-hidden="true" className="text-zinc-500 transition-colors group-hover:text-lime-400" />
                   </button>
                 ))}
               </div>
-            </div>
-          </div>
-        </section>
-      )}
+            )}
 
-      {/* Hero — brand first, one composition */}
-      <section className="relative min-h-[calc(100dvh-3.5rem)] overflow-hidden">
-        <HeroVisual />
-
-        <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-6xl flex-col justify-center px-4 pb-16 pt-16 sm:px-6 sm:pb-20 sm:pt-20">
-          <div className="max-w-xl animate-hero-rise">
-            <p className="font-display text-[clamp(3.5rem,12vw,6.5rem)] font-bold leading-[0.9] tracking-[-0.06em] text-zinc-50">
-              {copy("ui.269")}
-            </p>
-            <p className="mt-4 max-w-md font-display text-xl font-medium tracking-tight text-lime-400 sm:text-2xl">
-              {copy("ui.307")}
-            </p>
-            <p className="mt-4 max-w-md text-base leading-relaxed text-zinc-400 sm:text-lg">
-              {copy("ui.309")}
-            </p>
-
-            <div className="mt-9 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
               <Link href="/dashboard">
                 <Button variant="primary" size="lg" className="w-full sm:w-auto">
                   {copy("ui.310")} <ArrowRight size={16} />
                 </Button>
               </Link>
-              <DownloadButtonHero />
+              <Link href="/download">
+                <Button variant="outline" size="lg" className="w-full border-white/20 bg-black/25 text-zinc-100 backdrop-blur-sm hover:border-white/35 hover:bg-white/10 hover:text-white sm:w-auto">
+                  {copy("ui.143")}
+                </Button>
+              </Link>
             </div>
 
-            <p className="mt-5 font-mono text-xs text-zinc-600">
+            <p className="mt-5 font-mono text-[11px] tracking-wide text-zinc-500">
               {copy("ui.311")}
             </p>
           </div>
         </div>
       </section>
 
-      {/* Pillars — three jobs, no rainbow cards */}
       <section id="features" className="border-t border-zinc-800">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <p className="apex-eyebrow">{copy("ui.322")}</p>
@@ -141,10 +129,8 @@ export default function LandingPage() {
 
           <div className="mt-12 divide-y divide-zinc-800 border-y border-zinc-800">
             {PILLARS.map(({ icon: Icon, title, description }) => (
-              <div key={title} className="grid gap-4 py-8 sm:grid-cols-[48px_1fr] sm:gap-8">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-lime-400/20 bg-lime-400/5">
-                  <Icon size={20} className="text-lime-400" aria-hidden="true" />
-                </div>
+              <div key={title} className="grid gap-4 py-8 sm:grid-cols-[40px_1fr] sm:gap-6">
+                <Icon size={22} className="mt-0.5 text-lime-400" aria-hidden="true" />
                 <div>
                   <h3 className="font-display text-lg font-semibold tracking-tight text-zinc-100">{copy(title)}</h3>
                   <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">{copy(description)}</p>
@@ -155,7 +141,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How it works */}
       <section id="how-it-works" className="border-t border-zinc-800">
         <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
           <p className="apex-eyebrow text-center">{copy("ui.325")}</p>

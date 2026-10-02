@@ -6,7 +6,7 @@ import { loadProfile, getInitials, avatarColor } from "@/lib/profile/store";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, GraduationCap, Activity, MapPin, Car, ChevronRight, Layers, User, Download, Menu, X, Radio } from "lucide-react";
+import { LayoutDashboard, GraduationCap, Activity, MapPin, Car, ChevronRight, Layers, User, Download, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // NAV_ITEMS built inside component using t() for i18n
@@ -27,7 +27,6 @@ export function Sidebar() {
     { href: "/profile",    label: t.nav.profile,    icon: User },
     { href: "/tracks",     label: t.nav.tracks,     icon: MapPin },
     { href: "/cars",       label: t.nav.cars,       icon: Car },
-    { href: "/engineer",   label: t.nav.engineer,   icon: Radio },
     { href: "/download",   label: t.nav.download ?? "Скачать Desktop", icon: Download },
   ];
   return (
