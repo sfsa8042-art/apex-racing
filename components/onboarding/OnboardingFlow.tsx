@@ -26,6 +26,13 @@ export function OnboardingFlow() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("skipOnboarding") === "1") {
+      try { localStorage.setItem(ONBOARDING_KEY, "1"); } catch {}
+      setVisible(false);
+      setDismissed(true);
+      return;
+    }
     const profile = loadProfile();
     const skipped = localStorage.getItem(ONBOARDING_KEY) === "1";
     // Show only when there is no profile and the user has not dismissed/skipped
@@ -120,8 +127,8 @@ export function OnboardingFlow() {
           <>
             <div className="px-6 pt-6 pb-4">
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center">
-                  <User size={18} className="text-blue-400"/>
+                <div className="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                  <User size={18} className="text-lime-400"/>
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-zinc-100">{copy("ui.556")}</h2>
