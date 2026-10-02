@@ -72,7 +72,7 @@ export function OnboardingFlow() {
                 <div className="w-10 h-10 rounded-xl bg-lime-400 flex items-center justify-center">
                   <span className="text-zinc-950 text-sm font-black">{copy("ui.268")}</span>
                 </div>
-                <button onClick={finish} className="w-7 h-7 rounded-lg hover:bg-zinc-800 flex items-center justify-center text-zinc-500">
+                <button type="button" aria-label="Close" onClick={finish} className="w-7 h-7 rounded-lg hover:bg-zinc-800 flex items-center justify-center text-zinc-500">
                   <X size={14}/>
                 </button>
               </div>
@@ -85,9 +85,9 @@ export function OnboardingFlow() {
                 {[
                   { icon: Activity,  color: "text-lime-400", bg: "bg-lime-400/10",
                     title: "Загружай телеметрию", desc: "CSV или JSON из любого симулятора" },
-                  { icon: BarChart2, color: "text-blue-400", bg: "bg-blue-400/10",
+                  { icon: BarChart2, color: "text-zinc-300", bg: "bg-zinc-800",
                     title: "Получай анализ", desc: "Дельта, тепловая карта, AI инженер" },
-                  { icon: BookOpen,  color: "text-yellow-400", bg: "bg-yellow-400/10",
+                  { icon: BookOpen,  color: "text-amber-400", bg: "bg-amber-400/10",
                     title: "Учись через Академию", desc: "29+ уроков, привязанных к твоим ошибкам" },
                 ].map(({ icon: Icon, color, bg, title, desc }) => (
                   <div key={title} className="flex items-start gap-3 p-3 rounded-xl bg-zinc-800/50 border border-zinc-700/50">

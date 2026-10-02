@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { LevelBadge } from "@/components/ui/LevelBadge";
-import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { cn } from "@/lib/utils";
 import { loadHistory } from "@/lib/progress/tracker";
 import { computeStreak } from "@/lib/progress/streak";
@@ -84,8 +83,6 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 p-6 animate-fade-in sm:p-8">
-      <OnboardingFlow />
-
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="apex-eyebrow mb-2">{copy("ui.029")}</p>
