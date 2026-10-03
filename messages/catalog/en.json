@@ -1888,5 +1888,20 @@
   "polish.overlap": "Throttle and brake overlap",
   "polish.turn": "Turn 2 · 0.6 s of overlap in the sample lap",
   "polish.advice": "Release the brake before applying throttle, unless you are deliberately using left-foot braking to balance the car.",
-  "polish.explore": "Explore telemetry"
+  "polish.explore": "Explore telemetry",
+  "ux.next": "Next lesson",
+  "ux.start": "Start learning",
+  "ux.continue": "Continue learning",
+  "ux.review": "Review module",
+  "ux.windows": "Windows app",
+  "ux.local": "Local analyses",
+  "ux.progress": "Your progress",
+  "ux.history": "Local analysis history",
+  "ux.saved": "Saved uploads",
+  "ux.historyNote": "Analyses in this browser. Uploaded files are listed separately in Sessions.",
+  "ux.uploadsNote": "Files uploaded from the browser or desktop app. Local analysis history is shown on the dashboard.",
+  "ux.empty": "No saved uploads yet",
+  "ux.change": "Change selection",
+  "ux.close": "Close list",
+  "ux.trend": "Score change from first to latest local analysis"
 }

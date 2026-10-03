@@ -95,19 +95,20 @@ function LessonList({
   const copy = useCopy();
   const col  = MCOL[module.color] ?? MCOL.zinc;
   const done = getModuleCompletedCount(progress, module.id, module.lessons.length);
+  const nextLesson = module.lessons.find(lesson => !progress.completedLessons[module.id]?.includes(lesson.id)) ?? module.lessons[0];
   const pct  = module.lessons.length > 0 ? Math.round((done / module.lessons.length) * 100) : 0;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="mx-auto w-full max-w-4xl flex flex-col lg:min-h-full">
       {/* Module header */}
-      <div className={cn("px-5 py-5 border-b border-zinc-800", col.bg)}>
+      <div className={cn("m-4 rounded-2xl border border-zinc-800 p-5 sm:m-6 sm:p-8", col.bg)}>
         <div className="flex items-start gap-3 mb-4">
           <div className={cn("flex h-12 w-12 items-center justify-center rounded-xl border", col.bg, col.border)}>
             <ModuleIcon moduleId={module.id} size={22} className={col.text} />
           </div>
           <div>
             <p className={cn("text-xs font-mono uppercase tracking-widest mb-0.5", col.text)}>{copy(TIER_LABEL[module.tier])}</p>
-            <h2 className="text-xl font-bold text-zinc-100">{copy(module.title)}</h2>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">{copy(module.title)}</h2>
             <p className="text-sm text-zinc-400 mt-1 leading-relaxed">{copy(module.description)}</p>
           </div>
         </div>
@@ -118,8 +119,9 @@ function LessonList({
         </div>
       </div>
 
+      {nextLesson && <div className="px-5 pb-5 sm:px-8"><p className="mb-3 text-sm text-zinc-400">{copy("Next lesson")}: <span className="text-zinc-200">{copy(nextLesson.title)}</span></p><button onClick={() => onStart(nextLesson)} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-lime-400 px-5 py-3 text-sm font-semibold text-zinc-950 hover:bg-lime-300">{copy(done === module.lessons.length ? "Review module" : done > 0 ? "Continue learning" : "Start learning")}<ChevronRight size={16}/></button></div>}
       {/* Lessons */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="px-4 pb-6 sm:px-6 space-y-3">
         {module.lessons.map((lesson, i) => {
           const lessonDone = progress.completedLessons[module.id]?.includes(lesson.id) ?? false;
           const isNext = !lessonDone && (i === 0 || (progress.completedLessons[module.id]?.includes(module.lessons[i-1].id)));
@@ -344,7 +346,7 @@ export default function AcademyPage() {
       </div>
 
       {/* ─── RIGHT: lesson list or empty state ────────────────────────── */}
-      <div className="min-w-0 flex-1 flex flex-col lg:overflow-hidden bg-zinc-950">
+      <div className="min-w-0 flex-1 flex flex-col lg:overflow-y-auto bg-zinc-950">
         {selectedMod ? (
           <LessonList
             module={selectedMod}

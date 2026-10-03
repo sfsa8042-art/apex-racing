@@ -119,7 +119,7 @@ export function DownloadButtonNavbar({ className }: { className?: string }) {
         className,
       )}>
       {loading ? <Loader2 size={11} className="animate-spin"/> : <Download size={11}/>}
-      {loading ? "…" : <>{copy(info?.exe || info?.msi ? "Скачать" : "Desktop app")}{info?.version ? ` ${info.version}` : ""}</>}
+      {loading ? "…" : copy("Windows app")}
     </a>
   );
 }

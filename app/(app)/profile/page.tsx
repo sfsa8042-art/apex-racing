@@ -268,7 +268,7 @@ function StatsSection() {
             <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-1">{copy("ui.095")}</p>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-zinc-100">{copy(lp.level)}</span>
-              <span className="text-sm text-zinc-400 font-mono">{copy(lp.level)}</span>
+
             </div>
           </div>
           <div className="text-right">
@@ -304,13 +304,14 @@ function StatsSection() {
         ))}
       </div>
 
+      {history.length >= 2 && <p className="text-xs leading-relaxed text-zinc-400">{copy("Score change from first to latest local analysis")}: {new Date(history[history.length - 1].uploadedAt).toLocaleDateString(displayLang)} — {new Date(history[0].uploadedAt).toLocaleDateString(displayLang)}</p>}
       {/* Score sparkline */}
       {history.length >= 2 && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
           <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-3">
             {copy("ui.103")}</p>
           <div className="rounded-xl bg-zinc-950 border border-zinc-800 overflow-hidden">
-            <svg viewBox="0 0 500 80" className="w-full" style={{ height: 70 }}>
+            <svg viewBox="0 0 500 100" role="img" aria-label={copy("ui.103")} className="w-full" style={{ height: 140 }}>
               {(() => {
                 const scores = [...history].reverse().map(e => e.overallScore);
                 const min = Math.max(0, Math.min(...scores) - 5);
@@ -323,7 +324,9 @@ function StatsSection() {
                   <>
                     <path d={area} fill="rgba(163,230,53,0.07)"/>
                     <path d={d} fill="none" stroke="#a3e635" strokeWidth="2.5" strokeLinejoin="round"/>
-                    {scores.map((s, i) => <circle key={i} cx={toX(i)} cy={toY(s)} r="3" fill={i===scores.length-1?"#a3e635":"#18181b"} stroke="#a3e635" strokeWidth="1.5"/>)}
+                    {scores.map((s, i) => <circle key={i} cx={toX(i)} cy={toY(s)} r="3" fill={i===scores.length-1?"#a3e635":"#18181b"} stroke="#a3e635" strokeWidth="1.5"><title>{new Date([...history].reverse()[i].uploadedAt).toLocaleDateString(displayLang)}: {s}/100</title></circle>)}
+                    <text x="16" y="94" fill="#a1a1aa" fontSize="11">{new Date(history[history.length - 1].uploadedAt).toLocaleDateString(displayLang)} · {scores[0]}/100</text>
+                    <text x="484" y="94" textAnchor="end" fill="#a1a1aa" fontSize="11">{new Date(history[0].uploadedAt).toLocaleDateString(displayLang)} · {scores[scores.length - 1]}/100</text>
                   </>
                 );
               })()}

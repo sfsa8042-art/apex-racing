@@ -105,3 +105,13 @@
 .photoCaption a:focus-visible{outline:2px solid #bef264;outline-offset:3px}
 .photoEdit{font-size:10px}
 @media(max-width:767px){.carPhoto,.trackGallery{margin-top:20px}.photoCaption{padding:12px 16px;gap:5px 12px}.photoLocation{width:100%}.photoEdit{width:100%}.trackAngle{padding:8px;font-size:10px;gap:6px}}
+.mobilePicker{display:none}
+.map svg{height:190px}
+.carPhoto img,.trackGalleryMain img{max-height:360px;object-fit:cover}
+@media(max-width:767px){
+ .mobilePicker{display:flex;width:100%;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;min-height:52px;border:1px solid #3f3f46;border-radius:12px;text-align:left;background:#18181b;font-size:14px;color:#e4e4e7}
+ .mobilePicker span:last-child{color:#bef264;flex-shrink:0;font-size:12px}
+ .rail[data-collapsed="true"] .railContent{display:none}
+ .railContent{margin-top:16px}
+ .map svg{height:170px}
+}

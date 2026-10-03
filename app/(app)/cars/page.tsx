@@ -25,11 +25,11 @@ function CarDetail({ car }: { car: Car }) {
   return <article className={styles.detail} aria-label={`${car.manufacturer} ${car.name}`}>
     <div className={styles.hero}>
       <div className={styles.heroHeading}><div className={styles.meta}><span className="text-lime-300 font-medium">{car.manufacturer}</span><span aria-hidden="true">/</span><span>{car.class}</span><span aria-hidden="true">/</span><span>{drivetrain}</span></div><h2 className={styles.heroTitle}>{car.name}</h2><p className={styles.heroDescription}>{copy(car.description)}</p></div>
-      <CarPhoto carId={car.id}/>
       <dl className={`${styles.stats} ${styles.statsFour}`}>{[
         { label: c.power, value: car.powerHp, unit: c.hp }, { label: c.weight, value: car.weightKg, unit: c.kg },
         { label: c.speed, value: car.topSpeedKmh, unit: c.kmh }, { label: c.acceleration, value: car.acceleration0to100.toLocaleString(lang), unit: c.sec },
       ].map(stat => <div key={stat.label} className={styles.stat}><dt>{stat.label}</dt><dd>{stat.value}<small>{stat.unit}</small></dd></div>)}</dl>
+      <CarPhoto carId={car.id}/>
     </div>
     <p className={styles.notice}><Info size={16}/>{c.specNote}</p>
     <div className={styles.tabs} role="group" aria-label={c.car}>{(["overview", "setup", "trackSetup"] as const).map(item => <button key={item} className={styles.tab} aria-pressed={tab === item} onClick={() => setTab(item)}>{c[item]}</button>)}</div>
@@ -52,22 +52,27 @@ function CarDetail({ car }: { car: Car }) {
 }
 
 export default function CarsPage() {
+  const copy = useCopy();
   const { lang } = useLang();
   const c = catalogCopy[lang];
   const [selected, setSelected] = useState(mockCars[0]);
+  const [collapsed, setCollapsed] = useState(true);
   const [query, setQuery] = useState("");
   const visible = mockCars.filter(car => `${car.manufacturer} ${car.name}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   return <div className={styles.page}>
     <header className={styles.header}><div><p className={styles.eyebrow}>{c.library}</p><h1 className={styles.title}>{c.cars}</h1><p className={styles.intro}>{c.carIntro}</p></div><span className={styles.count}><strong>{mockCars.length.toString().padStart(2, "0")}</strong>GT3</span></header>
     <div className={styles.layout}>
-      <aside className={styles.rail} aria-label={c.cars}>
+      <aside data-collapsed={collapsed} className={styles.rail} aria-label={c.cars}>
+        <button className={styles.mobilePicker} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}><span>{selected.name}</span><span>{copy(collapsed ? "Change selection" : "Close list")}</span></button>
+        <div className={styles.railContent}>
         <label className={styles.search}><Search size={17} className="shrink-0"/><input type="search" aria-label={c.searchCars} placeholder={c.searchCars} value={query} onChange={e => setQuery(e.target.value)}/></label>
         <p className={styles.resultCount} role="status">{c.results}: {visible.length} / {mockCars.length}</p>
-        <div className={styles.list}>{visible.map(car => <button key={car.id} className={styles.choice} aria-pressed={selected.id === car.id} onClick={() => setSelected(car)}>
+        <div className={styles.list}>{visible.map(car => <button key={car.id} className={styles.choice} aria-pressed={selected.id === car.id} onClick={() => { setSelected(car); setCollapsed(true); }}>
           <CarPhoto carId={car.id} thumbnail/>
           <div className={styles.choiceBody}><div className={styles.choiceTop}><span>{car.manufacturer}</span>{selected.id === car.id ? <Check size={15} className="text-lime-400" aria-label={c.selected}/> : <span>GT3</span>}</div><h2 className={styles.choiceName}>{car.name}</h2><div className={styles.choiceMeta}><span>{car.powerHp} {c.hp}</span><span>{car.weightKg} {c.kg}</span></div></div>
         </button>)}</div>
         {!visible.length && <div className={styles.empty}><strong>{c.empty}</strong>{c.emptyHint}<button onClick={() => setQuery("")} className={styles.clear}>{c.clear}</button></div>}
+        </div>
       </aside>
       <CarDetail key={selected.id} car={selected}/>
     </div>

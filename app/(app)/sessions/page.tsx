@@ -239,9 +239,9 @@ export default function SessionsPage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-1">{copy("ui.132")}</p>
-          <h1 className="text-2xl font-semibold text-zinc-100">{copy("ui.133")}</h1>
+          <h1 className="text-2xl font-semibold text-zinc-100">{copy("Saved uploads")}</h1>
           <p className="text-sm text-zinc-500 mt-1">
-            {copy("ui.134")}</p>
+            {copy("Files uploaded from the browser or desktop app. Local analysis history is shown on the dashboard.")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={fetchSessions}>
@@ -265,7 +265,7 @@ export default function SessionsPage() {
           <div className="w-16 h-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto mb-4">
             <Activity size={28} className="text-zinc-600" />
           </div>
-          <p className="text-lg font-medium text-zinc-300 mb-2">{copy("ui.137")}</p>
+          <p className="text-lg font-medium text-zinc-300 mb-2">{copy("No saved uploads yet")}</p>
           <p className="text-sm text-zinc-500 mb-6 max-w-sm mx-auto">
             {copy("ui.138")}</p>
           <div className="flex items-center justify-center gap-3">

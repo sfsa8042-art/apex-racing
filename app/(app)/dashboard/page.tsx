@@ -94,7 +94,7 @@ export default function DashboardPage() {
               hasLap
                 ? coachMessage?.body
                 : history.length > 0
-                  ? t.dashboard.sessionsTotal.replace("{n}", String(history.length))
+                  ? `${copy("Local analyses")}: ${history.length}`
                   : t.dashboard.noLapYet,
             )}
           </p>
@@ -163,9 +163,9 @@ export default function DashboardPage() {
         <section>
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
-              <p className="apex-eyebrow mb-1">{copy("ui.041")}</p>
+              <p className="apex-eyebrow mb-1">{copy("Your progress")}</p>
               <h2 className="font-display text-lg font-semibold tracking-tight text-zinc-100">
-                {copy(hasLap ? uploadState.filename ?? "Latest lap" : "Recent sessions")}
+                {copy(hasLap ? uploadState.filename ?? "Latest lap" : "Latest lap")}
               </h2>
             </div>
             <Link href="/telemetry" className="font-mono text-[11px] text-zinc-400 transition-colors hover:text-lime-400">
@@ -177,7 +177,7 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 sm:grid-cols-4">
             <div className="bg-zinc-950 p-4">
-              <p className="font-mono text-xs uppercase tracking-widest text-zinc-400">{copy(t.dashboard.stats.bestLap)}</p>
+              <p className="font-mono text-xs uppercase tracking-widest text-zinc-400">{copy("Latest lap")}</p>
               <p className="mt-2 font-mono text-xl font-semibold tabular text-lime-400">
                 {copy(latestEntry ? fmtMs(latestEntry.lapTimeMs) : "—")}
               </p>
@@ -202,7 +202,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="bg-zinc-950 p-4">
-              <p className="font-mono text-xs uppercase tracking-widest text-zinc-400">{copy(t.dashboard.stats.totalLaps)}</p>
+              <p className="font-mono text-xs uppercase tracking-widest text-zinc-400">{copy("Local analyses")}</p>
               <p className="mt-2 font-mono text-xl font-semibold tabular text-zinc-100">{copy(history.length)}</p>
             </div>
           </div>
@@ -260,13 +260,14 @@ export default function DashboardPage() {
       {history.length > 0 && (
         <section>
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold tracking-tight text-zinc-100">{copy("ui.041")}</h2>
+            <h2 className="font-display text-lg font-semibold tracking-tight text-zinc-100">{copy("Local analysis history")}</h2>
             <Link href="/sessions">
               <Button variant="ghost" size="sm">
-                {copy("View all ")}<ArrowRight size={12} />
+                {copy("Saved uploads")}<ArrowRight size={12} />
               </Button>
             </Link>
           </div>
+          <p className="mb-4 text-sm leading-relaxed text-zinc-400">{copy("Analyses in this browser. Uploaded files are listed separately in Sessions.")}</p>
           <div>
             {history.slice(0, 3).map((entry) => (
               <SessionRow key={entry.id} entry={entry} />
