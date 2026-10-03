@@ -58,7 +58,7 @@ export default function DownloadPage() {
             <span className="text-sm font-semibold tracking-tight">{copy("ui.269")}</span>
           </Link>
           <div className="flex-1" />
-          <LanguageSwitch />
+          <LanguageSwitch compact />
           <Link href="/dashboard" className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors">
             {copy("ui.270")}</Link>
         </div>
@@ -80,12 +80,12 @@ export default function DownloadPage() {
           {/* Header */}
           <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
             <div>
-              <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-0.5">{copy("ui.273")}</p>
+              <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-0.5">{copy("ui.273")}</p>
               {loading && <div className="h-5 w-24 bg-zinc-800 rounded animate-pulse"/>}
               {info    && <p className="text-sm font-mono text-zinc-300">{copy(info.version)}</p>}
-              {error   && <p className="text-xs text-zinc-600 font-mono">{copy("ui.274")}</p>}
+              {error   && <p className="text-xs text-zinc-400 font-mono">{copy("ui.274")}</p>}
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-600">
+            <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400">
               <Shield size={11} className="text-lime-400/70"/>
               {copy("ui.275")}</div>
           </div>
@@ -94,7 +94,7 @@ export default function DownloadPage() {
           <div className="p-6 space-y-3">
             {/* EXE button */}
             {loading ? (
-              <div className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-zinc-800 text-zinc-600">
+              <div className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-zinc-800 text-zinc-400">
                 <Loader2 size={16} className="animate-spin"/>
                 <span className="text-sm">{copy("ui.276")}</span>
               </div>
@@ -102,7 +102,7 @@ export default function DownloadPage() {
               <div className="rounded-xl border border-yellow-400/25 bg-yellow-400/5 p-4 text-center">
                 <AlertCircle size={18} className="text-yellow-400 mx-auto mb-2"/>
                 <p className="text-sm text-zinc-300 mb-1">{copy("ui.277")}</p>
-                <p className="text-xs text-zinc-500 leading-relaxed">
+                <p className="text-xs text-zinc-400 leading-relaxed">
                   {copy("ui.278")}</p>
               </div>
             ) : (
@@ -112,7 +112,7 @@ export default function DownloadPage() {
                   "group flex items-center gap-3 w-full px-6 py-4 rounded-xl font-semibold text-base transition-all",
                   exeUrl
                     ? "bg-lime-400 hover:bg-lime-300 text-zinc-950 shadow-xl shadow-lime-400/20 hover:shadow-lime-400/30 hover:-translate-y-0.5"
-                    : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+                    : "bg-zinc-800 text-zinc-400 cursor-not-allowed"
                 )}
               >
                 <Download size={20} className={cn("shrink-0", exeUrl && "group-hover:-translate-y-0.5 transition-transform")}/>
@@ -134,25 +134,25 @@ export default function DownloadPage() {
                 <Download size={14} className="text-zinc-400 shrink-0"/>
                 <div className="flex-1 text-left">
                   <span className="text-zinc-300">{copy("ui.280")}</span>
-                  <span className="text-zinc-600 font-mono text-xs block">{info.msi.name} · {copy(fmt(info.msi.size))}</span>
+                  <span className="text-zinc-400 font-mono text-xs block">{info.msi.name} · {copy(fmt(info.msi.size))}</span>
                 </div>
-                <span className="text-xs text-zinc-600 font-mono">{copy("ui.281")}</span>
+                <span className="text-xs text-zinc-400 font-mono">{copy("ui.281")}</span>
               </a>
             )}
 
             {/* System requirements */}
-            <div className="flex items-center justify-center gap-4 text-xs text-zinc-600 font-mono pt-1">
-              <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-700"/>{copy("ui.282")}</span>
-              <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-700"/>{copy("ui.283")}</span>
-              <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-700"/>{copy("ui.284")}</span>
-              <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-700"/>{copy("ui.285")}</span>
+            <div className="flex items-center justify-center gap-4 text-xs text-zinc-400 font-mono pt-1">
+              <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-400"/>{copy("ui.282")}</span>
+              <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-400"/>{copy("ui.283")}</span>
+              <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-400"/>{copy("ui.284")}</span>
+              <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-400"/>{copy("ui.285")}</span>
             </div>
           </div>
         </div>
 
         {/* Steps */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 mb-8">
-          <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-5">{copy("ui.286")}</p>
+          <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-5">{copy("ui.286")}</p>
           <div className="space-y-4">
             {STEPS.map(step => (
               <div key={step.n} className="flex items-start gap-4">
@@ -161,7 +161,7 @@ export default function DownloadPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-zinc-200">{copy(step.title)}</p>
-                  <p className="text-xs text-zinc-500 font-mono mt-0.5">{copy(step.desc)}</p>
+                  <p className="text-xs text-zinc-400 font-mono mt-0.5">{copy(step.desc)}</p>
                 </div>
               </div>
             ))}
@@ -170,7 +170,7 @@ export default function DownloadPage() {
 
         {/* Supported sims */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 mb-8">
-          <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-4">{copy("ui.287")}</p>
+          <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-4">{copy("ui.287")}</p>
           <div className="space-y-3">
             {[
               { sim: "iRacing",                        path: "Documents\\iRacing\\telemetry",                          ext: ".ibt / .csv" },
@@ -182,8 +182,8 @@ export default function DownloadPage() {
                 <div className="w-1.5 h-1.5 rounded-full bg-lime-400/60 shrink-0 mt-2"/>
                 <div>
                   <p className="text-sm text-zinc-200 font-medium">{copy(sim)}</p>
-                  <p className="text-xs text-zinc-600 font-mono">{copy(path)}</p>
-                  <p className="text-xs text-zinc-700 font-mono">{copy(ext)}</p>
+                  <p className="text-xs text-zinc-400 font-mono">{copy(path)}</p>
+                  <p className="text-xs text-zinc-400 font-mono">{copy(ext)}</p>
                 </div>
               </div>
             ))}
@@ -191,7 +191,7 @@ export default function DownloadPage() {
         </div>
 
         {/* Footer links */}
-        <div className="flex items-center justify-center gap-6 text-xs text-zinc-600">
+        <div className="flex items-center justify-center gap-6 text-xs text-zinc-400">
           <a href={`https://github.com/${process.env.NEXT_PUBLIC_GITHUB_REPO ?? "sfsa8042-art/apex-racing"}/releases`}
             target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1.5 hover:text-zinc-400 transition-colors font-mono">

@@ -31,7 +31,7 @@ function PriorityCard({ priority }: { priority: CoachingPriority }) {
           <div className="flex items-start justify-between gap-2 mb-1">
             <p className="text-sm font-bold text-zinc-100 leading-tight">{copy(priority.title)}</p>
             <div className="shrink-0 text-right">
-              <p className="text-[9px] font-mono text-zinc-600 uppercase tracking-wider">{copy("ui.439")}</p>
+              <p className="text-xs font-mono text-zinc-400 uppercase tracking-wider">{copy("ui.439")}</p>
               <p className="text-sm font-mono font-bold tabular-nums" style={{ color: meta.color }}>
                 −{copy((priority.targetDeltaMs/1000).toFixed(3))}{copy("ui.106")}</p>
             </div>
@@ -40,9 +40,9 @@ function PriorityCard({ priority }: { priority: CoachingPriority }) {
           {/* Corners affected */}
           {priority.cornerLabels.length > 0 && (
             <div className="flex flex-wrap items-center gap-1 mb-2.5">
-              <span className="text-[9px] font-mono text-zinc-600 uppercase mr-1">{copy("ui.440")}</span>
+              <span className="text-xs font-mono text-zinc-400 uppercase mr-1">{copy("ui.440")}</span>
               {priority.cornerLabels.map((label, i) => (
-                <span key={i} className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                <span key={i} className="text-xs font-mono px-1.5 py-0.5 rounded"
                   style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
                   {copy(label)}
                 </span>
@@ -51,16 +51,19 @@ function PriorityCard({ priority }: { priority: CoachingPriority }) {
           )}
 
           {/* Step-by-step plan */}
+          <details open={priority.rank === 1}>
+            <summary className="cursor-pointer py-2 text-xs text-zinc-300">{copy("Action plan")}</summary>
           <div className="space-y-1.5">
             {priority.steps.map((step, i) => (
               <div key={i} className="flex items-start gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-900/60 border border-zinc-800/40">
                 <div className="w-3.5 h-3.5 rounded-full bg-zinc-800 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-[8px] font-mono text-zinc-500 font-bold">{copy(i+1)}</span>
+                  <span className="text-xs font-mono text-zinc-400 font-bold">{copy(i+1)}</span>
                 </div>
-                <p className="text-[10.5px] text-zinc-300 leading-relaxed">{copy(step)}</p>
+                <p className="text-xs text-zinc-300 leading-relaxed">{copy(step)}</p>
               </div>
             ))}
           </div>
+          </details>
         </div>
       </div>
     </div>
@@ -79,14 +82,14 @@ export function CoachingPlanPanel({ plan }: { plan: CoachingPlan }) {
           </div>
           <div>
             <p className="text-sm font-bold text-zinc-100">{copy("ui.441")}</p>
-            <p className="text-[10px] text-zinc-500">{copy("ui.442")}{copy(plan.priorities.length)} {copy(" фокус на улучшение")}</p>
+            <p className="text-xs text-zinc-400">{copy("ui.442")}{copy(plan.priorities.length)} {copy(" фокус на улучшение")}</p>
           </div>
         </div>
 
         {plan.estimatedGainMs > 0 && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-lime-400/8 border border-lime-400/20">
             <TrendingDown size={11} className="text-lime-400"/>
-            <p className="text-[11px] text-lime-300 flex-1">{copy(plan.focusMessage)}</p>
+            <p className="text-xs text-lime-300 flex-1">{copy(plan.focusMessage)}</p>
           </div>
         )}
       </div>
@@ -97,7 +100,7 @@ export function CoachingPlanPanel({ plan }: { plan: CoachingPlan }) {
           <CheckCircle2 size={28} className="text-lime-400"/>
           <div>
             <p className="text-sm font-semibold text-zinc-200">{copy("ui.444")}</p>
-            <p className="text-xs text-zinc-500 mt-1">{copy("ui.445")}</p>
+            <p className="text-xs text-zinc-400 mt-1">{copy("ui.445")}</p>
           </div>
         </div>
       ) : (

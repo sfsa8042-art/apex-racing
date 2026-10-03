@@ -62,7 +62,7 @@ function ScoreRing({ value, label, size = 52, animate = true }: {
           <span className="font-bold font-mono leading-none" style={{ fontSize: size * 0.22, color }}>{copy(value)}</span>
         </div>
       </div>
-      <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider">{copy(label)}</span>
+      <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">{copy(label)}</span>
     </div>
   );
 }
@@ -117,7 +117,7 @@ function DesktopUploads({ onFile }: { onFile:(f:File)=>void }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[11px] font-semibold text-lime-400 mb-0.5">{copy("ui.181")}</p>
-          <p className="text-[10px] text-zinc-400 font-mono truncate">{latest.filename}</p>
+          <p className="text-xs text-zinc-400 font-mono truncate">{latest.filename}</p>
         </div>
         <button onClick={() => open(latest)} disabled={loading === latest.id}
           className="px-3 py-1.5 rounded-lg bg-lime-400 hover:bg-lime-300 text-zinc-950 text-xs font-bold transition-all shrink-0 disabled:opacity-50">
@@ -125,7 +125,7 @@ function DesktopUploads({ onFile }: { onFile:(f:File)=>void }) {
         </button>
         {sessions.length > 1 && (
           <button onClick={() => setExpanded(v=>!v)}
-            className="text-[10px] font-mono text-zinc-500 hover:text-zinc-300 shrink-0">
+            className="text-xs font-mono text-zinc-400 hover:text-zinc-300 shrink-0">
             {copy(expanded ? "▲" : `+${sessions.length-1}`)}
           </button>
         )}
@@ -134,13 +134,13 @@ function DesktopUploads({ onFile }: { onFile:(f:File)=>void }) {
         <div className="border-t border-zinc-800 divide-y divide-zinc-800/50 max-h-48 overflow-y-auto">
           {sessions.map((s, i) => (
             <div key={s.id} className="flex items-center gap-3 px-4 py-2 hover:bg-zinc-800/30 transition-colors">
-              <span className="text-[10px] font-mono text-zinc-700 w-4 shrink-0">{copy(i+1)}</span>
+              <span className="text-xs font-mono text-zinc-400 w-4 shrink-0">{copy(i+1)}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-mono text-zinc-300 truncate">{s.filename}</p>
-                <p className="text-[10px] text-zinc-600">{copy(age(s.uploadedAt))} {copy(" назад")}</p>
+                <p className="text-xs text-zinc-400">{copy(age(s.uploadedAt))} {copy(" назад")}</p>
               </div>
               <button onClick={() => open(s)} disabled={loading===s.id}
-                className="text-[10px] px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/80 disabled:opacity-50 transition-all shrink-0">
+                className="text-xs px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/80 disabled:opacity-50 transition-all shrink-0">
                 {copy(loading===s.id ? "…" : "Открыть")}
               </button>
             </div>
@@ -204,9 +204,9 @@ function IdleState({ onFile, onSample }: { onFile:(f:File)=>void; onSample:()=>v
           <p className="text-base font-semibold text-zinc-200">
             {copy(dragging ? "Отпусти файл здесь" : "Перетащи файл или нажми здесь")}
           </p>
-          <p className="text-sm text-zinc-500">{copy("ui.186")}</p>
+          <p className="text-sm text-zinc-400">{copy("ui.186")}</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-zinc-600 pointer-events-none">
+        <div className="flex items-center gap-2 text-xs text-zinc-400 pointer-events-none">
           {["iRacing", "ACC", "MoTeC", "rFactor 2"].map((s, i) => (
             <React.Fragment key={s}>
               {i > 0 && <span className="text-zinc-800">·</span>}
@@ -253,8 +253,8 @@ function ProcessingState({ status }: { status: string }) {
                 ? "bg-zinc-900 border border-zinc-700"
                 : steps.findIndex(s=>s.id===status) > steps.findIndex(s=>s.id===id)
                   ? "opacity-40" : "opacity-20")}>
-              <Icon size={14} className={status===id ? "text-lime-400" : "text-zinc-500"} />
-              <span className={cn("text-sm font-mono", status===id ? "text-zinc-200" : "text-zinc-500")}>
+              <Icon size={14} className={status===id ? "text-lime-400" : "text-zinc-400"} />
+              <span className={cn("text-sm font-mono", status===id ? "text-zinc-200" : "text-zinc-400")}>
                 {copy(label)}
               </span>
               {status===id && (
@@ -304,19 +304,19 @@ function InsightCard({ ins, selected, onSelect, rank }: {
           {/* Rank */}
           <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5"
             style={{ background: cat.bg, border: `1px solid ${cat.border}` }}>
-            <span className="text-[9px] font-bold font-mono" style={{ color: cat.color }}>{copy(rank)}</span>
+            <span className="text-xs font-bold font-mono" style={{ color: cat.color }}>{copy(rank)}</span>
           </div>
 
           <div className="flex-1 min-w-0 space-y-1">
             {/* Header */}
             <div className="flex items-center gap-2">
-              <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-600">
+              <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
                 {copy(ins._segLabel ?? "")}
               </span>
-              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+              <span className="text-xs font-mono px-1.5 py-0.5 rounded"
                 style={{ background: cat.bg, color: cat.color }}>{copy(cat.label)}</span>
               {ins.timeCostMs > 0 && (
-                <span className="text-[10px] font-mono font-bold ml-auto shrink-0"
+                <span className="text-xs font-mono font-bold ml-auto shrink-0"
                   style={{ color: cat.color }}>−{copy(costS)}{copy("ui.106")}</span>
               )}
             </div>
@@ -341,15 +341,15 @@ function InsightCard({ ins, selected, onSelect, rank }: {
           <div className="mt-3 ml-8 space-y-2">
             <p className="text-[11px] text-zinc-300 leading-relaxed">{copy(ins.descriptionRu)}</p>
             {ins.academyModuleTitleRu && (
-              <div className="flex items-center gap-1.5 text-[10px] font-mono text-lime-400/80">
+              <div className="flex items-center gap-1.5 text-xs font-mono text-lime-400/80">
                 <ArrowRight size={9} />
                 <span>{copy("Академия: ")}{copy(ins.academyModuleTitleRu)}</span>
               </div>
             )}
             {ins.userValue !== undefined && ins.refValue !== undefined && (
-              <div className="flex items-center gap-4 text-[10px] font-mono">
-                <span className="text-zinc-500">{copy("Вы: ")}<span className="text-zinc-200">{copy(ins.userValue)} {copy(ins.unit)}</span></span>
-                <span className="text-zinc-500">{copy("Ref: ")}<span className="text-lime-400">{copy(ins.refValue)} {copy(ins.unit)}</span></span>
+              <div className="flex items-center gap-4 text-xs font-mono">
+                <span className="text-zinc-400">{copy("Вы: ")}<span className="text-zinc-200">{copy(ins.userValue)} {copy(ins.unit)}</span></span>
+                <span className="text-zinc-400">{copy("Ref: ")}<span className="text-lime-400">{copy(ins.refValue)} {copy(ins.unit)}</span></span>
               </div>
             )}
           </div>
@@ -369,6 +369,7 @@ export default function TelemetryPage() {
   } = useTelemetry();
   const { status, error, filename, parsedLap, analysisResult } = uploadState;
 
+  const [mobileView, setMobileView] = useState("overview");
   const [visibleCh, setVisibleCh] = useState(["speed","throttle","brake","delta"]);
   const [rightTab,  setRightTab]  = useState<RightTab>("plan");
   const [selIns,    setSelIns]    = useState<(AnalysisInsight&{_segLabel?:string})|null>(null);
@@ -406,7 +407,7 @@ export default function TelemetryPage() {
     .filter(i=>i.type!=="good_segment") ?? []) as any[];
 
   return (
-    <div className="h-full flex flex-col bg-zinc-950 overflow-hidden">
+    <div className="telemetry-workspace h-full flex flex-col bg-zinc-950 overflow-hidden" data-view={mobileView}>
 
       {showWow && wowSummary && (
         <WowScreen summary={wowSummary} onDismiss={dismissWow}
@@ -414,10 +415,10 @@ export default function TelemetryPage() {
       )}
 
       {/* ── NAV BAR ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 px-5 h-10 border-b border-zinc-800/70 shrink-0 bg-zinc-950/95 backdrop-blur-sm">
+      <div className="telemetry-toolbar flex items-center gap-3 px-5 min-h-10 border-b border-zinc-800/70 shrink-0 bg-zinc-950/95 backdrop-blur-sm">
         <div className="flex items-center gap-2">
-          <Activity size={12} className="text-zinc-600" />
-          <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">{copy("ui.202")}</span>
+          <Activity size={12} className="text-zinc-400" />
+          <span className="text-xs font-mono text-zinc-400 uppercase tracking-widest">{copy("ui.202")}</span>
         </div>
 
         {status === "done" && filename && (
@@ -425,7 +426,7 @@ export default function TelemetryPage() {
             <div className="text-zinc-800">/</div>
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-zinc-800/60 border border-zinc-700/50">
               <div className="w-1 h-1 rounded-full bg-lime-400" />
-              <span className="text-[10px] font-mono text-zinc-300 max-w-[220px] truncate">{filename}</span>
+              <span className="text-xs font-mono text-zinc-300 max-w-[220px] truncate">{filename}</span>
             </div>
           </>
         )}
@@ -436,7 +437,7 @@ export default function TelemetryPage() {
           <>
 
             <button onClick={reset}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60 transition-all border border-transparent hover:border-zinc-700/60">
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/60 transition-all border border-transparent hover:border-zinc-700/60">
               <RefreshCw size={10}/> {copy(" Сброс")}</button>
           </>
         )}
@@ -473,24 +474,24 @@ export default function TelemetryPage() {
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
 
           {/* ── METRICS BAR ──────────────────────────────────────────────────── */}
-          <div className="flex items-center shrink-0 border-b border-zinc-800/60 bg-zinc-950/95 backdrop-blur-sm overflow-x-auto">
+          <div className="telemetry-metrics flex items-center shrink-0 border-b border-zinc-800/60 bg-zinc-950/95 backdrop-blur-sm overflow-x-auto">
 
             {/* Lap times */}
             <div className="flex items-stretch border-r border-zinc-800/60 shrink-0">
               <div className="px-4 py-2.5 border-r border-zinc-800/40">
-                <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.15em] mb-0.5">{copy("ui.160")}</p>
+                <p className="text-[8px] font-mono text-zinc-400 uppercase tracking-[0.15em] mb-0.5">{copy("ui.160")}</p>
                 <p className="font-mono font-bold tabular-nums leading-none text-lg text-lime-400">{copy(lapTimeStr)}</p>
               </div>
               {analysisResult.hasReference ? (
                 <>
                   <div className="px-4 py-2.5 border-r border-zinc-800/40">
-                    <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.15em] mb-0.5">
+                    <p className="text-[8px] font-mono text-zinc-400 uppercase tracking-[0.15em] mb-0.5">
                       {copy(analysisResult.referenceSource === "personal" ? "Ваш лучший" : "Эталон")}
                     </p>
                     <p className="font-mono font-bold tabular-nums leading-none text-base text-zinc-400">{copy(refTimeStr)}</p>
                   </div>
                   <div className="px-4 py-2.5">
-                    <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.15em] mb-0.5">{copy("ui.122")}</p>
+                    <p className="text-[8px] font-mono text-zinc-400 uppercase tracking-[0.15em] mb-0.5">{copy("ui.122")}</p>
                     <p className={cn("font-mono font-bold tabular-nums leading-none text-lg",
                       gapMs>0 ? "text-red-400" : "text-lime-400")}>
                       {copy(gapMs>0?"+":"")}{copy((gapMs/1000).toFixed(3))}{copy("ui.106")}</p>
@@ -499,8 +500,8 @@ export default function TelemetryPage() {
               ) : (
                 <div className="px-4 py-2.5 flex items-center">
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/50 border border-zinc-700/50">
-                    <Gauge size={10} className="text-zinc-500"/>
-                    <span className="text-[9px] font-mono text-zinc-400">{copy("ui.208")}</span>
+                    <Gauge size={10} className="text-zinc-400"/>
+                    <span className="text-xs font-mono text-zinc-400">{copy("ui.208")}</span>
                   </div>
                 </div>
               )}
@@ -511,13 +512,13 @@ export default function TelemetryPage() {
               <div className="flex items-stretch border-r border-zinc-800/60 shrink-0">
                 {analysisResult.sectors.map(s => (
                   <div key={s.sectorIdx} className="px-3.5 py-2.5 border-r border-zinc-800/40 last:border-r-0">
-                    <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.15em] mb-0.5">{copy("ui.209")}{copy(s.sectorIdx+1)}</p>
+                    <p className="text-[8px] font-mono text-zinc-400 uppercase tracking-[0.15em] mb-0.5">{copy("ui.209")}{copy(s.sectorIdx+1)}</p>
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-xs font-mono tabular-nums text-zinc-200">
                         {copy((s.userTimeMs/1000).toFixed(3))}
                       </span>
                       {analysisResult.hasReference && (
-                        <span className={cn("text-[9px] font-mono tabular-nums",
+                        <span className={cn("text-xs font-mono tabular-nums",
                           s.deltaMs>0 ? "text-red-400" : "text-lime-400")}>
                           {copy(s.deltaMs>0?"+":"")}{copy((s.deltaMs/1000).toFixed(3))}
                         </span>
@@ -549,9 +550,9 @@ export default function TelemetryPage() {
                 { lbl:"BRAKES",  val:`${parsedLap.channelStats.brakingEvents.length}`,   unit:"", c:"text-red-400" },
               ].map(({lbl,val,unit,c}) => (
                 <div key={lbl}>
-                  <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.15em] mb-0.5">{copy(lbl)}</p>
+                  <p className="text-[8px] font-mono text-zinc-400 uppercase tracking-[0.15em] mb-0.5">{copy(lbl)}</p>
                   <p className={cn("text-sm font-mono font-bold leading-none tabular-nums",c)}>
-                    {copy(val)}<span className="text-[9px] text-zinc-600 ml-0.5">{copy(unit)}</span>
+                    {copy(val)}<span className="text-xs text-zinc-400 ml-0.5">{copy(unit)}</span>
                   </p>
                 </div>
               ))}
@@ -559,7 +560,7 @@ export default function TelemetryPage() {
                 <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-xl border border-lime-400/20 bg-lime-400/5 shrink-0">
                   <Zap size={11} className="text-lime-400"/>
                   <div>
-                    <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.15em]">{copy("ui.163")}</p>
+                    <p className="text-[8px] font-mono text-zinc-400 uppercase tracking-[0.15em]">{copy("ui.163")}</p>
                     <p className="text-sm font-mono font-bold text-lime-400 leading-none">
                       −{copy((analysisResult.optimalLap.potentialGainMs/1000).toFixed(3))}{copy("ui.106")}</p>
                   </div>
@@ -573,14 +574,19 @@ export default function TelemetryPage() {
             <CursorHud userLap={parsedLap} refLap={refLap} cursorProgress={cursorProg}/>
           )}
 
+          <div className="telemetry-view-switch" role="group" aria-label={copy("Workspace view")}>
+            {[["overview", "Overview"], ["charts", "Charts"], ["map", "Track map"], ["analysis", "Analysis"]].map(([id, label]) => (
+              <button key={id} type="button" aria-pressed={mobileView === id} onClick={() => setMobileView(id)}>{copy(label)}</button>
+            ))}
+          </div>
           {/* ── MAIN AREA: charts left, analysis right ──────────────────────── */}
-          <div className="flex-1 min-h-0 flex overflow-hidden">
+          <div className="telemetry-panels flex-1 min-h-0 flex overflow-hidden">
 
             {/* LEFT: Map + Charts */}
-            <div className="flex-1 min-w-0 flex flex-col overflow-y-auto border-r border-zinc-800/60">
+            <div className="telemetry-visuals flex-1 min-w-0 flex flex-col overflow-y-auto border-r border-zinc-800/60">
 
               {/* Track map */}
-              <div className="shrink-0 border-b border-zinc-800/50" style={{ height: 280 }}>
+              <div className="telemetry-map shrink-0 border-b border-zinc-800/50" style={{ height: 280 }}>
                 <LiveTrackMap
                   trackId={detectedTrackId}
                   trackName={detectedTrackName}
@@ -592,26 +598,28 @@ export default function TelemetryPage() {
                   onCornerClick={(segmentId) => {
                     setSelectedCorner(segmentId);
                     setRightTab("corner");
+                    setMobileView("analysis");
                   }}
                   selectedSegmentId={selectedCorner}
                   className="w-full h-full"
                 />
               </div>
 
+              <div className="telemetry-charts min-w-0">
               {/* Channel toggles */}
               <div className="flex items-center gap-1 px-4 py-2 border-b border-zinc-800/50 shrink-0 bg-zinc-950 flex-wrap">
                 {channels.map(ch => (
-                  <button key={ch.id} onClick={() => toggleCh(ch.id)}
-                    className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] border transition-all font-mono",
+                  <button key={ch.id} aria-pressed={visibleCh.includes(ch.id)} onClick={() => toggleCh(ch.id)}
+                    className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border transition-all font-mono",
                       visibleCh.includes(ch.id)
                         ? "bg-zinc-800 border-zinc-600/70 text-zinc-200"
-                        : "border-zinc-800/80 text-zinc-600 hover:border-zinc-700")}>
+                        : "border-zinc-800/80 text-zinc-400 hover:border-zinc-700")}>
                     <div className="w-1.5 h-1.5 rounded-full"
                       style={{ background: visibleCh.includes(ch.id) ? ch.color : "#52525b" }}/>
                     {copy(ch.id.toUpperCase())}
                   </button>
                 ))}
-                <span className="ml-auto text-[9px] font-mono text-zinc-700 uppercase tracking-wider">{copy("ui.214")}</span>
+                <span className="ml-auto text-xs font-mono text-zinc-400 uppercase tracking-wider">{copy("ui.214")}</span>
               </div>
 
               {/* Main multi-channel chart */}
@@ -626,8 +634,8 @@ export default function TelemetryPage() {
                 <div className="border-t border-zinc-800/50 shrink-0">
                   <div className="flex items-center gap-2 px-4 py-1.5 bg-zinc-950/80">
                     <BarChart2 size={9} className="text-blue-400"/>
-                    <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">{copy("ui.215")}</span>
-                    <div className="ml-auto flex items-center gap-3 text-[9px] font-mono">
+                    <span className="text-xs font-mono text-zinc-400 uppercase tracking-widest">{copy("ui.215")}</span>
+                    <div className="ml-auto flex items-center gap-3 text-xs font-mono">
                       <span className="text-red-400 flex items-center gap-1"><TrendingDown size={8}/>{copy("ui.216")}</span>
                       <span className="text-lime-400 flex items-center gap-1"><TrendingUp size={8}/>{copy("ui.217")}</span>
                     </div>
@@ -639,25 +647,29 @@ export default function TelemetryPage() {
 
               {/* Per-channel mini grids — 2 columns */}
               {channels.filter(ch => visibleCh.includes(ch.id) && ch.id !== "delta").length > 0 && (
-                <div className="grid grid-cols-2 gap-px bg-zinc-800/30 border-t border-zinc-800/50">
+                <details className="border-t border-zinc-800/50">
+                  <summary className="cursor-pointer px-4 py-3 text-sm text-zinc-300 hover:text-lime-300">{copy("Individual channels")}</summary>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-zinc-800/30">
                   {channels.filter(ch => visibleCh.includes(ch.id) && ch.id !== "delta").map(ch => (
                     <div key={ch.id} className="bg-zinc-950">
                       <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-zinc-800/40">
                         <div className="w-1.5 h-1.5 rounded-full" style={{ background: ch.color }}/>
-                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider"
+                        <span className="text-xs font-mono font-bold uppercase tracking-wider"
                           style={{ color: ch.color }}>{copy(ch.label)}</span>
-                        <span className="text-[9px] font-mono text-zinc-600 ml-auto">{copy(ch.unit)}</span>
+                        <span className="text-xs font-mono text-zinc-400 ml-auto">{copy(ch.unit)}</span>
                       </div>
                       <TelemetryChart channels={[ch] as any} visibleChannels={[ch.id]}
                         height={100} className="rounded-none border-0"/>
                     </div>
                   ))}
                 </div>
+                </details>
               )}
+              </div>
             </div>
 
             {/* RIGHT: Analysis panel */}
-            <div className="w-[380px] shrink-0 flex flex-col bg-zinc-950 overflow-hidden">
+            <div className="telemetry-analysis w-[380px] shrink-0 flex flex-col bg-zinc-950 overflow-hidden">
 
               {/* Tabs */}
               <div className="flex shrink-0 border-b border-zinc-800/60">
@@ -665,8 +677,8 @@ export default function TelemetryPage() {
                   ["plan","План ✦"],["corner","Поворот"],["insights","Инсайты"],["segments","Участки"],
                 ] as const).map(([k,lbl]) => (
                   <button key={k} onClick={() => setRightTab(k)}
-                    className={cn("flex-1 py-2.5 text-[10.5px] font-medium transition-colors relative",
-                      rightTab===k?"text-zinc-100":"text-zinc-500 hover:text-zinc-300")}>
+                    className={cn("flex-1 py-2.5 text-xs font-medium transition-colors relative",
+                      rightTab===k?"text-zinc-100":"text-zinc-400 hover:text-zinc-300")}>
                     {copy(lbl)}
                     {rightTab===k && (
                       <div className={cn("absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-t",
@@ -691,32 +703,32 @@ export default function TelemetryPage() {
                     <div className="px-3 py-2.5 border-b border-zinc-800/60 flex flex-wrap gap-1">
                       {analysisResult.cornerDetails?.length ? analysisResult.cornerDetails.map(cd => (
                         <button key={cd.segmentId} onClick={() => setSelectedCorner(cd.segmentId)}
-                          className={cn("px-2 py-1 rounded-lg text-[10px] font-mono border transition-all",
+                          className={cn("px-2 py-1 rounded-lg text-xs font-mono border transition-all",
                             selectedCorner === cd.segmentId
                               ? "bg-zinc-700 border-zinc-500 text-zinc-100"
-                              : "border-zinc-800/80 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300")}>
+                              : "border-zinc-800/80 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300")}>
                           {copy(cd.cornerLabel)}
                           <span className={cn("ml-1 font-bold",
                             cd.totalDeltaMs > 100 ? "text-red-400" :
                             cd.totalDeltaMs > 30 ? "text-yellow-400" :
-                            cd.totalDeltaMs < -30 ? "text-lime-400" : "text-zinc-600")}>
+                            cd.totalDeltaMs < -30 ? "text-lime-400" : "text-zinc-400")}>
                             {copy(cd.totalDeltaMs > 0 ? "+" : "")}{copy((cd.totalDeltaMs/1000).toFixed(2))}
                           </span>
                         </button>
                       )) : (
-                        <p className="text-[10px] text-zinc-600 py-2">{copy("ui.222")}</p>
+                        <p className="text-xs text-zinc-400 py-2">{copy("ui.222")}</p>
                       )}
                     </div>
                     {selectedCorner && analysisResult.cornerDetails ? (
                       (() => {
                         const detail = analysisResult.cornerDetails.find(c => c.segmentId === selectedCorner);
                         return detail ? <CornerDetailPanel detail={detail}/> :
-                          <div className="p-6 text-center text-xs text-zinc-500">{copy("ui.223")}</div>;
+                          <div className="p-6 text-center text-xs text-zinc-400">{copy("ui.223")}</div>;
                       })()
                     ) : (
                       <div className="px-4 py-12 text-center space-y-2">
-                        <p className="text-xs text-zinc-500">{copy("ui.224")}</p>
-                        <p className="text-[10px] text-zinc-600">{copy("ui.225")}</p>
+                        <p className="text-xs text-zinc-400">{copy("ui.224")}</p>
+                        <p className="text-xs text-zinc-400">{copy("ui.225")}</p>
                       </div>
                     )}
                   </div>
@@ -746,14 +758,14 @@ export default function TelemetryPage() {
                         {analysisResult.patterns?.map((p,i) => (
                           <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-xl bg-yellow-400/5 border border-yellow-400/15">
                             <Activity size={10} className="text-yellow-400 shrink-0 mt-0.5"/>
-                            <p className="text-[10px] text-yellow-200 leading-relaxed">{copy(p)}</p>
+                            <p className="text-xs text-yellow-200 leading-relaxed">{copy(p)}</p>
                           </div>
                         ))}
 
                         {analysisResult.strengthMessages?.map((s,i) => (
                           <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-lime-400/5 border border-lime-400/15">
                             <CheckCircle2 size={9} className="text-lime-400 shrink-0"/>
-                            <p className="text-[10px] text-lime-300">{copy(s)}</p>
+                            <p className="text-xs text-lime-300">{copy(s)}</p>
                           </div>
                         ))}
                       </div>
@@ -765,7 +777,7 @@ export default function TelemetryPage() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-zinc-200">{copy("ui.227")}</p>
-                            <p className="text-xs text-zinc-500 mt-1">{copy("ui.228")}</p>
+                            <p className="text-xs text-zinc-400 mt-1">{copy("ui.228")}</p>
                           </div>
                         </div>
                       ) : allInsights.map((ins: any, i: number) => (

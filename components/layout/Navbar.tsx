@@ -3,18 +3,15 @@ import { useCopy } from "../../shared/i18n/react";
 
 import Link from "next/link";
 import { DownloadButtonNavbar } from "@/components/ui/DownloadButton";
-import { ChevronDown, Globe, Check, User } from "lucide-react";
+import { ChevronDown, User } from "lucide-react";
 import { useState, useEffect } from "react";
 import { loadProfile, getInitials, avatarColor } from "@/lib/profile/store";
 import { useTelemetry } from "@/context/TelemetryContext";
-import { useLang, type Lang } from "@/context/LanguageContext";
-import { cn } from "@/lib/utils";
+import { LanguageSwitch } from "@/context/LanguageContext";
 
 export function Navbar() {
   const copy = useCopy();
   const { uploadState }    = useTelemetry();
-  const { lang, setLang, t } = useLang();
-  const [showLang, setShowLang] = useState(false);
   const [profile, setProfile] = useState<{ name: string } | null>(null);
   useEffect(() => { setProfile(loadProfile()); }, []);
   const hasLap = uploadState.status === "done";
@@ -43,24 +40,7 @@ export function Navbar() {
 
       <div className="flex items-center gap-1">
         {/* Language switcher */}
-        <div className="relative">
-          <button onClick={() => setShowLang((v) => !v)} aria-label={lang === "ru" ? "Язык интерфейса" : "Interface language"} aria-expanded={showLang}
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors">
-            <Globe size={14} />
-            <span className="text-xs font-mono uppercase">{copy(lang)}</span>
-          </button>
-          {showLang && (
-            <div className="absolute right-0 top-9 z-50 w-36 rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl overflow-hidden animate-slide-up">
-              {([["en", "English"], ["ru", "Русский"]] as [Lang, string][]).map(([l, label]) => (
-                <button key={l} onClick={() => { setLang(l); setShowLang(false); }}
-                  className="w-full flex items-center justify-between px-3 py-2.5 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors">
-                  <span>{copy(label)}</span>
-                  {lang === l && <Check size={12} className="text-lime-400" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <LanguageSwitch compact />
 
         <div className="hidden sm:block"><DownloadButtonNavbar /></div>
 

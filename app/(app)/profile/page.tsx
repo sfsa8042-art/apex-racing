@@ -65,7 +65,7 @@ function TokenCard({ token, onRefresh }: { token: string; onRefresh: (t: string)
           {show ? token : "•".repeat(Math.min(token.length, 28))}
         </div>
         <button onClick={() => setShow(v => !v)}
-          className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors">
+          className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-300 transition-colors">
           <Eye size={14}/>
         </button>
         <button onClick={copyToken}
@@ -74,10 +74,10 @@ function TokenCard({ token, onRefresh }: { token: string; onRefresh: (t: string)
           <Copy size={12}/>{copy(copied ? "Скопировано!" : "Скопировать")}
         </button>
       </div>
-      <p className="text-[11px] text-zinc-600 mt-2 leading-relaxed">
+      <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
         {copy("ui.075")}</p>
       <button onClick={refresh}
-        className="flex items-center gap-1 mt-2 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors font-mono">
+        className="flex items-center gap-1 mt-2 text-[11px] text-zinc-400 hover:text-zinc-400 transition-colors font-mono">
         <RefreshCw size={10}/> {copy(" Сгенерировать новый токен")}</button>
     </div>
   );
@@ -127,12 +127,12 @@ function ProfileForm({ existing, onSave, onCancel }: {
           <h2 className="text-base font-semibold text-zinc-100">
             {copy(isNew ? "Создать профиль" : "Редактировать профиль")}
           </h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-zinc-400 mt-0.5">
             {copy(isNew ? "Данные хранятся в браузере — без регистрации" : "Изменения сохраняются локально")}
           </p>
         </div>
         {!isNew && onCancel && (
-          <button onClick={onCancel} className="w-8 h-8 rounded-lg hover:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors">
+          <button onClick={onCancel} className="w-8 h-8 rounded-lg hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-300 transition-colors">
             <X size={15}/>
           </button>
         )}
@@ -141,7 +141,7 @@ function ProfileForm({ existing, onSave, onCancel }: {
       <div className="p-6 space-y-4">
         {/* Name */}
         <div>
-          <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 block mb-1.5">
+          <label className="text-xs font-mono uppercase tracking-widest text-zinc-400 block mb-1.5">
             {copy("ui.082")}</label>
           <input value={name} onChange={e => { setName(e.target.value); setError(""); }}
             placeholder={copy("ui.083")}
@@ -151,8 +151,8 @@ function ProfileForm({ existing, onSave, onCancel }: {
 
         {/* Email */}
         <div>
-          <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 block mb-1.5">
-            {copy("Email ")}<span className="text-zinc-700">{copy("ui.085")}</span>
+          <label className="text-xs font-mono uppercase tracking-widest text-zinc-400 block mb-1.5">
+            {copy("Email ")}<span className="text-zinc-400">{copy("ui.085")}</span>
           </label>
           <input type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder={copy("ivan@example.com")}
@@ -161,7 +161,7 @@ function ProfileForm({ existing, onSave, onCancel }: {
 
         {/* Simulator */}
         <div>
-          <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 block mb-1.5">
+          <label className="text-xs font-mono uppercase tracking-widest text-zinc-400 block mb-1.5">
             {copy("ui.086")}</label>
           <div className="flex flex-wrap gap-2">
             {SIMULATORS.map(sim => (
@@ -180,8 +180,8 @@ function ProfileForm({ existing, onSave, onCancel }: {
 
         {/* Bio */}
         <div>
-          <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 block mb-1.5">
-            {copy("О себе ")}<span className="text-zinc-700">{copy("ui.085")}</span>
+          <label className="text-xs font-mono uppercase tracking-widest text-zinc-400 block mb-1.5">
+            {copy("О себе ")}<span className="text-zinc-400">{copy("ui.085")}</span>
           </label>
           <textarea value={bio} onChange={e => setBio(e.target.value)}
             placeholder={copy("ui.088")}
@@ -191,7 +191,7 @@ function ProfileForm({ existing, onSave, onCancel }: {
 
         {/* API Token */}
         <div>
-          <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 block mb-1.5">
+          <label className="text-xs font-mono uppercase tracking-widest text-zinc-400 block mb-1.5">
             <span className="flex items-center gap-1.5"><Key size={11}/>{copy("ui.089")}</span>
           </label>
           <div className="flex gap-2">
@@ -204,13 +204,13 @@ function ProfileForm({ existing, onSave, onCancel }: {
                 className="flex-1 py-2.5 bg-transparent text-sm text-zinc-200 placeholder-zinc-600 outline-none font-mono"
               />
               <button type="button" onClick={() => setShowToken(v => !v)}
-                className="text-zinc-600 hover:text-zinc-400 transition-colors shrink-0">
+                className="text-zinc-400 hover:text-zinc-400 transition-colors shrink-0">
                 {showToken ? <EyeOff size={13}/> : <Eye size={13}/>}
               </button>
             </div>
           </div>
-          <p className="text-xs text-zinc-600 mt-1.5 leading-relaxed">
-            {copy("Введи любой текст — этот же токен укажи в настройках десктопного приложения. Например: ")}<span className="font-mono text-zinc-500">{copy("ui.092")}</span>
+          <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+            {copy("Введи любой текст — этот же токен укажи в настройках десктопного приложения. Например: ")}<span className="font-mono text-zinc-400">{copy("ui.092")}</span>
           </p>
         </div>
 
@@ -220,7 +220,7 @@ function ProfileForm({ existing, onSave, onCancel }: {
             <Avatar profile={{ name, email, simulator, bio, apiToken: "", createdAt: "" }} size="md"/>
             <div>
               <p className="text-sm font-semibold text-zinc-200">{name}</p>
-              <p className="text-xs text-zinc-500">{copy(simulator)}</p>
+              <p className="text-xs text-zinc-400">{copy(simulator)}</p>
             </div>
           </div>
         )}
@@ -265,15 +265,15 @@ function StatsSection() {
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-1">{copy("ui.095")}</p>
+            <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-1">{copy("ui.095")}</p>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-zinc-100">{copy(lp.level)}</span>
-              <span className="text-sm text-zinc-500 font-mono">{copy(lp.level)}</span>
+              <span className="text-sm text-zinc-400 font-mono">{copy(lp.level)}</span>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs text-zinc-500 font-mono">{copy(lp.totalXP)} {copy(" XP")}</p>
-            <p className="text-xs text-zinc-700 font-mono">+{copy(lp.xpToNextLevel)} {copy(" до след.")}</p>
+            <p className="text-xs text-zinc-400 font-mono">{copy(lp.totalXP)} {copy(" XP")}</p>
+            <p className="text-xs text-zinc-400 font-mono">+{copy(lp.xpToNextLevel)} {copy(" до след.")}</p>
           </div>
         </div>
         {/* XP bar */}
@@ -281,7 +281,7 @@ function StatsSection() {
           <div className="h-full rounded-full bg-lime-400 transition-all duration-700"
             style={{ width: `${lp.progressPct}%` }}/>
         </div>
-        <p className="text-xs text-zinc-600 font-mono mt-1.5">
+        <p className="text-xs text-zinc-400 font-mono mt-1.5">
           {copy(lp.xpToNextLevel)} {copy(" XP до следующего уровня")}</p>
       </div>
 
@@ -291,7 +291,7 @@ function StatsSection() {
           { label: "Кругов загружено", value: history.length, icon: Activity, color: "text-blue-400" },
           { label: "Серия дней",       value: streak?.currentStreak ?? 0, icon: Calendar, color: "text-orange-400", suffix: "д" },
           { label: "Тренд счёта",      value: trend, icon: trend >= 0 ? TrendingUp : TrendingDown,
-            color: trend > 0 ? "text-lime-400" : trend < 0 ? "text-red-400" : "text-zinc-500",
+            color: trend > 0 ? "text-lime-400" : trend < 0 ? "text-red-400" : "text-zinc-400",
             prefix: trend > 0 ? "+" : "" },
         ].map(({ label, value, icon: Icon, color, suffix, prefix }) => (
           <div key={label} className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-center">
@@ -299,7 +299,7 @@ function StatsSection() {
             <p className={cn("text-xl font-bold font-mono", color)}>
               {copy(prefix)}{copy(value)}{copy(suffix)}
             </p>
-            <p className="text-[10px] text-zinc-600 mt-0.5 leading-tight">{copy(label)}</p>
+            <p className="text-xs text-zinc-400 mt-0.5 leading-tight">{copy(label)}</p>
           </div>
         ))}
       </div>
@@ -307,7 +307,7 @@ function StatsSection() {
       {/* Score sparkline */}
       {history.length >= 2 && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-          <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-3">
+          <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-3">
             {copy("ui.103")}</p>
           <div className="rounded-xl bg-zinc-950 border border-zinc-800 overflow-hidden">
             <svg viewBox="0 0 500 80" className="w-full" style={{ height: 70 }}>
@@ -366,7 +366,7 @@ export default function ProfilePage() {
               <User size={28} className="text-lime-400"/>
             </div>
             <h1 className="text-2xl font-bold text-zinc-100 mb-2">{copy("ui.104")}</h1>
-            <p className="text-sm text-zinc-500 leading-relaxed">
+            <p className="text-sm text-zinc-400 leading-relaxed">
               {copy("ui.105")}</p>
           </div>
           <ProfileForm existing={null} onSave={handleSave}/>
@@ -389,13 +389,13 @@ export default function ProfilePage() {
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl font-bold text-zinc-100 leading-tight">{profile.name}</h1>
                 {profile.email && (
-                  <p className="text-sm text-zinc-500 mt-0.5 font-mono">{profile.email}</p>
+                  <p className="text-sm text-zinc-400 mt-0.5 font-mono">{profile.email}</p>
                 )}
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <span className="text-xs px-2.5 py-1 rounded-lg bg-lime-400/10 border border-lime-400/20 text-lime-400 font-mono">
                     {copy(profile.simulator)}
                   </span>
-                  <span className="text-xs text-zinc-600 font-mono">
+                  <span className="text-xs text-zinc-400 font-mono">
                     {copy(`Since ${new Date(profile.createdAt).toLocaleDateString(locales[displayLang], { month: "long", year: "numeric" })}`)}
                   </span>
                 </div>
@@ -414,7 +414,7 @@ export default function ProfilePage() {
 
           {/* Danger zone */}
           <div className="rounded-xl border border-zinc-800 p-4">
-            <p className="text-xs font-mono uppercase tracking-widest text-zinc-600 mb-3">
+            <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-3">
               {copy("ui.108")}</p>
             <button onClick={() => { clearProfile(); setProfile(null); }}
               className="text-xs text-red-400/70 hover:text-red-400 transition-colors font-mono">

@@ -63,17 +63,17 @@ function ModuleCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-600">{copy("ui.003")}{copy(module.number)}</span>
-            <span className={cn("text-[9px] font-mono uppercase tracking-widest", col.text)}>{copy(TIER_LABEL[module.tier])}</span>
+            <span className="text-xs font-mono uppercase tracking-widest text-zinc-400">{copy("ui.003")}{copy(module.number)}</span>
+            <span className={cn("text-xs font-mono uppercase tracking-widest", col.text)}>{copy(TIER_LABEL[module.tier])}</span>
           </div>
           <p className="text-sm font-semibold text-zinc-200 leading-snug">{copy(module.title)}</p>
-          <p className="text-xs text-zinc-500 mt-0.5 leading-snug line-clamp-2">{copy(module.description)}</p>
+          <p className="text-xs text-zinc-400 mt-0.5 leading-snug line-clamp-2">{copy(module.description)}</p>
         </div>
         {!locked && (
           <div className="shrink-0 flex flex-col items-end gap-1">
             {status === "completed" && <CheckCircle size={16} className={col.text}/>}
             {status === "in_progress" && <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse"/>}
-            <span className="text-[10px] font-mono text-zinc-600">{copy(done)}/{copy(module.lessons.length)}</span>
+            <span className="text-xs font-mono text-zinc-400">{copy(done)}/{copy(module.lessons.length)}</span>
           </div>
         )}
       </div>
@@ -106,14 +106,14 @@ function LessonList({
             <ModuleIcon moduleId={module.id} size={22} className={col.text} />
           </div>
           <div>
-            <p className={cn("text-[10px] font-mono uppercase tracking-widest mb-0.5", col.text)}>{copy(TIER_LABEL[module.tier])}</p>
+            <p className={cn("text-xs font-mono uppercase tracking-widest mb-0.5", col.text)}>{copy(TIER_LABEL[module.tier])}</p>
             <h2 className="text-xl font-bold text-zinc-100">{copy(module.title)}</h2>
             <p className="text-sm text-zinc-400 mt-1 leading-relaxed">{copy(module.description)}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <ProgressBar value={done} max={module.lessons.length} animated className="flex-1" showLabel label={copy(`${done}/${module.lessons.length} уроков`)}/>
-          <div className="flex items-center gap-1 text-xs font-mono text-zinc-500 shrink-0">
+          <div className="flex items-center gap-1 text-xs font-mono text-zinc-400 shrink-0">
             <Clock size={11}/> {copy(module.durationMin)} {copy(" мин")}</div>
         </div>
       </div>
@@ -133,20 +133,20 @@ function LessonList({
               )}>
               <div className="flex items-center gap-3">
                 <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                  lessonDone ? "bg-lime-400/15 text-lime-400" : isNext ? cn(col.bg, col.text) : "bg-zinc-800 text-zinc-500")}>
+                  lessonDone ? "bg-lime-400/15 text-lime-400" : isNext ? cn(col.bg, col.text) : "bg-zinc-800 text-zinc-400")}>
                   <LessonTypeGlyph type={lesson.type} done={lessonDone} size={15} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
+                    <span className="text-xs font-mono text-zinc-400 uppercase tracking-widest">
                       {copy(lesson.type === "theory" ? "ТЕОРИЯ" : lesson.type === "exercise" ? "УПРАЖНЕНИЕ" : "ЗАДАНИЕ")}
                     </span>
-                    <span className="text-[9px] font-mono text-zinc-700">{copy(lesson.durationMin)} {copy(" мин")}</span>
+                    <span className="text-xs font-mono text-zinc-400">{copy(lesson.durationMin)} {copy(" мин")}</span>
                   </div>
                   <p className={cn("text-sm font-medium leading-snug",
-                    lessonDone ? "text-zinc-500" : "text-zinc-200")}>{copy(lesson.title)}</p>
+                    lessonDone ? "text-zinc-400" : "text-zinc-200")}>{copy(lesson.title)}</p>
                   {isNext && !lessonDone && (
-                    <p className="text-[11px] text-zinc-500 mt-0.5 italic">{copy(lesson.hook).slice(0,80)}…</p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5 italic">{copy(lesson.hook).slice(0,80)}…</p>
                   )}
                 </div>
                 <div className="shrink-0">
@@ -154,7 +154,7 @@ function LessonList({
                     ? <CheckCircle size={16} className="text-lime-400"/>
                     : isNext
                     ? <ChevronRight size={16} className={cn("transition-transform group-hover:translate-x-0.5", col.text)}/>
-                    : <Circle size={14} className="text-zinc-700"/>}
+                    : <Circle size={14} className="text-zinc-400"/>}
                 </div>
               </div>
             </button>
@@ -202,7 +202,7 @@ function ImmersiveLessonView({
         <div className="flex items-center gap-2">
           <LessonTypeGlyph type={lesson.type} size={16} className={col.text} />
           <div>
-            <p className={cn("text-[9px] font-mono uppercase tracking-widest", col.text)}>
+            <p className={cn("text-xs font-mono uppercase tracking-widest", col.text)}>
               {copy("ui.003")}{copy(module.number)} · {copy(module.title)}
             </p>
             <p className="text-sm font-semibold text-zinc-200 leading-none mt-0.5">{copy(lesson.title)}</p>
@@ -253,7 +253,7 @@ function StatsBar({ progress }: { progress: AcademyProgress }) {
           <Icon size={16} className={color}/>
           <div>
             <p className={cn("text-lg font-bold font-mono tabular", color)}>{copy(value)}</p>
-            <p className="text-[10px] text-zinc-500">{copy(label)}</p>
+            <p className="text-xs text-zinc-400">{copy(label)}</p>
           </div>
         </div>
       ))}
@@ -268,7 +268,7 @@ export default function AcademyPage() {
   const copy = useCopy();
   const { t } = useLang();
   const [progress,      setProgress]      = useState<AcademyProgress>(() => loadProgress());
-  const [selectedMod,   setSelectedMod]   = useState<ModuleContent | null>(null);
+  const [selectedMod,   setSelectedMod]   = useState<ModuleContent | null>(ACADEMY_MODULES[0] ?? null);
   const [activeLessonState, setActiveLessonState] = useState<{
     module: ModuleContent; lesson: LessonContent;
   } | null>(null);
@@ -301,16 +301,16 @@ export default function AcademyPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex flex-col lg:flex-row lg:h-full min-h-0">
       {/* ─── LEFT: module list ─────────────────────────────────────────── */}
-      <div className="w-72 xl:w-80 shrink-0 border-r border-zinc-800 flex flex-col bg-zinc-950 overflow-hidden">
+      <div className="w-full lg:w-80 shrink-0 border-r border-zinc-800 flex flex-col bg-zinc-950 overflow-hidden">
         {/* Header */}
         <div className="px-5 py-5 border-b border-zinc-800">
           <div className="flex items-center gap-2 mb-1">
             <BookOpen size={16} className="text-lime-400"/>
-            <h1 className="text-base font-bold text-zinc-100">{copy("ui.013")}</h1>
+            <h1 className="apex-page-title">{copy("ui.013")}</h1>
           </div>
-          <p className="text-xs text-zinc-500">{copy("ui.014")}</p>
+          <p className="text-xs text-zinc-400">{copy("ui.014")}</p>
         </div>
 
         {/* Stats */}
@@ -321,8 +321,8 @@ export default function AcademyPage() {
           <div className="flex gap-1">
             {(["all","beginner","intermediate","advanced"] as FilterTier[]).map(tier => (
               <button key={tier} onClick={() => setFilterTier(tier)}
-                className={cn("px-2.5 py-1 rounded-md text-[10px] font-mono uppercase tracking-wide transition-all",
-                  filterTier === tier ? "bg-zinc-700 text-zinc-100" : "text-zinc-600 hover:text-zinc-400")}>
+                className={cn("px-2.5 py-1 rounded-md text-xs font-mono uppercase tracking-wide transition-all",
+                  filterTier === tier ? "bg-zinc-700 text-zinc-100" : "text-zinc-400 hover:text-zinc-400")}>
                 {copy(tier === "all" ? "Все" : tier === "beginner" ? "Нач." : tier === "intermediate" ? "Сред." : "Прод.")}
               </button>
             ))}
@@ -330,7 +330,7 @@ export default function AcademyPage() {
         </div>
 
         {/* Module cards */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div className="max-h-64 lg:max-h-none flex-1 overflow-y-auto p-3 space-y-2">
           {filtered.map(module => (
             <ModuleCard
               key={module.id}
@@ -344,7 +344,7 @@ export default function AcademyPage() {
       </div>
 
       {/* ─── RIGHT: lesson list or empty state ────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-zinc-950">
+      <div className="min-w-0 flex-1 flex flex-col lg:overflow-hidden bg-zinc-950">
         {selectedMod ? (
           <LessonList
             module={selectedMod}
@@ -371,15 +371,15 @@ function EmptyState({ onPickModule, progress }: { onPickModule: () => void; prog
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
       <div className="w-20 h-20 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mb-6">
-        <BookOpen size={32} className="text-zinc-600"/>
+        <BookOpen size={32} className="text-zinc-400"/>
       </div>
       <h2 className="text-xl font-bold text-zinc-200 mb-2">{copy("ui.019")}</h2>
-      <p className="text-sm text-zinc-500 mb-8 max-w-xs leading-relaxed">
+      <p className="text-sm text-zinc-400 mb-8 max-w-xs leading-relaxed">
         {copy("ui.020")}</p>
       {continueModule ? (
         <div className="rounded-xl border border-lime-400/25 bg-lime-400/5 p-4 mb-4 max-w-xs cursor-pointer hover:border-lime-400/40 transition-colors"
           onClick={onPickModule}>
-          <p className="text-[10px] font-mono text-lime-400 uppercase tracking-widest mb-1">{copy("ui.021")}</p>
+          <p className="text-xs font-mono text-lime-400 uppercase tracking-widest mb-1">{copy("ui.021")}</p>
           <p className="text-sm font-semibold text-zinc-200">{copy(continueModule.title)}</p>
         </div>
       ) : (

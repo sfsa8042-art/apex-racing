@@ -75,7 +75,7 @@ export function LanguageSwitch({ prominent = false, compact = false }: { promine
         prominent
           ? "min-h-11 flex-1 rounded-lg px-6 py-2.5 text-sm font-semibold"
           : compact
-            ? "rounded px-2 py-1 font-mono text-[11px] font-medium tracking-wide"
+            ? "min-h-10 min-w-10 rounded px-2 py-1 font-mono text-xs font-medium tracking-wide"
             : "rounded-lg px-2 py-1 text-xs"
       } ${lang===code?"bg-lime-400 text-zinc-950": compact ? "text-zinc-300 hover:bg-white/10 hover:text-white" : "text-zinc-200 hover:bg-zinc-800"}`}>
       {compact ? (code==="ru"?"RU":"EN") : (code==="ru"?"Русский":"English")}

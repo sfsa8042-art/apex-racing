@@ -46,7 +46,7 @@ export function DownloadButtonHero({ className }: { className?: string }) {
   const [showMore, setShowMore] = useState(false);
 
   // No release yet → link to /download page which explains the situation
-  const href = loading ? "#" : DOWNLOAD_EXE;
+  const href = info?.exe ? DOWNLOAD_EXE : info?.msi ? DOWNLOAD_MSI : "/dashboard";
 
   return (
     <div className={cn("flex flex-col items-center gap-3", className)}>
@@ -61,13 +61,14 @@ export function DownloadButtonHero({ className }: { className?: string }) {
           ? <Loader2 size={20} className="animate-spin shrink-0"/>
           : <Download size={20} className="shrink-0 group-hover:animate-bounce"/>
         }
-        <span>{copy(loading ? "Подождите…" : "Скачать для Windows")}</span>
+        <span>{copy(loading ? "Подождите…" : info?.exe || info?.msi ? "Скачать для Windows" : "Open web app")}</span>
         <Monitor size={18} className="opacity-50 shrink-0"/>
         {info?.version && <span className="text-xs font-mono opacity-60">{info.version}</span>}
       </a>
 
+      {!loading && !info?.exe && !info?.msi && <p role="status" className="max-w-sm text-center text-sm text-zinc-400">{copy("Desktop download is currently unavailable. You can analyse a lap in the web app.")}</p>}
       {/* Meta */}
-      <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono">
+      <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono">
         <Shield size={10} className="text-lime-400/70"/>
         <span>{copy("ui.273")}</span>
         {info?.exe && <><span>·</span><span>{copy(fmt(info.exe.size))}</span></>}
@@ -79,17 +80,17 @@ export function DownloadButtonHero({ className }: { className?: string }) {
       {info?.msi && (
         <div>
           <button onClick={() => setShowMore(v => !v)}
-            className="flex items-center gap-1 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors font-mono mx-auto">
+            className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-400 transition-colors font-mono mx-auto">
             <ChevronDown size={11} className={cn("transition-transform", showMore && "rotate-180")}/>
             {copy("ui.570")}</button>
           {showMore && (
             <div className="mt-2 flex flex-col items-center gap-1.5">
               <a href={DOWNLOAD_MSI}
-                className="flex items-center gap-1.5 text-[11px] text-zinc-500 hover:text-zinc-300 font-mono transition-colors">
+                className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-zinc-300 font-mono transition-colors">
                 <Download size={10}/>
                 {info.msi.name} ({copy(fmt(info.msi.size))}{copy("ui.571")}</a>
               <a href="/download"
-                className="flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 font-mono transition-colors">
+                className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-zinc-400 font-mono transition-colors">
                 <ExternalLink size={10}/>
                 {copy("ui.572")}</a>
             </div>
@@ -110,7 +111,7 @@ export function DownloadButtonNavbar({ className }: { className?: string }) {
   const copy = useCopy();
   const { info, loading } = useRelease();
   return (
-    <a href={DOWNLOAD_EXE}
+    <a href={info?.exe ? DOWNLOAD_EXE : info?.msi ? DOWNLOAD_MSI : "/download"}
       className={cn(
         "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all",
         "border border-lime-400/30 bg-lime-400/8 text-lime-400 hover:bg-lime-400/15 hover:border-lime-400/50",
@@ -118,7 +119,7 @@ export function DownloadButtonNavbar({ className }: { className?: string }) {
         className,
       )}>
       {loading ? <Loader2 size={11} className="animate-spin"/> : <Download size={11}/>}
-      {loading ? "…" : <>{copy("Скачать")}{info?.version ? ` ${info.version}` : ""}</>}
+      {loading ? "…" : <>{copy(info?.exe || info?.msi ? "Скачать" : "Desktop app")}{info?.version ? ` ${info.version}` : ""}</>}
     </a>
   );
 }
@@ -148,23 +149,24 @@ export function DownloadSection() {
               ].map(([sim, path]) => (
                 <li key={sim} className="border-t border-zinc-800 pt-3 first:border-t-0 first:pt-0">
                   <span className="text-sm font-medium text-zinc-200">{copy(sim)}</span>
-                  <span className="mt-0.5 block font-mono text-[11px] text-zinc-600">{path}</span>
+                  <span className="mt-0.5 block font-mono text-[11px] text-zinc-400">{path}</span>
                 </li>
               ))}
             </ul>
 
-            <a href={DOWNLOAD_EXE}
+            {!loading && !info?.exe && !info?.msi && <p role="status" className="mt-6 text-sm leading-relaxed text-zinc-400">{copy("Desktop download is currently unavailable. You can analyse a lap in the web app.")}</p>}
+            <a href={info?.exe ? DOWNLOAD_EXE : info?.msi ? DOWNLOAD_MSI : "/dashboard"}
               className={cn(
                 "mt-8 inline-flex items-center gap-3 rounded-lg bg-lime-400 px-6 py-3.5 font-semibold text-zinc-950 transition-colors duration-150 hover:bg-lime-300",
                 loading && "cursor-wait opacity-75",
               )}>
               {loading ? <Loader2 size={18} className="animate-spin"/> : <Download size={18} />}
-              {copy(loading ? "Загрузка…" : "Скачать для Windows")}
+              {copy(loading ? "Загрузка…" : info?.exe || info?.msi ? "Скачать для Windows" : "Open web app")}
               {info?.version && <span className="font-mono text-xs opacity-60">{info.version}</span>}
             </a>
 
-            <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-xs text-zinc-600">
-              <span className="flex items-center gap-1"><Shield size={10} className="text-zinc-500"/>{copy("ui.273")}</span>
+            <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-xs text-zinc-400">
+              <span className="flex items-center gap-1"><Shield size={10} className="text-zinc-400"/>{copy("ui.273")}</span>
               {info?.exe && <span>{fmt(info.exe.size)}</span>}
               {info?.msi && <a href={DOWNLOAD_MSI} className="flex items-center gap-1 transition-colors hover:text-zinc-400"><Download size={10}/>{copy("ui.580")}</a>}
               <a href="/download" className="flex items-center gap-1 transition-colors hover:text-zinc-400"><ExternalLink size={10}/>{copy("ui.572")}</a>
@@ -177,7 +179,7 @@ export function DownloadSection() {
               <div className="flex h-5 w-5 items-center justify-center rounded-md bg-lime-400">
                 <span className="text-[9px] font-bold text-zinc-950">{copy("ui.268")}</span>
               </div>
-              <span className="font-mono text-xs text-zinc-500">{copy("ui.271")}</span>
+              <span className="font-mono text-xs text-zinc-400">{copy("ui.271")}</span>
               <span className="ml-auto font-mono text-[10px] text-lime-400">{copy("ui.581")}</span>
             </div>
             <div className="space-y-3 p-4">
@@ -199,11 +201,11 @@ export function DownloadSection() {
                       item.status === "pending"   && "bg-zinc-600",
                     )}/>
                     <span className="flex-1 truncate font-mono text-[11px] text-zinc-400">{item.name}</span>
-                    <span className="font-mono text-[10px] text-zinc-600">{item.size}</span>
+                    <span className="font-mono text-[10px] text-zinc-400">{item.size}</span>
                     <span className={cn("font-mono text-[10px]",
                       item.status === "done"      && "text-lime-400",
                       item.status === "uploading" && "text-zinc-300",
-                      item.status === "pending"   && "text-zinc-600",
+                      item.status === "pending"   && "text-zinc-400",
                     )}>
                       {copy(item.status === "done" ? item.time : item.status === "uploading" ? "загрузка…" : "ожидание")}
                     </span>
@@ -223,10 +225,10 @@ export function DownloadLink({ className }: { className?: string }) {
   const copy = useCopy();
   const { info, loading } = useRelease();
   return (
-    <a href={DOWNLOAD_EXE}
+    <a href={info?.exe ? DOWNLOAD_EXE : info?.msi ? DOWNLOAD_MSI : "/download"}
       className={cn("inline-flex items-center gap-2 text-sm text-lime-400 hover:text-lime-300 transition-colors font-medium", className)}>
       <Download size={14}/>
-      {copy("ui.279")}{!loading && info?.version ? ` ${info.version}` : ""}
+      {copy(info?.exe || info?.msi ? "ui.279" : "Desktop app")}{!loading && info?.version ? ` ${info.version}` : ""}
     </a>
   );
 }

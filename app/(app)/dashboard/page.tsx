@@ -33,9 +33,9 @@ function SessionRow({ entry }: { entry: LapHistoryEntry }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="font-mono text-sm font-medium text-zinc-200">{copy(fmtMs(entry.lapTimeMs))}</span>
-          {entry.track && <span className="truncate text-xs text-zinc-500">{copy(entry.track)}</span>}
+          {entry.track && <span className="truncate text-xs text-zinc-400">{copy(entry.track)}</span>}
         </div>
-        <p className="font-mono text-[11px] text-zinc-600">{copy(entry.uploadedAt.slice(0, 10))}</p>
+        <p className="font-mono text-[11px] text-zinc-400">{copy(entry.uploadedAt.slice(0, 10))}</p>
       </div>
       <p className="font-mono text-xs tabular text-zinc-400">
         {copy("Score ")}{copy(entry.overallScore)}
@@ -82,14 +82,14 @@ export default function DashboardPage() {
       : null;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 p-6 animate-fade-in sm:p-8">
+    <div className="mx-auto max-w-6xl space-y-8 p-6 animate-fade-in sm:p-8">
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="apex-eyebrow mb-2">{copy("ui.029")}</p>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-zinc-100 sm:text-3xl">
+          <h1 className="apex-page-title">
             {copy(hasLap ? coachMessage?.headline ?? t.dashboard.welcomeBack : t.dashboard.welcomeBack)}
           </h1>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-500">
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-400">
             {copy(
               hasLap
                 ? coachMessage?.body
@@ -110,7 +110,7 @@ export default function DashboardPage() {
       {!hasLap && history.length === 0 && (
         <section className="border-y border-zinc-800 py-10">
           <p className="font-display text-lg font-semibold text-zinc-100">{copy("ui.327")}</p>
-          <p className="mt-2 max-w-lg text-sm leading-relaxed text-zinc-500">{copy("ui.328")}</p>
+          <p className="mt-2 max-w-lg text-sm leading-relaxed text-zinc-400">{copy("ui.328")}</p>
           <ol className="mt-8 space-y-5">
             {[
               { n: "01", t: "ui.327", d: "ui.328" },
@@ -121,7 +121,7 @@ export default function DashboardPage() {
                 <span className="w-8 shrink-0 font-mono text-xs font-bold text-lime-400">{copy(n)}</span>
                 <div>
                   <p className="text-sm font-medium text-zinc-200">{copy(title)}</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">{copy(d)}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-zinc-400">{copy(d)}</p>
                 </div>
               </li>
             ))}
@@ -142,7 +142,7 @@ export default function DashboardPage() {
               <CoachToneIcon tone={coachMessage.tone} size={18} className="text-lime-400" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="mb-1 font-mono text-[10px] uppercase tracking-widest text-lime-400/70">{copy("ui.034")}</p>
+              <p className="mb-1 font-mono text-xs uppercase tracking-widest text-lime-400/70">{copy("ui.034")}</p>
               <p className="text-sm font-medium text-zinc-100">{copy(primaryAction.headlineEn)}</p>
               <p className="mt-1 text-xs text-zinc-400">{copy(coachMessage.actionLine)}</p>
               {patternNote && (
@@ -168,7 +168,7 @@ export default function DashboardPage() {
                 {copy(hasLap ? uploadState.filename ?? "Latest lap" : "Recent sessions")}
               </h2>
             </div>
-            <Link href="/telemetry" className="font-mono text-[11px] text-zinc-500 transition-colors hover:text-lime-400">
+            <Link href="/telemetry" className="font-mono text-[11px] text-zinc-400 transition-colors hover:text-lime-400">
               <span className="inline-flex items-center gap-1">
                 <Activity size={12} />{copy("ui.030")}
               </span>
@@ -177,19 +177,19 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 sm:grid-cols-4">
             <div className="bg-zinc-950 p-4">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{copy(t.dashboard.stats.bestLap)}</p>
+              <p className="font-mono text-xs uppercase tracking-widest text-zinc-400">{copy(t.dashboard.stats.bestLap)}</p>
               <p className="mt-2 font-mono text-xl font-semibold tabular text-lime-400">
                 {copy(latestEntry ? fmtMs(latestEntry.lapTimeMs) : "—")}
               </p>
             </div>
             <div className="bg-zinc-950 p-4">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{copy(t.dashboard.stats.latestScore)}</p>
+              <p className="font-mono text-xs uppercase tracking-widest text-zinc-400">{copy(t.dashboard.stats.latestScore)}</p>
               <p className="mt-2 font-mono text-xl font-semibold tabular text-zinc-100">
                 {copy(latestEntry?.overallScore ?? "—")}
               </p>
             </div>
             <div className="bg-zinc-950 p-4">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{copy("Delta")}</p>
+              <p className="font-mono text-xs uppercase tracking-widest text-zinc-400">{copy("Delta")}</p>
               <p className={cn(
                 "mt-2 font-mono text-xl font-semibold tabular",
                 hasLap && uploadState.analysisResult!.totalTimeDeltaMs > 0 ? "text-red-400" : "text-lime-400",
@@ -202,7 +202,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="bg-zinc-950 p-4">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{copy(t.dashboard.stats.totalLaps)}</p>
+              <p className="font-mono text-xs uppercase tracking-widest text-zinc-400">{copy(t.dashboard.stats.totalLaps)}</p>
               <p className="mt-2 font-mono text-xl font-semibold tabular text-zinc-100">{copy(history.length)}</p>
             </div>
           </div>
@@ -223,7 +223,7 @@ export default function DashboardPage() {
                 )}
               </span>
               {improvement > 0 && (
-                <span className="ml-auto inline-flex items-center gap-1 font-mono text-xs text-zinc-500">
+                <span className="ml-auto inline-flex items-center gap-1 font-mono text-xs text-zinc-400">
                   <Zap size={11} />{copy(Math.min(500, Math.round(improvement * 0.1)))} XP
                 </span>
               )}
@@ -243,13 +243,13 @@ export default function DashboardPage() {
             </div>
           )}
           {(rank ?? ctxRank) && (
-            <span className="font-mono text-xs text-zinc-500">
+            <span className="font-mono text-xs text-zinc-400">
               {copy("Top ")}{copy((rank ?? ctxRank)!.percentile)}%
             </span>
           )}
           <Link
             href="/profile"
-            className="ml-auto inline-flex items-center gap-1 font-mono text-[11px] text-zinc-600 transition-colors hover:text-zinc-400"
+            className="ml-auto inline-flex items-center gap-1 font-mono text-[11px] text-zinc-400 transition-colors hover:text-zinc-400"
           >
             <User size={11} />{copy("ui.032")}
           </Link>

@@ -26,7 +26,7 @@ function NavBar() {
         <nav className="ml-6 hidden items-center gap-6 text-sm text-zinc-300/90 md:flex">
           <a href="#features" className="transition-colors hover:text-white">{copy("ui.303")}</a>
           <a href="#how-it-works" className="transition-colors hover:text-white">{copy("ui.304")}</a>
-          <a href="#download" className="transition-colors hover:text-white">{copy("ui.143")}</a>
+          <a href="#download" className="transition-colors hover:text-white">{copy("Desktop app")}</a>
         </nav>
 
         <div className="flex-1" />
@@ -79,6 +79,7 @@ export default function LandingPage() {
               {copy("ui.269")}
             </p>
 
+            <h1 className="mt-6 text-sm font-semibold tracking-wide text-lime-300 sm:text-base">{copy("Telemetry analysis for sim racing")}</h1>
             <p
               className="animate-hero-rise mt-5 max-w-md text-lg leading-snug text-zinc-100 sm:text-xl"
               style={{ animationDelay: "140ms" }}
@@ -118,6 +119,17 @@ export default function LandingPage() {
           <h2 className="apex-section-title max-w-xl">{copy("ui.323")}</h2>
           <p className="apex-intro">{copy("ui.324")}</p>
 
+          <div className="mt-10 rounded-2xl border border-lime-400/20 bg-zinc-900/70 p-6 sm:p-8">
+            <p className="text-xs font-mono uppercase tracking-widest text-lime-400">{copy("Example analysis · demo data")}</p>
+            <div className="mt-5 grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
+              <div>
+                <h3 className="text-xl font-semibold text-zinc-100">{copy("Throttle and brake overlap")}</h3>
+                <p className="mt-2 text-sm text-zinc-400">{copy("Turn 2 · 0.6 s of overlap in the sample lap")}</p>
+                <p className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-200">{copy("Release the brake before applying throttle, unless you are deliberately using left-foot braking to balance the car.")}</p>
+              </div>
+              <Link href="/telemetry" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-lime-300 hover:text-lime-200">{copy("Explore telemetry")} <ArrowRight size={16} /></Link>
+            </div>
+          </div>
           <div className="mt-12 divide-y divide-zinc-800 border-y border-zinc-800">
             {PILLARS.map(({ icon: Icon, title, description }, i) => (
               <Reveal key={title} delay={i * 80} className="grid gap-4 py-8 sm:grid-cols-[40px_1fr] sm:gap-6">
