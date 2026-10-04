@@ -4,7 +4,7 @@ import { useCopy } from "../shared/i18n/react";
 import { LanguageSwitch } from "@/context/LanguageContext";
 import Link from "next/link";
 import { ArrowRight, BarChart2, BookOpen, Monitor } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { ProjectStory } from "@/components/landing/ProjectStory";
 import { DownloadSection } from "@/components/ui/DownloadButton";
 import { HeroVisual } from "@/components/landing/HeroVisual";
 import { AnalysisPreview } from "@/components/landing/AnalysisPreview";
@@ -24,17 +24,17 @@ function NavBar() {
           </span>
         </Link>
 
-        <nav className="ml-6 hidden items-center gap-6 text-sm text-zinc-300/90 md:flex">
+        <div className="ml-6 hidden items-center gap-6 text-sm text-zinc-300/90 md:flex">
           <a href="#features" className="transition-colors hover:text-white">{copy("ui.303")}</a>
           <a href="#how-it-works" className="transition-colors hover:text-white">{copy("ui.304")}</a>
           <a href="#download" className="transition-colors hover:text-white">{copy("Desktop app")}</a>
-        </nav>
+        </div>
 
         <div className="flex-1" />
         <div className="flex items-center gap-2 sm:gap-3">
           <LanguageSwitch compact />
           <Link href="/telemetry">
-            <Button variant="primary" size="sm">{copy("Analyse a lap")}</Button>
+            <span className="inline-flex rounded-md bg-lime-400 px-3 py-2 text-xs font-semibold text-zinc-950">{copy("Analyse a lap")}</span>
           </Link>
         </div>
       </div>
@@ -67,6 +67,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <NavBar />
 
+      <main>
       {/* Hero — one composition: photo + brand + one line + CTAs */}
       <section className="relative min-h-[100dvh] overflow-hidden">
         <HeroVisual />
@@ -74,7 +75,7 @@ export default function LandingPage() {
         <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-6xl flex-col justify-center px-4 pb-12 pt-28 sm:justify-center sm:px-6 sm:pb-24 sm:pt-20">
           <div className="max-w-lg">
             <p
-              className="animate-hero-rise font-display text-[clamp(3.5rem,12vw,6.5rem)] font-bold leading-[0.86] tracking-[-0.055em] text-white"
+              className="animate-hero-rise font-display text-[clamp(3rem,9vw,5rem)] font-bold leading-[0.86] tracking-[-0.055em] text-white"
               style={{ animationDelay: "40ms" }}
             >
               {copy("ui.269")}
@@ -85,22 +86,24 @@ export default function LandingPage() {
               className="animate-hero-rise mt-5 max-w-lg text-3xl font-semibold tracking-tight leading-tight text-zinc-100 sm:text-4xl"
               style={{ animationDelay: "140ms" }}
             >
-              {copy("ui.308")}
+              {copy("landing.headline")}
             </h1>
+
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-zinc-300 sm:text-lg">{copy("landing.subhead")}</p>
 
             <div
               className="animate-hero-rise mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center"
               style={{ animationDelay: "240ms" }}
             >
               <Link href="/telemetry">
-                <Button variant="primary" size="lg" className="w-full sm:w-auto">
+                <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-lime-400 px-6 py-3 text-base font-semibold text-zinc-950 transition-colors hover:bg-lime-300 sm:w-auto">
                   {copy("Analyse my lap")} <ArrowRight size={16} />
-                </Button>
+                </span>
               </Link>
               <a href="#analysis-preview">
-                <Button variant="outline" size="lg" className="w-full border-white/20 bg-black/30 text-zinc-100 backdrop-blur-sm hover:border-white/35 hover:bg-white/10 hover:text-white sm:w-auto">
+                <span className="inline-flex w-full items-center justify-center rounded-lg border border-white/20 bg-black/30 px-6 py-3 text-base text-zinc-100 backdrop-blur-sm hover:border-white/35 hover:bg-white/10 sm:w-auto">
                   {copy("See an example")}
-                </Button>
+                </span>
               </a>
             </div>
 
@@ -123,7 +126,7 @@ export default function LandingPage() {
           <AnalysisPreview />
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {PILLARS.map(({ icon: Icon, title, description }, i) => (
-              <Reveal key={title} delay={i * 80} className="grid content-start gap-4 border-t border-zinc-700 py-6">
+              <Reveal key={title} delay={i * 80} className="grid content-start gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
                 <Icon size={22} className="mt-0.5 text-lime-400" aria-hidden="true" />
                 <div>
                   <h3 className="font-display text-lg font-semibold tracking-tight text-zinc-100">{copy(title)}</h3>
@@ -146,7 +149,7 @@ export default function LandingPage() {
               { n: "02", t: "ui.329", d: "ui.330" },
               { n: "03", t: "ui.333", d: "ui.334" },
             ].map(({ n, t, d }, i) => (
-              <Reveal key={n} delay={i * 70} className="flex flex-col items-start gap-4">
+              <Reveal key={n} delay={i * 70} className="flex flex-col items-start gap-4 rounded-2xl border border-zinc-800 p-6">
                 <span className="w-10 shrink-0 font-mono text-sm font-bold text-lime-400">{copy(n)}</span>
                 <div>
                   <p className="text-sm font-semibold text-zinc-200">{copy(t)}</p>
@@ -157,6 +160,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <ProjectStory />
 
       <div id="download">
         <DownloadSection />
@@ -169,13 +174,14 @@ export default function LandingPage() {
           </h2>
           <p className="mt-3 text-zinc-400">{copy("Bring your telemetry file. Get a breakdown and choose what to practise next.")}</p>
           <Link href="/telemetry" className="mt-8 inline-flex">
-            <Button variant="primary" size="lg">
+            <span className="inline-flex items-center justify-center gap-2 rounded-lg bg-lime-400 px-6 py-3 text-base font-semibold text-zinc-950 hover:bg-lime-300">
               {copy("Analyse my lap")} <ArrowRight size={16} />
-            </Button>
+            </span>
           </Link>
         </div>
       </section>
 
+      </main>
       <footer className="border-t border-zinc-800 py-8">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4">
           <div className="flex items-center gap-2">
@@ -187,8 +193,8 @@ export default function LandingPage() {
           <p className="text-xs text-zinc-400">{`© ${new Date().getFullYear()} APEX Racing`}</p>
           <div className="flex items-center gap-4 text-sm text-zinc-400">
             <Link href="/telemetry" className="transition-colors hover:text-white">{copy("Explore telemetry")}</Link>
-            <Link href="/academy" className="transition-colors hover:text-zinc-400">{copy("ui.013")}</Link>
-            <Link href="/download" className="transition-colors hover:text-zinc-400">{copy("ui.143")}</Link>
+            <Link href="/academy" className="transition-colors hover:text-white">{copy("ui.013")}</Link>
+            <Link href="/download" className="transition-colors hover:text-white">{copy("ui.143")}</Link>
           </div>
         </div>
       </footer>

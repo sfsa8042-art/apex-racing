@@ -1,6 +1,7 @@
 "use client";
 import { useCopy } from "../../shared/i18n/react";
 
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ArrowRight, X, Activity, BarChart2, BookOpen, User, Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ const SIMULATORS = ["iRacing", "ACC", "rFactor 2", "Automobilista 2", "Друг�
 
 export function OnboardingFlow() {
   const copy = useCopy();
+  const pathname = usePathname();
   const { t } = useLang();
   const [visible,   setVisible]   = useState(false);
   const [dismissed, setDismissed] = useState(true);
@@ -26,6 +28,10 @@ export function OnboardingFlow() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Profile setup is optional and only offered on the profile page.
+    setVisible(false);
+    setDismissed(true);
+    if (pathname !== "/profile") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("skipOnboarding") === "1") {
       try { localStorage.setItem(ONBOARDING_KEY, "1"); } catch {}
@@ -41,7 +47,7 @@ export function OnboardingFlow() {
       setVisible(true);
       setStep(0);
     }
-  }, []);
+  }, [pathname]);
 
   const finish = () => {
     try { localStorage.setItem(ONBOARDING_KEY, "1"); } catch {}

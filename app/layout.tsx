@@ -33,6 +33,7 @@ function getLanguage() {
 export function generateMetadata(): Metadata {
   const lang = getLanguage();
   return {
+    metadataBase: new URL("https://www.apex-racing.online"),
     title: lang === "ru" ? "APEX — платформа для симрейсинга" : "APEX — Sim Racing Platform",
     description: lang === "ru"
       ? "Улучшай темп с помощью последовательного обучения и анализа телеметрии."

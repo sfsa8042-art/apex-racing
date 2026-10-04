@@ -33,7 +33,7 @@ export function HeroVisual() {
       </picture>
 
       {/* Readability on the copy column — car stays bright on the right */}
-      <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-zinc-950/85 via-zinc-950/60 to-zinc-950/20 sm:w-[68%] sm:from-zinc-950/95 sm:via-zinc-950/50" />
+      <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-zinc-950/85 via-zinc-950/60 to-zinc-950/20 sm:w-[85%] sm:from-zinc-950/95 sm:via-zinc-950/75" />
       <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-zinc-950/80 to-transparent" />
     </div>
   );

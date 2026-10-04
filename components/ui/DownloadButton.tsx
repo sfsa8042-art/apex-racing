@@ -130,9 +130,9 @@ export function DownloadSection() {
   const { info, loading } = useRelease();
 
   return (
-    <section className="border-t border-zinc-800 py-20">
+    <section className="border-t border-zinc-800 py-12">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="grid items-start gap-12 md:grid-cols-2 md:items-center">
+        <div className="grid items-start gap-8 md:grid-cols-2 md:items-center">
           <div>
             <p className="apex-eyebrow">{copy("ui.575")}</p>
             <h2 className="apex-section-title">
@@ -163,7 +163,7 @@ export function DownloadSection() {
           </div>
 
           {/* Product preview — flat panel, no fake OS chrome */}
-          <div className="overflow-hidden border border-zinc-800 bg-zinc-900/60">
+          <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60">
             <div className="flex items-center gap-2 border-b border-zinc-800 px-4 py-3">
               <div className="flex h-5 w-5 items-center justify-center rounded-md bg-lime-400">
                 <span className="text-[9px] font-bold text-zinc-950">{copy("ui.268")}</span>
