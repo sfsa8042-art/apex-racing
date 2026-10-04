@@ -369,6 +369,7 @@ export default function TelemetryPage() {
   } = useTelemetry();
   const { status, error, filename, parsedLap, analysisResult } = uploadState;
 
+  const [metricsExpanded, setMetricsExpanded] = useState(false);
   const [mobileView, setMobileView] = useState("overview");
   const [visibleCh, setVisibleCh] = useState(["speed","throttle","brake","delta"]);
   const [rightTab,  setRightTab]  = useState<RightTab>("plan");
@@ -474,8 +475,9 @@ export default function TelemetryPage() {
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
 
           {/* ── METRICS BAR ──────────────────────────────────────────────────── */}
-          <div className="telemetry-metrics flex items-center shrink-0 border-b border-zinc-800/60 bg-zinc-950/95 backdrop-blur-sm overflow-x-auto">
+          <div className={`${metricsExpanded ? "metrics-expanded " : ""}telemetry-metrics flex items-center shrink-0 border-b border-zinc-800/60 bg-zinc-950/95 backdrop-blur-sm overflow-x-auto`}>
 
+            <button aria-expanded={metricsExpanded} onClick={() => setMetricsExpanded(v => !v)} className="order-last px-4 py-2 text-xs text-lime-400 md:hidden">{copy(metricsExpanded ? "internal.lessMetrics" : "internal.moreMetrics")}</button>
             {/* Lap times */}
             <div className="flex items-stretch border-r border-zinc-800/60 shrink-0">
               <div className="px-4 py-2.5 border-r border-zinc-800/40">
@@ -509,7 +511,7 @@ export default function TelemetryPage() {
 
             {/* Sectors */}
             {analysisResult.sectors.length>0 && (
-              <div className="flex items-stretch border-r border-zinc-800/60 shrink-0">
+              <div className="secondary-metric flex items-stretch border-r border-zinc-800/60 shrink-0">
                 {analysisResult.sectors.map(s => (
                   <div key={s.sectorIdx} className="px-3.5 py-2.5 border-r border-zinc-800/40 last:border-r-0">
                     <p className="text-[8px] font-mono text-zinc-400 uppercase tracking-[0.15em] mb-0.5">{copy("ui.209")}{copy(s.sectorIdx+1)}</p>
@@ -530,7 +532,7 @@ export default function TelemetryPage() {
             )}
 
             {/* Scores */}
-            <div className="flex items-center gap-2 px-4 py-1.5 border-r border-zinc-800/60 shrink-0">
+            <div className="secondary-metric flex items-center gap-2 px-4 py-1.5 border-r border-zinc-800/60 shrink-0">
               <ScoreRing value={analysisResult.overallScore} label={copy("ui.028")} size={46}/>
               {analysisResult.subScores && (
                 <>
@@ -543,7 +545,7 @@ export default function TelemetryPage() {
             </div>
 
             {/* Stats */}
-            <div className="flex items-center gap-4 px-4 py-2.5 flex-1 min-w-0">
+            <div className="secondary-metric flex items-center gap-4 px-4 py-2.5 flex-1 min-w-0">
               {parsedLap && [
                 { lbl:"MAX SPD", val:`${Math.round(parsedLap.channelStats.maxSpeed)}`, unit:"km/h", c:"text-lime-400" },
                 { lbl:"AVG GAS", val:`${Math.round(parsedLap.channelStats.avgThrottle)}`, unit:"%",  c:"text-green-400" },

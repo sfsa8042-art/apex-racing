@@ -61,6 +61,12 @@ for (const lang of ["en", "ru"] as const) patterns[lang].sort((a,b) => b.specifi
  */
 export function translateText(value: string, lang: Lang, depth = 0): string {
   if (!value || depth > 6) return value;
+  if (/^[—–−]+$/.test(value.trim())) return value;
+  const focus = /^Главное — (.+?)(?: \((Поворот \d+)\))?$/.exec(value);
+  if (focus && lang === "en") {
+    const title = focus[1][0].toUpperCase() + focus[1].slice(1);
+    return `Main focus — ${translateText(title, lang, depth + 1)}${focus[2] ? ` (${translateText(focus[2], lang, depth + 1)})` : ""}`;
+  }
   const key = normalise(value);
   const catalog = lang === "ru" ? ru : en;
   if (Object.prototype.hasOwnProperty.call(catalog,key)) return catalog[key as keyof typeof catalog];

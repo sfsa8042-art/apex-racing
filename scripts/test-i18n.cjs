@@ -29,6 +29,8 @@ assert.equal(preferredLanguage('de'),'en');
 assert.equal(preferredLanguage('en;q=0.3,ru;q=0.9'),'ru');
 assert.equal(preferredLanguage('ru;q=0,en;q=1'),'en');
 assert.equal(translateText('THROTTLE','ru'),'ГАЗ');
+assert.equal(translateText('—','en'),'—');
+assert.equal(translateText('Главное — газ и тормоз вместе (Поворот 2)','en'),'Main focus — Throttle and brake overlap (Turn 2)');
 assert.equal(translateText('✓ ACC найден\nКругов завершено: 3','en'),'✓ ACC detected\nLaps completed: 3');
 for(const value of ['Results','Assets','David','Recorded','Documents\\Results','test.csv','Porsche 992 GT3 R','apex_tok_abc123']) {
   assert.equal(translateText(value,'ru'),value,'Technical data must stay intact');

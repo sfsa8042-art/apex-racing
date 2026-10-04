@@ -83,7 +83,7 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-6 animate-fade-in sm:p-8">
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div className="min-w-0 flex-1">
           <p className="apex-eyebrow mb-2">{copy("ui.029")}</p>
           <h1 className="apex-page-title">
@@ -108,10 +108,10 @@ export default function DashboardPage() {
 
       {/* Empty state — one job */}
       {!hasLap && history.length === 0 && (
-        <section className="border-y border-zinc-800 py-10">
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 sm:p-8">
           <p className="font-display text-lg font-semibold text-zinc-100">{copy("ui.327")}</p>
           <p className="mt-2 max-w-lg text-sm leading-relaxed text-zinc-400">{copy("ui.328")}</p>
-          <ol className="mt-8 space-y-5">
+          <ol className="mt-8 grid gap-6 md:grid-cols-3">
             {[
               { n: "01", t: "ui.327", d: "ui.328" },
               { n: "02", t: "ui.329", d: "ui.330" },
@@ -195,7 +195,7 @@ export default function DashboardPage() {
                 hasLap && uploadState.analysisResult!.totalTimeDeltaMs > 0 ? "text-red-400" : "text-lime-400",
               )}>
                 {copy(
-                  hasLap
+                  hasLap && uploadState.analysisResult!.hasReference
                     ? `${uploadState.analysisResult!.totalTimeDeltaMs > 0 ? "+" : ""}${(uploadState.analysisResult!.totalTimeDeltaMs / 1000).toFixed(3)}s`
                     : "—",
                 )}

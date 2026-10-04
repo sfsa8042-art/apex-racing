@@ -21,7 +21,7 @@ type SessionStatus = TelemetrySession["status"];
 
 function statusConfig(s: SessionStatus) {
   const map = {
-    pending:    { label: "В очереди",   icon: Clock,        color: "text-zinc-500",  bg: "bg-zinc-500/10", border: "border-zinc-500/25" },
+    pending:    { label: "В очереди",   icon: Clock,        color: "text-zinc-400",  bg: "bg-zinc-500/10", border: "border-zinc-500/25" },
     processing: { label: "Анализ...",   icon: Loader,       color: "text-blue-400",  bg: "bg-blue-400/10", border: "border-blue-400/25" },
     ready:      { label: "Готово",      icon: CheckCircle,  color: "text-lime-400",  bg: "bg-lime-400/10", border: "border-lime-400/25" },
     error:      { label: "Ошибка",      icon: AlertCircle,  color: "text-red-400",   bg: "bg-red-400/10",  border: "border-red-400/25"  },
@@ -69,8 +69,8 @@ function SessionCard({ session }: { session: TelemetrySession }) {
           session.status === "ready" ? "bg-lime-400/10" : "bg-zinc-800"
         )}>
           {isDesktop
-            ? <Monitor size={16} className={session.status === "ready" ? "text-lime-400" : "text-zinc-500"} />
-            : <Globe   size={16} className={session.status === "ready" ? "text-lime-400" : "text-zinc-500"} />
+            ? <Monitor size={16} className={session.status === "ready" ? "text-lime-400" : "text-zinc-400"} />
+            : <Globe   size={16} className={session.status === "ready" ? "text-lime-400" : "text-zinc-400"} />
           }
         </div>
 
@@ -86,7 +86,7 @@ function SessionCard({ session }: { session: TelemetrySession }) {
                   <span className="text-xs text-zinc-400">{copy(session.detectedTrack)}</span>
                 )}
                 {session.detectedCar && (
-                  <span className="text-xs text-zinc-500">{copy(session.detectedCar)}</span>
+                  <span className="text-xs text-zinc-400">{copy(session.detectedCar)}</span>
                 )}
                 {!session.detectedTrack && !session.detectedCar && (
                   <span className="text-xs text-zinc-600">{copy("ui.120")}</span>
@@ -110,13 +110,13 @@ function SessionCard({ session }: { session: TelemetrySession }) {
             <div className="flex items-center gap-4 mt-2 flex-wrap">
               {session.lapTimeMs && (
                 <div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">{copy("ui.121")}</p>
+                  <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-0.5">{copy("ui.121")}</p>
                   <p className="text-sm font-mono tabular text-lime-400">{copy(formatLapTime(session.lapTimeMs))}</p>
                 </div>
               )}
               {session.totalDeltaMs !== null && (
                 <div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">{copy("ui.122")}</p>
+                  <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-0.5">{copy("ui.122")}</p>
                   <p className={cn("text-sm font-mono tabular", session.totalDeltaMs > 0 ? "text-red-400" : "text-lime-400")}>
                     {copy(session.totalDeltaMs > 0 ? "+" : "")}
                     {copy((session.totalDeltaMs / 1000).toFixed(3))}{copy("ui.106")}</p>
@@ -124,13 +124,13 @@ function SessionCard({ session }: { session: TelemetrySession }) {
               )}
               {session.overallScore !== null && (
                 <div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">{copy("ui.123")}</p>
+                  <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-0.5">{copy("ui.123")}</p>
                   <p className="text-sm font-mono tabular text-zinc-200">{copy(session.overallScore)}<span className="text-zinc-600">/100</span></p>
                 </div>
               )}
               {session.insightsCount !== null && session.insightsCount > 0 && (
                 <div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">{copy("ui.124")}</p>
+                  <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-0.5">{copy("ui.124")}</p>
                   <p className="text-sm font-mono tabular text-yellow-400">{copy(session.insightsCount)}</p>
                 </div>
               )}
@@ -189,7 +189,7 @@ function StatsBar({ sessions }: { sessions: TelemetrySession[] }) {
         <div key={label} className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
           <div className="flex items-center gap-1.5 mb-1">
             <Icon size={12} className={color} />
-            <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">{copy(label)}</p>
+            <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-400">{copy(label)}</p>
           </div>
           <p className={cn("text-2xl font-semibold tabular tracking-tight font-mono", color)}>{copy(value)}</p>
         </div>
@@ -234,13 +234,13 @@ export default function SessionsPage() {
   });
 
   return (
-    <div className="p-6 max-w-5xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto animate-fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-8">
         <div>
-          <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-1">{copy("ui.132")}</p>
-          <h1 className="text-2xl font-semibold text-zinc-100">{copy("Saved uploads")}</h1>
-          <p className="text-sm text-zinc-500 mt-1">
+          <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest mb-1">{copy("ui.132")}</p>
+          <h1 className="apex-page-title">{copy("Saved uploads")}</h1>
+          <p className="text-sm text-zinc-400 mt-1">
             {copy("Files uploaded from the browser or desktop app. Local analysis history is shown on the dashboard.")}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -261,17 +261,17 @@ export default function SessionsPage() {
         </div>
       ) : sessions.length === 0 ? (
         /* Empty state */
-        <div className="text-center py-16">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 text-center px-5 py-12">
           <div className="w-16 h-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto mb-4">
             <Activity size={28} className="text-zinc-600" />
           </div>
           <p className="text-lg font-medium text-zinc-300 mb-2">{copy("No saved uploads yet")}</p>
-          <p className="text-sm text-zinc-500 mb-6 max-w-sm mx-auto">
+          <p className="text-sm text-zinc-400 mb-6 max-w-sm mx-auto">
             {copy("ui.138")}</p>
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-700 bg-zinc-800 text-sm text-zinc-400">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/download" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-700 bg-zinc-800 text-sm text-zinc-300 hover:border-lime-400">
               <Monitor size={14} className="text-lime-400" />
-              {copy("ui.139")}</div>
+              {copy("ui.139")}</Link>
             <Link href="/telemetry">
               <Button variant="primary">
                 <Upload size={14} />
@@ -309,7 +309,7 @@ export default function SessionsPage() {
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
                   filter === key
                     ? "bg-zinc-700 text-zinc-100"
-                    : "bg-zinc-900 border border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300"
+                    : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300"
                 )}>
                 {copy(label)}
                 <span className={cn(

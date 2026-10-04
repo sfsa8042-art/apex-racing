@@ -1951,5 +1951,13 @@
   "landing.lessonMeta": "Racing line · Theory · 8 min",
   "landing.lessonPractice": "Observe → understand → practise",
   "landing.author": "Sole developer of APEX, built with the assistance of AI tools.",
-  "landing.research": "To explore demand for the app, I reached out to active sim racing teams. The next research question is how useful the tool could be in their training process."
+  "landing.research": "To explore demand for the app, I reached out to active sim racing teams. The next research question is how useful the tool could be in their training process.",
+  "internal.currentRelease": "Current release",
+  "internal.desktopSettings": "Desktop connection (optional)",
+  "internal.trendHint": "Analyse two laps to see how your score changes.",
+  "internal.chooseModule": "Choose module",
+  "internal.backAcademy": "Back to Academy",
+  "internal.step": "Step",
+  "internal.moreMetrics": "Show all metrics",
+  "internal.lessMetrics": "Hide extra metrics"
 }

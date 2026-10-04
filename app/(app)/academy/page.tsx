@@ -197,7 +197,7 @@ function ImmersiveLessonView({
     <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col">
       {/* Top bar */}
       <div className={cn("flex items-center gap-3 px-4 py-3 border-b border-zinc-800 shrink-0", col.bg)}>
-        <button onClick={onBack}
+        <button aria-label={copy("internal.backAcademy")} onClick={onBack}
           className="w-8 h-8 rounded-lg hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-200 transition-colors">
           <X size={16}/>
         </button>
@@ -219,9 +219,10 @@ function ImmersiveLessonView({
         <StageProgress current={stage} completed={completed} onStageClick={goToStage}/>
       </div>
 
+      <p className="px-5 py-2 text-xs text-zinc-400">{copy("internal.step")} {STAGE_ORDER.indexOf(stage) + 1} / {STAGE_ORDER.length}</p>
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        <div className="max-w-2xl mx-auto h-full">
+        <div className="max-w-3xl mx-auto h-full">
           <LessonStage
             lesson={lesson}
             stage={stage}
@@ -274,6 +275,7 @@ export default function AcademyPage() {
   const [activeLessonState, setActiveLessonState] = useState<{
     module: ModuleContent; lesson: LessonContent;
   } | null>(null);
+  const [modulesOpen, setModulesOpen] = useState(false);
   const [filterTier,    setFilterTier]    = useState<FilterTier>("all");
 
   const refreshProgress = () => setProgress(loadProgress());
@@ -315,6 +317,8 @@ export default function AcademyPage() {
           <p className="text-xs text-zinc-400">{copy("ui.014")}</p>
         </div>
 
+        <button className="mx-4 my-3 flex items-center justify-between rounded-xl border border-zinc-700 p-3 text-sm lg:hidden" aria-expanded={modulesOpen} aria-controls="academy-module-picker" onClick={() => setModulesOpen(v => !v)}><span>{copy(selectedMod?.title ?? "ui.013")}</span><span className="text-lime-400">{copy("internal.chooseModule")}</span></button>
+        <div id="academy-module-picker" className={modulesOpen ? "contents" : "hidden lg:contents"}>
         {/* Stats */}
         <div className="px-4 py-3 border-b border-zinc-800">
           <StatsBar progress={progress}/>
@@ -339,10 +343,12 @@ export default function AcademyPage() {
               module={module}
               progress={progress}
               isSelected={selectedMod?.id === module.id}
-              onSelect={() => setSelectedMod(module)}
+              onSelect={() => { setSelectedMod(module); setModulesOpen(false); }}
             />
           ))}
         </div>
+      </div>
+
       </div>
 
       {/* ─── RIGHT: lesson list or empty state ────────────────────────── */}

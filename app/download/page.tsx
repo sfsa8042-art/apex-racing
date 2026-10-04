@@ -82,7 +82,7 @@ export default function DownloadPage() {
             <div>
               <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-0.5">{copy("ui.273")}</p>
               {loading && <div className="h-5 w-24 bg-zinc-800 rounded animate-pulse"/>}
-              {info    && <p className="text-sm font-mono text-zinc-300">{copy(info.version)}</p>}
+              {info    && <p className="text-sm font-mono text-zinc-300">{copy(info.version === "latest-build" ? "internal.currentRelease" : info.version)}</p>}
               {error   && <p className="text-xs text-zinc-400 font-mono">{copy("ui.274")}</p>}
             </div>
             <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400">
@@ -141,10 +141,9 @@ export default function DownloadPage() {
             )}
 
             {/* System requirements */}
-            <div className="flex items-center justify-center gap-4 text-xs text-zinc-400 font-mono pt-1">
+            <div className="grid grid-cols-2 gap-3 text-xs text-zinc-400 pt-1 sm:flex sm:flex-wrap sm:justify-center">
               <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-400"/>{copy("ui.282")}</span>
               <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-400"/>{copy("ui.283")}</span>
-              <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-400"/>{copy("ui.284")}</span>
               <span className="flex items-center gap-1.5"><CheckCircle size={10} className="text-zinc-400"/>{copy("ui.285")}</span>
             </div>
           </div>

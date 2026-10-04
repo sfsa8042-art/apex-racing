@@ -32,11 +32,12 @@ function TrackDetail({ track }: { track: Track }) {
         <div className={styles.stat}><dt>{c.corners}</dt><dd>{track.corners}</dd></div>
         <div className={styles.stat}><dt>{c.sectors}</dt><dd>{track.sectors.length.toString().padStart(2, "0")}</dd></div>
       </dl>
-      <TrackGallery trackId={track.id} />
-    </div>
     <div className={styles.tabs} role="group" aria-label={c.explore}>
       <button className={styles.tab} aria-pressed={sector === undefined} onClick={() => setSector(undefined)}>{c.fullLap}</button>
       {track.sectors.map((s, i) => <button key={s.id} className={styles.tab} aria-pressed={sector === s.id} onClick={() => setSector(s.id)}><span style={{ color: sectorColors[i] }}>●</span> S{s.id}</button>)}
+    </div>
+      {sector && <p className="px-5 py-4 text-sm leading-relaxed text-zinc-300" aria-live="polite">{copy(track.sectors.find(s => s.id === sector)?.name)} · {copy(track.sectors.find(s => s.id === sector)?.description)}</p>}
+      <TrackGallery trackId={track.id} />
     </div>
     <section><h3 className={styles.sectionTitle}>{c.character}</h3><div className={styles.chips}>{track.keyCharacteristics.map(item => <span key={item} className={styles.chip}>{copy(item)}</span>)}</div></section>
     <section>

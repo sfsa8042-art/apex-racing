@@ -215,3 +215,5 @@ body {
     animation: none !important;
   }
 }
+
+@media(max-width:767px){.telemetry-metrics:not(.metrics-expanded) .secondary-metric{display:none}.telemetry-metrics:not(.metrics-expanded){gap:0}}

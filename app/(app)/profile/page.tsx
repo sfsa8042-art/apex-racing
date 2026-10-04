@@ -189,8 +189,10 @@ function ProfileForm({ existing, onSave, onCancel }: {
             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-500 transition-colors resize-none"/>
         </div>
 
-        {/* API Token */}
-        <div>
+        {/* Optional desktop integration */}
+        <details className="rounded-xl border border-zinc-700 p-4">
+          <summary className="cursor-pointer text-sm font-medium text-zinc-300">{copy("internal.desktopSettings")}</summary>
+        <div className="mt-4">
           <label className="text-xs font-mono uppercase tracking-widest text-zinc-400 block mb-1.5">
             <span className="flex items-center gap-1.5"><Key size={11}/>{copy("ui.089")}</span>
           </label>
@@ -213,6 +215,8 @@ function ProfileForm({ existing, onSave, onCancel }: {
             {copy("Введи любой текст — этот же токен укажи в настройках десктопного приложения. Например: ")}<span className="font-mono text-zinc-400">{copy("ui.092")}</span>
           </p>
         </div>
+
+        </details>
 
         {/* Preview */}
         {name.trim() && (
@@ -273,7 +277,7 @@ function StatsSection() {
           </div>
           <div className="text-right">
             <p className="text-xs text-zinc-400 font-mono">{copy(lp.totalXP)} {copy(" XP")}</p>
-            <p className="text-xs text-zinc-400 font-mono">+{copy(lp.xpToNextLevel)} {copy(" до след.")}</p>
+
           </div>
         </div>
         {/* XP bar */}
@@ -290,9 +294,9 @@ function StatsSection() {
         {[
           { label: "Кругов загружено", value: history.length, icon: Activity, color: "text-blue-400" },
           { label: "Серия дней",       value: streak?.currentStreak ?? 0, icon: Calendar, color: "text-orange-400", suffix: "д" },
-          { label: "Тренд счёта",      value: trend, icon: trend >= 0 ? TrendingUp : TrendingDown,
+          { label: "Тренд счёта",      value: history.length >= 2 ? trend : "—", icon: trend >= 0 ? TrendingUp : TrendingDown,
             color: trend > 0 ? "text-lime-400" : trend < 0 ? "text-red-400" : "text-zinc-400",
-            prefix: trend > 0 ? "+" : "" },
+            prefix: history.length >= 2 && trend > 0 ? "+" : "" },
         ].map(({ label, value, icon: Icon, color, suffix, prefix }) => (
           <div key={label} className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-center">
             <Icon size={16} className={cn("mx-auto mb-1.5", color)}/>
@@ -305,6 +309,7 @@ function StatsSection() {
       </div>
 
       {history.length >= 2 && <p className="text-xs leading-relaxed text-zinc-400">{copy("Score change from first to latest local analysis")}: {new Date(history[history.length - 1].uploadedAt).toLocaleDateString(displayLang)} — {new Date(history[0].uploadedAt).toLocaleDateString(displayLang)}</p>}
+      {history.length < 2 && <p className="text-sm text-zinc-400">{copy("internal.trendHint")}</p>}
       {/* Score sparkline */}
       {history.length >= 2 && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">

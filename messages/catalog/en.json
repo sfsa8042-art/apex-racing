@@ -258,7 +258,7 @@
   "ui.256": "Could not process file",
   "ui.257": "Analysis failed",
   "ui.258": "Download the installer",
-  "ui.259": "Click the button below to download the .exe file",
+  "ui.259": "Use the download button to save the .exe installer.",
   "ui.260": "Run the installer",
   "ui.261": "Double-click the .exe file and follow the instructions",
   "ui.262": "Select your telemetry folder",
@@ -1951,5 +1951,13 @@
   "landing.lessonMeta": "Racing line · Theory · 8 min",
   "landing.lessonPractice": "Observe → understand → practise",
   "landing.author": "Sole developer of APEX, built with the assistance of AI tools.",
-  "landing.research": "To explore demand for the app, I reached out to active sim racing teams. The next research question is how useful the tool could be in their training process."
+  "landing.research": "To explore demand for the app, I reached out to active sim racing teams. The next research question is how useful the tool could be in their training process.",
+  "internal.currentRelease": "Current release",
+  "internal.desktopSettings": "Desktop connection (optional)",
+  "internal.trendHint": "Analyse two laps to see how your score changes.",
+  "internal.chooseModule": "Choose module",
+  "internal.backAcademy": "Back to Academy",
+  "internal.step": "Step",
+  "internal.moreMetrics": "Show all metrics",
+  "internal.lessMetrics": "Hide extra metrics"
 }
