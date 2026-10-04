@@ -20,7 +20,7 @@ export function AnalysisPreview() {
     </header>
     <div className={styles.heading}>
       <div><p className={styles.eyebrow}>{copy("From data to your next move")}</p><h3>{copy("One moment. A clear next step.")}</h3></div>
-      <span className={styles.file}><Activity size={14}/>sample_reference.csv</span>
+      <span className={styles.file}><Activity size={14}/>{copy("Two seconds of telemetry")}</span>
     </div>
     <div className={styles.workspace}>
       <figure className={styles.corner}>
@@ -33,6 +33,7 @@ export function AnalysisPreview() {
           <path d="M38 216 L119 135 Q201 48 240 109 Q260 148 309 47" fill="none" stroke="#61666c" strokeWidth="1" strokeDasharray="4 7"/>
           <path d="M38 216 L119 135 Q201 48 240 109 Q260 148 309 47" fill="none" stroke="#bef264" strokeWidth="3"/>
           <circle cx="116" cy="138" r="22" fill="#bef264" fillOpacity=".08" stroke="#bef264" strokeOpacity=".25"/>
+          <circle cx="116" cy="138" r="12" fill="none" stroke="#bef264" strokeOpacity=".45"/>
           <circle cx="116" cy="138" r="6" fill="#bef264" stroke="#10130b" strokeWidth="3"/>
           <path d="M123 134 L152 165 H230" stroke="#a1a1aa" fill="none"/>
           <text x="158" y="184" fill="#e4e4e7" fontSize="12" fontFamily="monospace">{copy("Selected moment")}</text>
@@ -51,15 +52,16 @@ export function AnalysisPreview() {
           <line x1={x(.4)} x2={x(.4)} y1="40" y2="196" stroke="#d4d4d8" strokeOpacity=".5" strokeDasharray="3 5"/>
           <circle cx={x(.4)} cy={y(80)} r="4" fill="#bef264" stroke="#101214" strokeWidth="2"/>
           <circle cx={x(.4)} cy={y(5)} r="4" fill="#f5a38e" stroke="#101214" strokeWidth="2"/>
+          <rect x={x(.4)-28} y="9" width="56" height="25" rx="6" fill="#bef264" fillOpacity=".12" stroke="#bef264" strokeOpacity=".2"/>
           <text x={x(.4)} y="26" textAnchor="middle" fill="#bef264" fontSize="12" fontFamily="monospace">0.4 {copy("s")}</text>
           {[0,.5,1,1.5,2].map(time=><text key={time} x={x(time)} y="222" fill="#94999f" fontSize="11" textAnchor="middle">{time.toFixed(1)} {copy("s")}</text>)}
         </svg>
-        <dl className={styles.readouts}><div><dt>{copy("Selected moment")}</dt><dd>0.4 <small>{copy("s")}</small></dd></div><div><dt>{copy("Throttle")}</dt><dd className={styles.throttle}>80<small>%</small></dd></div><div><dt>{copy("preview.brake")}</dt><dd className={styles.brake}>5<small>%</small></dd></div></dl>
+        <dl className={styles.readouts}><div><dt>{copy("Selected moment")}</dt><dd>0.4 <small>{copy("s")}</small></dd></div><div><dt>{copy("Throttle")}</dt><dd className={styles.throttle}>80<small>%</small></dd><span className={styles.meter} aria-hidden="true"><span style={{width:"80%",background:"#bef264"}}/></span></div><div><dt>{copy("preview.brake")}</dt><dd className={styles.brake}>5<small>%</small></dd><span className={styles.meter} aria-hidden="true"><span style={{width:"5%",background:"#f5a38e"}}/></span></div></dl>
       </figure>
     </div>
     <div className={styles.insight}>
       <div className={styles.finding}><span className={styles.icon}><Target size={19}/></span><div><p className={styles.eyebrow}>{copy("What the data shows")}</p><h4>{copy("Throttle and brake overlap")}</h4><p>{copy("At this moment, both pedals are pressed. Check whether the overlap is intentional.")}</p></div></div>
-      <div className={styles.action}><span className={styles.eyebrow}>{copy("Try on your next lap")}</span><p>{copy("Release the brake before applying throttle, unless you are deliberately using left-foot braking to balance the car.")}</p></div>
+      <div className={styles.action}><span className={styles.eyebrow}><span className={styles.step}>→</span>{copy("Try on your next lap")}</span><p>{copy("Release the brake before applying throttle, unless you are deliberately using left-foot braking to balance the car.")}</p></div>
     </div>
     <footer className={styles.footer}><span>{copy("A sample, not a prediction of your lap time.")}</span><Link href="/telemetry">{copy("Analyse my lap")}<ArrowUpRight size={17}/></Link></footer>
   </section>;

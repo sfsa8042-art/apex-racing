@@ -1930,5 +1930,6 @@
   "preview.next": "Try on your next lap",
   "preview.disclaimer": "A sample, not a prediction of your lap time.",
   "preview.open": "Open full analysis",
-  "preview.brake": "Brake input"
+  "preview.brake": "Brake input",
+  "preview.duration": "Two seconds of telemetry"
 }
