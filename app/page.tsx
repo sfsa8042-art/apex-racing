@@ -120,18 +120,7 @@ export default function LandingPage() {
           <h2 className="apex-section-title max-w-xl">{copy("ui.323")}</h2>
           <p className="apex-intro">{copy("ui.324")}</p>
 
-          <div id="analysis-preview" className="scroll-mt-6 mt-10 rounded-2xl border border-lime-400/20 bg-zinc-900/70 p-6 sm:p-8">
-            <p className="text-xs font-mono uppercase tracking-widest text-lime-400">{copy("Example analysis · demo data")}</p>
-            <div className="mt-5 grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:items-center">
-              <AnalysisPreview />
-              <div>
-                <h3 className="text-xl font-semibold text-zinc-100">{copy("Throttle and brake overlap")}</h3>
-                <p className="mt-2 text-sm text-zinc-400">{copy("At 0.4 s: throttle 80%, brake 5%.")}</p>
-                <p className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-200">{copy("Release the brake before applying throttle, unless you are deliberately using left-foot braking to balance the car.")}</p>
-              <Link href="/telemetry" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-lime-300 hover:text-lime-200">{copy("Analyse my lap")} <ArrowRight size={16} /></Link>
-              </div>
-            </div>
-          </div>
+          <AnalysisPreview />
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {PILLARS.map(({ icon: Icon, title, description }, i) => (
               <Reveal key={title} delay={i * 80} className="grid content-start gap-4 border-t border-zinc-700 py-6">

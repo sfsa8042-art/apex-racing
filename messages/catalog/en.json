@@ -1914,5 +1914,21 @@
   "landing.final": "Bring your telemetry file. Get a breakdown and choose what to practise next.",
   "landing.moment": "At 0.4 s: throttle 80%, brake 5%.",
   "landing.folder": "Your telemetry folder",
-  "landing.demo": "Demo preview"
+  "landing.demo": "Demo preview",
+  "preview.lap": "Lap analysis",
+  "preview.demo": "Demo data",
+  "preview.eyebrow": "From data to your next move",
+  "preview.title": "One moment. A clear next step.",
+  "preview.corner": "Corner entry",
+  "preview.schematic": "Illustrative corner schematic, not recorded GPS",
+  "preview.selected": "Selected moment",
+  "preview.schematicLabel": "Schematic illustration",
+  "preview.note": "Spot the input. Understand the technique.",
+  "preview.pedals": "Pedal inputs",
+  "preview.finding": "What the data shows",
+  "preview.fact": "At this moment, both pedals are pressed. Check whether the overlap is intentional.",
+  "preview.next": "Try on your next lap",
+  "preview.disclaimer": "A sample, not a prediction of your lap time.",
+  "preview.open": "Open full analysis",
+  "preview.brake": "Brake input"
 }
