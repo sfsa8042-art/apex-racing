@@ -141,18 +141,7 @@ export function DownloadSection() {
             </h2>
             <p className="apex-intro">{copy("ui.578")}</p>
 
-            <ul className="mt-8 space-y-3">
-              {[
-                ["iRacing",                   "Documents\\iRacing\\telemetry"],
-                ["Assetto Corsa Competizione", "Documents\\ACC\\MoTeC"],
-                ["rFactor 2",                  "rFactor2\\UserData\\Log\\Results"],
-              ].map(([sim, path]) => (
-                <li key={sim} className="border-t border-zinc-800 pt-3 first:border-t-0 first:pt-0">
-                  <span className="text-sm font-medium text-zinc-200">{copy(sim)}</span>
-                  <span className="mt-0.5 block font-mono text-[11px] text-zinc-400">{path}</span>
-                </li>
-              ))}
-            </ul>
+            <ul className="mt-6 flex flex-wrap gap-2">{["iRacing", "Assetto Corsa Competizione", "rFactor 2"].map(sim => <li key={sim} className="rounded-full border border-zinc-700 px-3 py-2 text-sm text-zinc-300">{sim}</li>)}</ul>
 
             {!loading && !info?.exe && !info?.msi && <p role="status" className="mt-6 text-sm leading-relaxed text-zinc-400">{copy("Desktop download is currently unavailable. You can analyse a lap in the web app.")}</p>}
             <a href={info?.exe ? DOWNLOAD_EXE : info?.msi ? DOWNLOAD_MSI : "/dashboard"}
@@ -162,7 +151,7 @@ export function DownloadSection() {
               )}>
               {loading ? <Loader2 size={18} className="animate-spin"/> : <Download size={18} />}
               {copy(loading ? "Загрузка…" : info?.exe || info?.msi ? "Скачать для Windows" : "Open web app")}
-              {info?.version && <span className="font-mono text-xs opacity-60">{info.version}</span>}
+
             </a>
 
             <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-xs text-zinc-400">
@@ -180,13 +169,13 @@ export function DownloadSection() {
                 <span className="text-[9px] font-bold text-zinc-950">{copy("ui.268")}</span>
               </div>
               <span className="font-mono text-xs text-zinc-400">{copy("ui.271")}</span>
-              <span className="ml-auto font-mono text-[10px] text-lime-400">{copy("ui.581")}</span>
+              <span className="ml-auto font-mono text-[10px] text-lime-400">{copy("Demo preview")}</span>
             </div>
             <div className="space-y-3 p-4">
               <div className="flex items-center gap-2 border border-zinc-800 bg-zinc-950/50 px-3 py-2">
                 <Monitor size={13} className="shrink-0 text-lime-400"/>
                 <span className="truncate font-mono text-[11px] text-zinc-400">
-                  {copy("ui.582")}</span>
+                  {copy("Your telemetry folder")}</span>
               </div>
               <div className="space-y-2">
                 {[

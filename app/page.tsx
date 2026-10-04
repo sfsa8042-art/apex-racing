@@ -7,6 +7,7 @@ import { ArrowRight, BarChart2, BookOpen, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DownloadSection } from "@/components/ui/DownloadButton";
 import { HeroVisual } from "@/components/landing/HeroVisual";
+import { AnalysisPreview } from "@/components/landing/AnalysisPreview";
 import { Reveal } from "@/components/landing/Reveal";
 
 function NavBar() {
@@ -32,8 +33,8 @@ function NavBar() {
         <div className="flex-1" />
         <div className="flex items-center gap-2 sm:gap-3">
           <LanguageSwitch compact />
-          <Link href="/dashboard">
-            <Button variant="primary" size="sm">{copy("ui.305")}</Button>
+          <Link href="/telemetry">
+            <Button variant="primary" size="sm">{copy("Analyse a lap")}</Button>
           </Link>
         </div>
       </div>
@@ -70,35 +71,35 @@ export default function LandingPage() {
       <section className="relative min-h-[100dvh] overflow-hidden">
         <HeroVisual />
 
-        <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-6xl flex-col justify-end px-4 pb-16 pt-28 sm:justify-center sm:px-6 sm:pb-24 sm:pt-20">
+        <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-6xl flex-col justify-center px-4 pb-12 pt-28 sm:justify-center sm:px-6 sm:pb-24 sm:pt-20">
           <div className="max-w-lg">
             <p
-              className="animate-hero-rise font-display text-[clamp(4.25rem,14vw,7.5rem)] font-bold leading-[0.86] tracking-[-0.055em] text-white"
+              className="animate-hero-rise font-display text-[clamp(3.5rem,12vw,6.5rem)] font-bold leading-[0.86] tracking-[-0.055em] text-white"
               style={{ animationDelay: "40ms" }}
             >
               {copy("ui.269")}
             </p>
 
-            <h1 className="mt-6 text-sm font-semibold tracking-wide text-lime-300 sm:text-base">{copy("Telemetry analysis for sim racing")}</h1>
-            <p
-              className="animate-hero-rise mt-5 max-w-md text-lg leading-snug text-zinc-100 sm:text-xl"
+            <p className="mt-6 text-sm font-semibold tracking-wide text-lime-300 sm:text-base">{copy("Telemetry analysis for sim racing")}</p>
+            <h1
+              className="animate-hero-rise mt-5 max-w-lg text-3xl font-semibold tracking-tight leading-tight text-zinc-100 sm:text-4xl"
               style={{ animationDelay: "140ms" }}
             >
               {copy("ui.308")}
-            </p>
+            </h1>
 
             <div
               className="animate-hero-rise mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center"
               style={{ animationDelay: "240ms" }}
             >
-              <Link href="/dashboard">
+              <Link href="/telemetry">
                 <Button variant="primary" size="lg" className="w-full sm:w-auto">
-                  {copy("ui.310")} <ArrowRight size={16} />
+                  {copy("Analyse my lap")} <ArrowRight size={16} />
                 </Button>
               </Link>
-              <a href="#download">
+              <a href="#analysis-preview">
                 <Button variant="outline" size="lg" className="w-full border-white/20 bg-black/30 text-zinc-100 backdrop-blur-sm hover:border-white/35 hover:bg-white/10 hover:text-white sm:w-auto">
-                  {copy("ui.143")}
+                  {copy("See an example")}
                 </Button>
               </a>
             </div>
@@ -107,7 +108,7 @@ export default function LandingPage() {
               className="animate-hero-rise mt-5 font-mono text-xs tracking-wide text-zinc-300"
               style={{ animationDelay: "320ms" }}
             >
-              {copy("ui.311")}
+              {copy("Free, no registration. Have a telemetry file ready to get started.")}
             </p>
           </div>
         </div>
@@ -119,20 +120,21 @@ export default function LandingPage() {
           <h2 className="apex-section-title max-w-xl">{copy("ui.323")}</h2>
           <p className="apex-intro">{copy("ui.324")}</p>
 
-          <div className="mt-10 rounded-2xl border border-lime-400/20 bg-zinc-900/70 p-6 sm:p-8">
+          <div id="analysis-preview" className="scroll-mt-6 mt-10 rounded-2xl border border-lime-400/20 bg-zinc-900/70 p-6 sm:p-8">
             <p className="text-xs font-mono uppercase tracking-widest text-lime-400">{copy("Example analysis · demo data")}</p>
-            <div className="mt-5 grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div className="mt-5 grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+              <AnalysisPreview />
               <div>
                 <h3 className="text-xl font-semibold text-zinc-100">{copy("Throttle and brake overlap")}</h3>
-                <p className="mt-2 text-sm text-zinc-400">{copy("Turn 2 · 0.6 s of overlap in the sample lap")}</p>
+                <p className="mt-2 text-sm text-zinc-400">{copy("At 0.4 s: throttle 80%, brake 5%.")}</p>
                 <p className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-200">{copy("Release the brake before applying throttle, unless you are deliberately using left-foot braking to balance the car.")}</p>
+              <Link href="/telemetry" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-lime-300 hover:text-lime-200">{copy("Analyse my lap")} <ArrowRight size={16} /></Link>
               </div>
-              <Link href="/telemetry" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-lime-300 hover:text-lime-200">{copy("Explore telemetry")} <ArrowRight size={16} /></Link>
             </div>
           </div>
-          <div className="mt-12 divide-y divide-zinc-800 border-y border-zinc-800">
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
             {PILLARS.map(({ icon: Icon, title, description }, i) => (
-              <Reveal key={title} delay={i * 80} className="grid gap-4 py-8 sm:grid-cols-[40px_1fr] sm:gap-6">
+              <Reveal key={title} delay={i * 80} className="grid content-start gap-4 border-t border-zinc-700 py-6">
                 <Icon size={22} className="mt-0.5 text-lime-400" aria-hidden="true" />
                 <div>
                   <h3 className="font-display text-lg font-semibold tracking-tight text-zinc-100">{copy(title)}</h3>
@@ -145,18 +147,17 @@ export default function LandingPage() {
       </section>
 
       <section id="how-it-works" className="border-t border-zinc-800">
-        <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <p className="apex-eyebrow text-center">{copy("ui.325")}</p>
           <h2 className="apex-section-title text-center">{copy("ui.326")}</h2>
 
-          <div className="mt-12 space-y-8">
+          <div className="mt-10 grid gap-8 md:grid-cols-3">
             {[
               { n: "01", t: "ui.327", d: "ui.328" },
               { n: "02", t: "ui.329", d: "ui.330" },
               { n: "03", t: "ui.333", d: "ui.334" },
-              { n: "04", t: "ui.335", d: "ui.336" },
             ].map(({ n, t, d }, i) => (
-              <Reveal key={n} delay={i * 70} className="flex items-start gap-5">
+              <Reveal key={n} delay={i * 70} className="flex flex-col items-start gap-4">
                 <span className="w-10 shrink-0 font-mono text-sm font-bold text-lime-400">{copy(n)}</span>
                 <div>
                   <p className="text-sm font-semibold text-zinc-200">{copy(t)}</p>
@@ -177,10 +178,10 @@ export default function LandingPage() {
           <h2 className="font-display text-3xl font-bold tracking-tight text-zinc-100 md:text-4xl">
             {copy("ui.337")}
           </h2>
-          <p className="mt-3 text-zinc-400">{copy("ui.338")}</p>
-          <Link href="/dashboard" className="mt-8 inline-flex">
+          <p className="mt-3 text-zinc-400">{copy("Bring your telemetry file. Get a breakdown and choose what to practise next.")}</p>
+          <Link href="/telemetry" className="mt-8 inline-flex">
             <Button variant="primary" size="lg">
-              {copy("ui.339")} <ArrowRight size={16} />
+              {copy("Analyse my lap")} <ArrowRight size={16} />
             </Button>
           </Link>
         </div>
@@ -194,9 +195,9 @@ export default function LandingPage() {
             </div>
             <span className="font-display text-sm font-semibold text-zinc-400">{copy("ui.269")}</span>
           </div>
-          <p className="text-xs text-zinc-700">{copy("ui.342")}</p>
-          <div className="flex items-center gap-4 text-xs text-zinc-600">
-            <Link href="/dashboard" className="transition-colors hover:text-zinc-400">{copy("ui.343")}</Link>
+          <p className="text-xs text-zinc-400">{`© ${new Date().getFullYear()} APEX Racing`}</p>
+          <div className="flex items-center gap-4 text-sm text-zinc-400">
+            <Link href="/telemetry" className="transition-colors hover:text-white">{copy("Explore telemetry")}</Link>
             <Link href="/academy" className="transition-colors hover:text-zinc-400">{copy("ui.013")}</Link>
             <Link href="/download" className="transition-colors hover:text-zinc-400">{copy("ui.143")}</Link>
           </div>
