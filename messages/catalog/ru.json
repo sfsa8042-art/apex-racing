@@ -1959,5 +1959,6 @@
   "internal.backAcademy": "Вернуться в Академию",
   "internal.step": "Шаг",
   "internal.moreMetrics": "Все показатели",
-  "internal.lessMetrics": "Свернуть показатели"
+  "internal.lessMetrics": "Свернуть показатели",
+  "performance.sessionsError": "Не удалось загрузить сессии. Нажми «Обновить», чтобы повторить попытку."
 }

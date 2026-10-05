@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { ParsedLap, LapAnalysisResult, UploadState } from "@/types/telemetry";
 import type {
   WowSummary, DriverProfile, ProgressSummary, TrackHeatmapData,
@@ -63,7 +63,20 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
   const [driverRank,    setDriverRank]    = useState<DriverRank | null>(null);
   const [showWow,       setShowWow]       = useState(false);
 
-  const run = useCallback(async (parsed: ParsedLap, filename: string) => {
+  const generation = useRef(0);
+  const referenceRequest = useRef<AbortController | null>(null);
+  const wowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelPending = useCallback(() => {
+    generation.current += 1;
+    referenceRequest.current?.abort();
+    if (wowTimer.current) clearTimeout(wowTimer.current);
+    wowTimer.current = null;
+    return generation.current;
+  }, []);
+  useEffect(() => () => { cancelPending(); }, [cancelPending]);
+
+  const run = useCallback(async (parsed: ParsedLap, filename: string, ticket: number) => {
+    if (ticket !== generation.current) return;
     setUploadState((s) => ({ ...s, status: "analyzing", parsedLap: parsed }));
 
     // ── Detect track from filename and fetch community reference ──
@@ -71,9 +84,12 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
 
     let ref: ParsedLap | null = null;
     let refSource: "community" | "personal" | null = null;
+    const controller = new AbortController();
+    referenceRequest.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 5000);
     try {
       if (!detectedTrack) throw new Error("track unknown");   // → diagnostic mode
-      const r = await fetch(`/api/reference/laps?track=${detectedTrack}`);
+      const r = await fetch(`/api/reference/laps?track=${detectedTrack}`, { signal: controller.signal });
       const d = await r.json();
       if (d.found && d.csv) {
         const blob = new Blob([d.csv], { type: "text/csv" });
@@ -85,7 +101,8 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       // No real reference → try personal best below, else diagnostic mode.
     } catch {
       ref = null;
-    }
+    } finally { clearTimeout(timeout); }
+    if (ticket !== generation.current) return;
 
     // ── Personal best: compare against your own fastest lap on this track ──
     if (!ref && detectedTrack) {
@@ -98,6 +115,7 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
         }
       } catch { ref = null; }   // → diagnostic mode
     }
+    if (ticket !== generation.current) return;
     setRefLap(ref);
 
     const result   = analyseLapHonest(parsed, ref, refSource);
@@ -109,10 +127,6 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
 
     // ── Auto-submit to community reference if it could be top lap ──
     try {
-      const { csv: parsedCsv } = await (async () => {
-        const resp = await fetch("/api/sessions?all=1").catch(() => ({ ok: false }));
-        return { csv: null };
-      })();
       // Build CSV from parsed lap for submission
       const csvLines = ["time,speed,throttle,brake,gear,rpm,steerAngle,lateralG,longitudinalG"];
       parsed.rows.forEach(r => {
@@ -202,23 +216,28 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       parsedLap: parsed, analysisResult: result,
     });
 
-    setTimeout(() => setShowWow(true), 300);
+    wowTimer.current = setTimeout(() => { if (ticket === generation.current) setShowWow(true); }, 300);
   }, []);
 
   const handleFile = useCallback(async (file: File) => {
+    const ticket = cancelPending();
+    setShowWow(false);
     if (file.size > 50 * 1024 * 1024) {
       setUploadState((s) => ({ ...s, status: "error", error: "File too large (max 50 MB)" }));
       return;
     }
     setUploadState({ status: "parsing", error: null, filename: file.name, parsedLap: null, analysisResult: null });
     try {
-      await run(await parseFile(file), file.name);
+      await run(await parseFile(file), file.name, ticket);
     } catch (err) {
+      if (ticket !== generation.current) return;
       setUploadState((s) => ({ ...s, status: "error", error: err instanceof Error ? err.message : "Parse error" }));
     }
-  }, [run]);
+  }, [run, cancelPending]);
 
   const loadSampleData = useCallback(async () => {
+    const ticket = cancelPending();
+    setShowWow(false);
     setUploadState({ status: "parsing", error: null, filename: "sample_lap.csv", parsedLap: null, analysisResult: null });
     try {
       const { SAMPLE_REFERENCE_CSV } = await import("@/lib/telemetry/reference");
@@ -237,21 +256,26 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
         ...base, rows, lapTimeMs: Math.round(base.lapTimeMs * 1.028),
         id: `sample_${Date.now()}`,
         channelStats: { ...base.channelStats, maxSpeed: Math.max(...rows.map((r) => r.speed)), minSpeed: Math.min(...rows.map((r) => r.speed)) },
-      }, "sample_lap.csv");
+      }, "sample_lap.csv", ticket);
     } catch (err) {
+      if (ticket !== generation.current) return;
       setUploadState((s) => ({ ...s, status: "error", error: err instanceof Error ? err.message : "Sample load error" }));
     }
-  }, [run]);
+  }, [run, cancelPending]);
 
   const reset      = useCallback(() => {
+    cancelPending();
     setUploadState(INITIAL); setRefLap(null); setChartCh(null);
     setDriverProfile(null); setWowSummary(null); setProgress(null);
     setHeatmapData(null); setPatternReport(null); setCoachMessage(null);
     setNextActions([]); setPositives([]); setLevelProgress(null); setDriverRank(null);
     setShowWow(false);
-  }, []);
+  }, [cancelPending]);
 
-  const dismissWow = useCallback(() => setShowWow(false), []);
+  const dismissWow = useCallback(() => {
+    if (wowTimer.current) clearTimeout(wowTimer.current);
+    setShowWow(false);
+  }, []);
 
   return (
     <TelemetryContext.Provider value={{

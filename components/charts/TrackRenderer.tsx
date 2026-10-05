@@ -1,7 +1,7 @@
 "use client";
 import { useCopy } from "../../shared/i18n/react";
 
-import { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import { useMemo, useState, useRef, useCallback } from "react";
 import { getSmoothedLine, getCircuit, getPointAtFrac, getHeadingAtFrac } from "@/lib/tracks/geometry";
 import type { Vec2 } from "@/lib/tracks/geometry";
 import { cn } from "@/lib/utils";
@@ -98,17 +98,10 @@ export function TrackRenderer({
   const svgRef = useRef<SVGSVGElement>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string; sub?: string } | null>(null);
-  const [animPulse, setAnimPulse] = useState(0);
 
   const circuit = useMemo(() => getCircuit(trackId), [trackId]);
   const pts     = useMemo(() => getSmoothedLine(trackId, 20, compact) ?? [], [trackId]);
 
-  // Pulse animation for worst-heat dot
-  useEffect(() => {
-    if (!showHeatmap) return;
-    const id = setInterval(() => setAnimPulse(v => (v + 1) % 60), 50);
-    return () => clearInterval(id);
-  }, [showHeatmap]);
 
   // Pre-compute offset paths for track borders
   const { outer, inner, trackW } = useMemo(() => {
@@ -191,7 +184,6 @@ const refPos  = useMemo(() => { const p = refLapFrac != null && pts.length ? get
   );
 
   const sfPt = pts[0]; const [sfx, sfy] = toPx(sfPt);
-  const pulseR = 12 + Math.sin(animPulse * 0.21) * 4;
   const worstIdx = heatSegs.length ? heatSegs.reduce((bi, s, i) => s.intensity > heatSegs[bi].intensity ? i : bi, 0) : -1;
   const worstPt  = worstIdx >= 0 ? (() => { const [x,y] = [heatSegs[worstIdx].x1, heatSegs[worstIdx].y1]; return [x,y] as [number,number]; })() : null;
 
@@ -345,7 +337,7 @@ const refPos  = useMemo(() => { const p = refLapFrac != null && pts.length ? get
         {/* ── LAYER 12: worst heat dot (pulsing) ───────────────────────────── */}
         {showHeatmap && worstPt && (
           <g>
-            <circle cx={worstPt[0]} cy={worstPt[1]} r={pulseR}
+            <circle cx={worstPt[0]} cy={worstPt[1]} r={12} className="track-heat-pulse"
               fill="rgba(239,68,68,0.08)" stroke="rgba(239,68,68,0.35)" strokeWidth="1.2"/>
             <circle cx={worstPt[0]} cy={worstPt[1]} r="5"
               fill="#ef4444" filter="url(#glow-sm)"/>

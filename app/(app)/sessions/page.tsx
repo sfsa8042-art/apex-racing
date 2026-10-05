@@ -1,7 +1,7 @@
 "use client";
 import { useCopy, useLang, locales } from "../../../shared/i18n/react";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Activity, Clock, CheckCircle, AlertCircle, Loader,
   Monitor, Globe, ChevronRight, RefreshCw, Gauge,
@@ -205,17 +205,30 @@ export default function SessionsPage() {
   const { lang: displayLang } = useLang();
   const [sessions, setSessions]   = useState<TelemetrySession[]>([]);
   const [loading,  setLoading]    = useState(true);
+  const [failed, setFailed] = useState(false);
+  const pendingRequest = useRef<AbortController | null>(null);
   const [filter,   setFilter]     = useState<"all" | "desktop" | "browser" | "ready">("all");
 
   const fetchSessions = useCallback(async () => {
+    if (document.hidden || pendingRequest.current) return;
+    const controller = new AbortController();
+    pendingRequest.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 10000);
     try {
-      const res  = await fetch("/api/sessions");
+      const res  = await fetch("/api/sessions", { signal: controller.signal });
       const data = await res.json();
-      if (data.ok) setSessions(data.sessions ?? []);
+      if (!res.ok || !data.ok) throw new Error("Sessions unavailable");
+      if (pendingRequest.current !== controller) return;
+      setSessions(previous => JSON.stringify(previous) === JSON.stringify(data.sessions ?? []) ? previous : data.sessions ?? []);
+      setFailed(false);
     } catch {
-      // silently fail in UI
+      if (pendingRequest.current === controller) setFailed(true);
     } finally {
-      setLoading(false);
+      clearTimeout(timeout);
+      if (pendingRequest.current === controller) {
+        pendingRequest.current = null;
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -223,7 +236,15 @@ export default function SessionsPage() {
     fetchSessions();
     // Auto-refresh every 5s to pick up processing completions
     const id = setInterval(fetchSessions, 5000);
-    return () => clearInterval(id);
+    const onVisible = () => { if (!document.hidden) void fetchSessions(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+      const pending = pendingRequest.current;
+      pendingRequest.current = null;
+      pending?.abort();
+    };
   }, [fetchSessions]);
 
   const filtered = sessions.filter((s) => {
@@ -255,11 +276,12 @@ export default function SessionsPage() {
         </div>
       </div>
 
+      {failed && <p role="alert" className="mb-6 rounded-xl border border-amber-400/30 bg-amber-400/5 p-4 text-sm text-amber-200">{copy("performance.sessionsError")}</p>}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="w-8 h-8 rounded-full border-2 border-lime-400 border-t-transparent animate-spin" />
         </div>
-      ) : sessions.length === 0 ? (
+      ) : failed && sessions.length === 0 ? null : sessions.length === 0 ? (
         /* Empty state */
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 text-center px-5 py-12">
           <div className="w-16 h-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto mb-4">

@@ -217,3 +217,7 @@ body {
 }
 
 @media(max-width:767px){.telemetry-metrics:not(.metrics-expanded) .secondary-metric{display:none}.telemetry-metrics:not(.metrics-expanded){gap:0}}
+
+.track-heat-pulse{transform-box:fill-box;transform-origin:center;animation:heatPulse 3s ease-in-out infinite}
+@keyframes heatPulse{0%,100%{transform:scale(.67)}50%{transform:scale(1.33)}}
+@media(prefers-reduced-motion:reduce){.track-heat-pulse{animation:none}}

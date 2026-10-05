@@ -1959,5 +1959,6 @@
   "internal.backAcademy": "Back to Academy",
   "internal.step": "Step",
   "internal.moreMetrics": "Show all metrics",
-  "internal.lessMetrics": "Hide extra metrics"
+  "internal.lessMetrics": "Hide extra metrics",
+  "performance.sessionsError": "Sessions could not be loaded. Select Refresh to try again."
 }
